@@ -1,53 +1,24 @@
 // Conversions between port types.
 //
 // These are what let modules written without knowledge of each other be
-// connected. The query builder emits search results; the annotation kit wants
-// documents with text. Neither knows about the other, and neither had to
-// change — the conversion lives here, and registry/adapters.json declares that
-// it exists so the composer allows the connection.
+// connected, and registry/adapters.json declares which pairs are legal so the
+// composer can allow the connection.
 //
-// Adding a conversion is a function here plus an entry in adapters.json.
-
-import type { CorpusDocument } from "./types";
+// With a shared database, a port carries a reference rather than a payload, so
+// a conversion is usually a statement about what the referenced rows may be
+// used for rather than a transformation of data. That is still a real claim —
+// it is what makes "search results can be annotated" true — but it means most
+// adapters do no work, and the ones that do should be looked at twice.
 
 type Adapt = (value: unknown) => unknown;
 
-/** Anything the search modules return: a document with some full-text field. */
-interface SearchResult {
-  id?: string;
-  data?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-/**
- * Pulls a readable title and body out of a search result. The two datasets
- * (Rechtspraak, ECHR) shape their documents differently, so this looks for the
- * plausible fields rather than assuming one schema — a search result with no
- * text at all is skipped rather than becoming an empty document to annotate.
- */
-function toCorpusDocument(doc: SearchResult, index: number): CorpusDocument | null {
-  const data = (doc.data ?? doc) as Record<string, unknown>;
-
-  const textField = ["full_text", "fullText", "text", "summary", "conclusion"].find(
-    (k) => typeof data[k] === "string" && (data[k] as string).trim() !== "",
-  );
-  if (!textField) return null;
-
-  const nameField = ["ecli", "title", "docname", "name", "id"].find(
-    (k) => typeof data[k] === "string" && (data[k] as string).trim() !== "",
-  );
-  const name = nameField ? (data[nameField] as string) : (doc.id ?? `document-${index + 1}`);
-
-  return { name: String(name), full_text: data[textField] as string };
-}
-
 const adapters: Record<string, Adapt> = {
-  "document-set@1->corpus@1": (value) => {
-    const docs = Array.isArray(value) ? (value as SearchResult[]) : [];
-    return docs
-      .map(toCorpusDocument)
-      .filter((d): d is CorpusDocument => d !== null);
-  },
+  // Search results and a corpus are both datasets of documents. The query
+  // builder stores what it finds with the text extracted, so an annotation
+  // step downstream reads them exactly as it reads the corpus folder. Nothing
+  // to convert — the claim is that those documents have usable text, and the
+  // storing side is what makes it true.
+  "document-set@1->corpus@1": (value) => value,
 };
 
 /**

@@ -10,13 +10,17 @@
 import { computed, ref, watch } from "vue";
 import ConfigForm from "./ConfigForm.vue";
 import Runtime from "../runtime/Runtime.vue";
-import { exportPipeline, store, validatePipeline } from "../api";
+import { exportPipeline, validatePipeline } from "../api";
 import type { Manifest, Node, Pipeline, Registry } from "../types";
 import { canConnect, configWithDefaults } from "../types";
 
 const props = defineProps<{ registry: Registry }>();
 
-const DRAFT_KEY = "composer.draft";
+// The draft lives in the browser, not the platform database. It is composer
+// state — a pipeline that does not exist yet — and never travels into an
+// exported platform, so giving it a table would put a design-time concern into
+// the runtime's data model.
+const DRAFT_KEY = "legal-blocks:composer-draft";
 
 const pipeline = ref<Pipeline>({ version: 1, name: "My platform", nodes: [], edges: [] });
 const selected = ref<string | null>(null);
@@ -24,15 +28,20 @@ const previewing = ref(false);
 const status = ref("");
 const problem = ref("");
 
-// The draft lives in the same store everything else does, so a closed tab does
-// not lose a half-built pipeline.
-store.get<Pipeline>(DRAFT_KEY).then((saved) => {
-  if (saved?.nodes) pipeline.value = saved;
-});
+// Restore a half-built pipeline after a closed tab.
+try {
+  const saved = localStorage.getItem(DRAFT_KEY);
+  if (saved) {
+    const parsed = JSON.parse(saved) as Pipeline;
+    if (Array.isArray(parsed.nodes)) pipeline.value = parsed;
+  }
+} catch {
+  // A corrupt draft is not worth failing over; start from a blank one.
+}
 watch(
   pipeline,
   (value) => {
-    void store.put(DRAFT_KEY, value);
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(value));
   },
   { deep: true },
 );
@@ -110,7 +119,6 @@ function removeLast() {
     (e) => e.from.node !== removed.id && e.to.node !== removed.id,
   );
   if (selected.value === removed.id) selected.value = null;
-  void store.remove(`${removed.id}.task`).catch(() => {});
 }
 
 const selectedNode = computed(() => pipeline.value.nodes.find((n) => n.id === selected.value));

@@ -9,27 +9,36 @@ import { computed, ref, watch } from "vue";
 import ModuleHost from "./ModuleHost.vue";
 import type { ResolveEnv } from "./resolve";
 import type { Pipeline, Registry } from "../types";
+import { ensureUsers, getUsers, type User } from "../api";
 
 const props = defineProps<{ pipeline: Pipeline; registry: Registry }>();
 
 /**
- * Who is using the platform. A dropdown for now, and the seam where a real
- * login goes: everything downstream already takes the annotator as an input
- * rather than assuming a single user.
+ * Who is using the platform.
+ *
+ * These are real rows in the users table, not positions in a list, so the
+ * dropdown selects an identity that everything downstream already keys off.
+ * That is the seam a login replaces: the selector goes, the user id stays.
  */
-const ANNOTATOR_KEY = "legal-blocks:annotator";
-const annotator = ref(Number(localStorage.getItem(ANNOTATOR_KEY)) || 1);
+const ANNOTATOR_KEY = "legal-blocks:user";
+const users = ref<User[]>([]);
+const annotator = ref(Number(localStorage.getItem(ANNOTATOR_KEY)) || 0);
 watch(annotator, (value) => localStorage.setItem(ANNOTATOR_KEY, String(value)));
 
-// How many annotators any step in this pipeline was configured for.
-const annotatorCount = computed(() => {
-  let max = 1;
-  for (const node of props.pipeline.nodes) {
-    const n = Number(node.config?.annotators ?? 0);
-    if (Number.isFinite(n) && n > max) max = n;
+// Steps must not mount before we know who is working: a queue is per-user, and
+// asking for user 0's queue returns nothing, which looks exactly like a task
+// with no documents. On a fresh database nobody exists yet, so the first call
+// creates a user rather than only reading — otherwise nothing would mount, and
+// the step that would have created the users never gets the chance.
+const identified = computed(() => annotator.value > 0);
+
+async function loadUsers(create = false) {
+  users.value = create ? await ensureUsers(1) : await getUsers();
+  if (!users.value.some((u) => u.id === annotator.value)) {
+    annotator.value = users.value[0]?.id ?? 0;
   }
-  return max;
-});
+}
+void loadUsers(true);
 
 const steps = computed(() => {
   const byId = new Map(props.pipeline.nodes.map((n) => [n.id, n]));
@@ -77,6 +86,8 @@ const env = computed<ResolveEnv>(() => ({
 function goTo(index: number) {
   current.value = index;
   revision.value++;
+  // A step may have created more users when it prepared its task.
+  void loadUsers();
 }
 </script>
 
@@ -98,20 +109,22 @@ function goTo(index: number) {
         </button>
       </nav>
 
-      <label v-if="annotatorCount > 1" class="who">
+      <label v-if="users.length > 1" class="who">
         Working as
         <select v-model.number="annotator">
-          <option v-for="n in annotatorCount" :key="n" :value="n">Annotator {{ n }}</option>
+          <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
         </select>
       </label>
     </header>
 
+    <p v-if="!identified" class="pad muted">Starting…</p>
     <ModuleHost
-      v-if="steps[current]"
+      v-else-if="steps[current]"
       :env="env"
       :node="steps[current].node"
       :manifest="steps[current].manifest"
       :revision="revision"
+      @mounted="loadUsers()"
     />
   </div>
 </template>

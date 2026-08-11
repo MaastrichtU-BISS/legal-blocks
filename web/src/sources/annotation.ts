@@ -1,11 +1,11 @@
 // AnnotationSource — the data-access contract legal-annotation-kit asks its
 // host to implement.
 //
-// The package deliberately owns no persistence: it asks for "the assignment at
-// this queue position" and says "save this assignment", and the host decides
-// what that means. Here it means the platform's store, on disk next to the
-// binary. That is the whole reason an annotator can refresh the page and lose
-// nothing, and none of it required a change to the package.
+// Every method is now a request that lands in the platform's database. The
+// package asks for "the assignment at this queue position" and says "save this
+// assignment", and each of those is one row's worth of work rather than a
+// whole task rewritten. That is what lets two annotators work at once: saving
+// one assignment cannot touch another's.
 
 import type {
   AnnotationSource,
@@ -13,110 +13,69 @@ import type {
   DocumentRef,
   IncomingRelation,
 } from "legal-annotation-kit";
-import type { Assignment, TaskData } from "legal-annotation-kit";
-import { saveTask } from "./task";
+import type { Assignment } from "legal-annotation-kit";
+import {
+  getBundle,
+  getIncomingRelations,
+  getQueue,
+  saveAssignment,
+  type QueueEntry,
+} from "../api";
 
 /**
- * Builds a source over one annotator's slice of a task.
+ * Builds a source over one user's queue for a task.
  *
- * The task is held in memory and written back whole on every save. At these
- * sizes that is simpler than a per-assignment layout and keeps the stored file
- * readable; it does mean two people annotating the same task from two browsers
- * would overwrite each other, which is a real limitation and the thing to fix
- * first when this stops being a single-user demo.
+ * The queue is fetched once so `total` can be a plain number, which is what
+ * the package's interface asks for. Everything else is loaded on demand.
  */
-/**
- * Replaces the package's temporary ids with stable ones.
- *
- * New annotations arrive with descending negative ids, unique only within the
- * assignment being edited — the package's way of saying "the host assigns real
- * ids when it persists". Without this, every annotator's first annotation is
- * id -1, which collides across the task as soon as anything joins annotations
- * to their source. Ids are unique across the whole task so they stay
- * meaningful once flattened for the metrics list.
- */
-function assignStableIds(task: TaskData, assignment: Assignment): void {
-  let nextAnnotation = 0;
-  let nextDocumentAnnotation = 0;
-  for (const doc of task.documents) {
-    for (const a of doc.assignments) {
-      for (const ann of a.annotations) {
-        nextAnnotation = Math.max(nextAnnotation, ann.id);
-      }
-      for (const tag of a.document_annotations) {
-        nextDocumentAnnotation = Math.max(nextDocumentAnnotation, tag.id);
-      }
-    }
-  }
-  for (const ann of assignment.annotations) {
-    if (ann.id <= 0) ann.id = ++nextAnnotation;
-  }
-  for (const tag of assignment.document_annotations) {
-    if (tag.id <= 0) tag.id = ++nextDocumentAnnotation;
-  }
-}
+export async function createAnnotationSource(
+  taskId: number,
+  userId: number,
+): Promise<AnnotationSource> {
+  const queue: QueueEntry[] = await getQueue(taskId, userId);
 
-export function createAnnotationSource(
-  nodeId: string,
-  task: TaskData,
-  annotator: number,
-): AnnotationSource {
-  // Documents this annotator has an assignment for, in queue order.
-  const queue = task.documents
-    .map((doc) => ({
-      doc,
-      assignment: doc.assignments.find((a) => a.annotator === annotator),
-    }))
-    .filter((entry): entry is { doc: TaskData["documents"][number]; assignment: Assignment } =>
-      entry.assignment !== undefined,
-    )
-    .sort((a, b) => a.assignment.order - b.assignment.order);
+  const at = (position: number): QueueEntry => {
+    const entry = queue[position - 1];
+    if (!entry) throw new Error(`no document at position ${position}`);
+    return entry;
+  };
+
+  // Which assignment a given queue position maps to, so save() can address the
+  // right row without the package having to know row ids exist.
+  const assignmentFor = (assignment: Assignment): QueueEntry => {
+    const entry = queue.find((e) => e.order === assignment.order);
+    if (!entry) throw new Error("saving an assignment that is not in this queue");
+    return entry;
+  };
 
   return {
     total: queue.length,
 
     async load(position: number): Promise<AssignmentBundle> {
-      const entry = queue[position - 1];
-      if (!entry) throw new Error(`no document at position ${position}`);
-      return {
-        document: { name: entry.doc.name, full_text: entry.doc.full_text },
-        assignment: entry.assignment,
-      };
+      return (await getBundle(at(position).assignment_id)) as AssignmentBundle;
     },
 
     async save(assignment: Assignment): Promise<void> {
-      const entry = queue.find(
-        (e) => e.assignment.annotator === assignment.annotator && e.assignment.order === assignment.order,
-      );
-      if (!entry) throw new Error("saving an assignment that is not in this queue");
-
-      assignStableIds(task, assignment);
-
-      // Replace the assignment inside the task, then persist the task. The
-      // in-memory queue points at the same document objects, so the next load
-      // sees the update without a round trip.
-      const docIndex = task.documents.indexOf(entry.doc);
-      const asgnIndex = entry.doc.assignments.indexOf(entry.assignment);
-      task.documents[docIndex].assignments[asgnIndex] = assignment;
-      entry.assignment = assignment;
-
-      await saveTask(nodeId, task);
+      const entry = assignmentFor(assignment);
+      await saveAssignment(entry.assignment_id, assignment);
+      entry.status = assignment.status;
     },
 
     listDocuments(): DocumentRef[] {
-      return queue.map((e) => ({ name: e.doc.name, order: e.assignment.order }));
+      return queue.map((e) => ({ name: e.name, order: e.order }));
     },
 
-    listIncomingRelations(toName: string): IncomingRelation[] {
-      const incoming: IncomingRelation[] = [];
-      for (const entry of queue) {
-        for (const relation of entry.assignment.document_relations ?? []) {
-          if (relation.to === toName) {
-            incoming.push({ from: entry.doc.name, labels: relation.labels });
-          }
-        }
-      }
-      return incoming;
+    async listIncomingRelations(toName: string): Promise<IncomingRelation[]> {
+      const entry = queue.find((e) => e.name === toName);
+      if (!entry) return [];
+      // The stored form links two assignments; the host resolves that back to
+      // "which document does the relation come from", which is what the
+      // package displays.
+      const incoming = (await getIncomingRelations(entry.assignment_id)) as {
+        to: string;
+        labels: string[];
+      }[];
+      return incoming.map((r) => ({ from: r.to, labels: r.labels }));
     },
   };
 }

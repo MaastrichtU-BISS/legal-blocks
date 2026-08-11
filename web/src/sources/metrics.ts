@@ -1,11 +1,15 @@
 // MetricsSource — the data-access contract vue-iaa-metrics asks its host to
 // implement.
 //
+// Filtering is a query now rather than an array filter in the browser: the
+// package asks for "annotations matching these filters" and gets exactly those
+// rows back, instead of the whole task being loaded so it can be narrowed
+// client-side.
+//
 // The package's own note says computeMetrics and downloadReport are
 // host-implemented because the Go IAA service has no CORS or auth handling and
 // was never meant to be called from a browser. Compiled into the platform
-// binary it is same-origin, so the host calls it directly and that constraint
-// simply stops applying.
+// binary it is same-origin, so the host calls it directly.
 
 import type {
   AnnotationFilters,
@@ -17,118 +21,62 @@ import type {
   MetricsSource,
   RichAnnotation,
 } from "vue-iaa-metrics";
-import type { TaskData } from "legal-annotation-kit";
-import { callService } from "../api";
+import {
+  callService,
+  getAnnotations,
+  getIaaInput,
+  getTask,
+  getTaskAnnotators,
+  getTaskDocuments,
+  type Task,
+} from "../api";
 
 const SERVICE_ID = "lawnotation-iaa";
 
 /**
- * Converts an annotation task into the IAA service's input.
+ * Builds a source over a task.
  *
- * The two schemas were designed independently and line up almost exactly —
- * the differences are a field name (confidence / difficulty_rating) and
- * annotator identifiers being numbers on one side and strings on the other.
- * This function is the entire cost of connecting the two packages.
- */
-export function toIaaInput(task: TaskData): IaaInputData {
-  return {
-    labelset: { labels: task.labelset.labels.map((l) => ({ name: l.name })) },
-    annotation_level: task.annotation_level as IaaInputData["annotation_level"],
-    documents: task.documents.map((doc) => ({
-      name: doc.name,
-      full_text: doc.full_text,
-      assignments: doc.assignments.map((a) => ({
-        annotator: String(a.annotator),
-        difficulty_rating: a.confidence,
-        annotations: a.annotations.map((ann) => ({
-          start: ann.start,
-          end: ann.end,
-          label: ann.label,
-          text: ann.text,
-        })),
-      })),
-    })),
-  };
-}
-
-/** Every annotation in the task, flattened for the browsable list. */
-function allAnnotations(task: TaskData): RichAnnotation[] {
-  const out: RichAnnotation[] = [];
-  for (const doc of task.documents) {
-    for (const assignment of doc.assignments) {
-      for (const ann of assignment.annotations) {
-        out.push({
-          start: ann.start,
-          end: ann.end,
-          text: ann.text,
-          label: ann.label,
-          annotator: String(assignment.annotator),
-          ann_id: ann.id,
-          doc_id: doc.name,
-          doc_name: doc.name,
-          confidence: ann.confidence,
-          metadata: ann.metadata ?? undefined,
-        });
-      }
-    }
-  }
-  return out;
-}
-
-/**
- * Builds a source over an annotated task.
- *
- * Criterion and granularity are deliberately not parameters here. They are
+ * Criterion and granularity are deliberately not parameters. They are
  * properties of a question a user asks — "would these annotators agree if I
  * accepted contained matches?" — so they belong to the request, not to the
- * platform. The package already puts them in front of the user and passes the
- * current values in with every call; this just forwards them.
+ * platform. The package puts them in front of the user and passes the current
+ * values in with every call; this forwards them.
  */
-export function createMetricsSource(task: TaskData): MetricsSource {
-  const params = (p: IaaParams) => ({
-    criterion: p.criterion,
-    granularity: p.granularity,
-  });
-
+export function createMetricsSource(taskId: number, task: Task): MetricsSource {
   return {
     getLabels(): LabelOption[] {
       return task.labelset.labels.map((l) => ({ name: l.name, color: l.color }));
     },
 
-    getAnnotators(): string[] {
-      const seen = new Set<string>();
-      for (const doc of task.documents) {
-        for (const a of doc.assignments) seen.add(String(a.annotator));
-      }
-      return [...seen].sort();
+    async getAnnotators(): Promise<string[]> {
+      return getTaskAnnotators(taskId);
     },
 
-    getDocuments(): DocumentOption[] {
-      return task.documents.map((d) => ({ value: d.name, label: d.name }));
+    async getDocuments(): Promise<DocumentOption[]> {
+      return getTaskDocuments(taskId);
     },
 
     async getAnnotations(filters: AnnotationFilters): Promise<RichAnnotation[]> {
-      const { labels, documents, annotators } = filters;
-      return allAnnotations(task).filter(
-        (a) =>
-          (labels.length === 0 || labels.includes(a.label)) &&
-          (documents.length === 0 || documents.includes(a.doc_id)) &&
-          (annotators.length === 0 || annotators.includes(a.annotator)),
-      );
+      return (await getAnnotations(taskId, filters)) as RichAnnotation[];
     },
 
     async getIaaInputData(): Promise<IaaInputData> {
-      return toIaaInput(task);
+      return (await getIaaInput(taskId)) as IaaInputData;
     },
 
     async computeMetrics(input: IaaInputData, p: IaaParams): Promise<IaaMetricsResponse> {
-      const res = await callService(SERVICE_ID, "metrics", params(p), input);
+      const res = await callService(SERVICE_ID, "metrics", { ...p }, input);
       return res.json() as Promise<IaaMetricsResponse>;
     },
 
     async downloadReport(input: IaaInputData, p: IaaParams): Promise<Blob> {
-      const res = await callService(SERVICE_ID, "report.zip", params(p), input);
+      const res = await callService(SERVICE_ID, "report.zip", { ...p }, input);
       return res.blob();
     },
   };
+}
+
+/** Loads the task a metrics step reports on. */
+export async function loadMetricsTask(taskId: number): Promise<Task> {
+  return getTask(taskId);
 }

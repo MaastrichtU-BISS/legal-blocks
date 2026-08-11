@@ -10,6 +10,11 @@ import type { Manifest, Node } from "../types";
 import { bindingFor } from "./bindings";
 import { contextFor, type ResolveEnv } from "./resolve";
 
+// Mounting a step can create rows the shell shows — preparing a task creates
+// the users the "Working as" selector lists — so the shell is told when a
+// mount finishes rather than having to guess when to re-read.
+const emit = defineEmits<{ mounted: [] }>();
+
 const props = defineProps<{
   env: ResolveEnv;
   node: Node;
@@ -41,6 +46,7 @@ async function mount() {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
     loading.value = false;
+    emit("mounted");
   }
 }
 
