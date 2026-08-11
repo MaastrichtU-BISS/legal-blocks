@@ -82,7 +82,9 @@ function goTo(index: number) {
 
 <template>
   <div class="app">
-    <header>
+    <!-- lb-ui goes on the header, not on .app: the shell's control styling
+         must not reach the module mounted below it. -->
+    <header class="lb-ui">
       <strong>{{ pipeline.name }}</strong>
 
       <nav>

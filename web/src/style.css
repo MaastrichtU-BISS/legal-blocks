@@ -17,7 +17,8 @@
   color-scheme: light;
 }
 
-* {
+.lb-ui,
+.lb-ui * {
   box-sizing: border-box;
 }
 
@@ -26,7 +27,13 @@ body {
   background: #fff;
 }
 
-button {
+/* Form controls are scoped to .lb-ui — the shell's own chrome — and never
+   applied globally. A bare `input { width: 100% }` reaches inside every
+   mounted module and, for example, stretches a package's filter checkboxes to
+   the full row width, pushing their labels off to the right. Modules ship
+   their own styling and must be left alone. */
+
+.lb-ui button {
   font: inherit;
   padding: 0.35rem 0.7rem;
   border: 1px solid var(--border);
@@ -35,30 +42,30 @@ button {
   cursor: pointer;
 }
 
-button:hover:not(:disabled) {
+.lb-ui button:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-button:disabled {
+.lb-ui button:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-button.primary {
+.lb-ui button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
 
-button.primary:hover:not(:disabled) {
+.lb-ui button.primary:hover:not(:disabled) {
   color: #fff;
   opacity: 0.9;
 }
 
-input,
-select,
-textarea {
+.lb-ui input,
+.lb-ui select,
+.lb-ui textarea {
   font: inherit;
   padding: 0.3rem 0.4rem;
   border: 1px solid var(--border);

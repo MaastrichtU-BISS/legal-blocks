@@ -147,14 +147,14 @@ async function doExport() {
 
 <template>
   <div v-if="previewing" class="preview">
-    <div class="preview-bar">
+    <div class="preview-bar lb-ui">
       <span>Preview — this is exactly what the exported platform runs.</span>
       <button @click="previewing = false">Back to composer</button>
     </div>
     <Runtime :pipeline="pipeline" :registry="registry" />
   </div>
 
-  <div v-else class="app">
+  <div v-else class="app lb-ui">
     <header>
       <input v-model="pipeline.name" class="name" aria-label="Platform name" />
       <div class="row">
