@@ -25,6 +25,37 @@ import { saveTask } from "./task";
  * would overwrite each other, which is a real limitation and the thing to fix
  * first when this stops being a single-user demo.
  */
+/**
+ * Replaces the package's temporary ids with stable ones.
+ *
+ * New annotations arrive with descending negative ids, unique only within the
+ * assignment being edited — the package's way of saying "the host assigns real
+ * ids when it persists". Without this, every annotator's first annotation is
+ * id -1, which collides across the task as soon as anything joins annotations
+ * to their source. Ids are unique across the whole task so they stay
+ * meaningful once flattened for the metrics list.
+ */
+function assignStableIds(task: TaskData, assignment: Assignment): void {
+  let nextAnnotation = 0;
+  let nextDocumentAnnotation = 0;
+  for (const doc of task.documents) {
+    for (const a of doc.assignments) {
+      for (const ann of a.annotations) {
+        nextAnnotation = Math.max(nextAnnotation, ann.id);
+      }
+      for (const tag of a.document_annotations) {
+        nextDocumentAnnotation = Math.max(nextDocumentAnnotation, tag.id);
+      }
+    }
+  }
+  for (const ann of assignment.annotations) {
+    if (ann.id <= 0) ann.id = ++nextAnnotation;
+  }
+  for (const tag of assignment.document_annotations) {
+    if (tag.id <= 0) tag.id = ++nextDocumentAnnotation;
+  }
+}
+
 export function createAnnotationSource(
   nodeId: string,
   task: TaskData,
@@ -58,6 +89,8 @@ export function createAnnotationSource(
         (e) => e.assignment.annotator === assignment.annotator && e.assignment.order === assignment.order,
       );
       if (!entry) throw new Error("saving an assignment that is not in this queue");
+
+      assignStableIds(task, assignment);
 
       // Replace the assignment inside the task, then persist the task. The
       // in-memory queue points at the same document objects, so the next load
