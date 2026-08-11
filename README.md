@@ -86,16 +86,27 @@ The same rule is enforced in Go when a pipeline is exported
 ([`internal/pipeline`](internal/pipeline/pipeline.go)), so an export cannot be
 something the composer would have rejected.
 
-### 3. The host implements the contracts
+### 3. One database, not a conveyor belt
+
+Modules do not hand data to each other. Everything lives in one SQLite
+database — [`internal/db/schema.sql`](internal/db/schema.sql) — and a pipeline
+edge carries a *reference*: a dataset id, a task id. Two modules looking at the
+same task look at the same rows rather than at two copies that can drift.
 
 `legal-annotation-kit` and `vue-iaa-metrics` were already built the right way:
-each exposes a component plus a `Source` interface that the *host* implements.
-Neither package owns any persistence or networking.
+each exposes a component plus a `Source` interface that the *host* implements,
+owning no persistence or networking itself. So this project did not need a
+plugin system — it needed to be a host, and here that means those contracts are
+SQL queries.
 
-So this project did not need a plugin system. It needed to be a host. The
-`host` field in a manifest names the contract, and the runtime implements
+The `host` field in a manifest names the contract, and the runtime implements
 contracts rather than modules — a second annotation module declaring
 `"host": "AnnotationSource"` would work with no frontend change at all.
+
+The schema follows Lawnotation's vocabulary, since that is the platform most
+users of this project are trying to rebuild. Where Lawnotation and the packages
+disagree on a name, the packages win: `confidence` not `difficulty_rating`,
+`"order"` not `seq_pos`, `"start"`/`"end"` not `start_index`/`end_index`.
 
 ---
 
@@ -127,10 +138,13 @@ imports only the modules that pipeline names — and the binary already contains
 every Go service. Exporting is: copy two prebuilt artefacts, write one JSON
 file, add the documents. It takes about a second.
 
-**Persistence** is the `data/` folder: one JSON file per key, written
-atomically. Server-side rather than in the browser on purpose — it survives a
-cache clear, users can back it up by copying a folder or send it to you when
-something looks wrong, and it is the same seam a hosted database will occupy.
+**Persistence** is `data/platform.db`, a SQLite database. Server-side rather
+than in the browser on purpose — it survives a cache clear, users can back it
+up by copying one file or send it to you when something looks wrong, and it is
+the same seam a hosted Postgres will occupy.
+
+It is also inspectable: `sqlite3 data/platform.db` answers questions about
+somebody's annotations without running the platform at all.
 
 ---
 
@@ -162,10 +176,11 @@ twelve lines.
 
 Worth naming before anyone finds them in a demo.
 
-- **One user at a time.** A task is stored as a single document and rewritten
-  whole on each save, so two people annotating the same task from two browsers
-  would overwrite each other. The fix is per-assignment storage keys; it is not
-  worth doing before there is a login to attach it to.
+- **No migrations.** A schema change means deleting `data/platform.db` and
+  starting over. Fine while the shape is still moving; it needs solving before
+  anyone has work they care about.
+- **One pipeline holds one of each module.** Nothing is scoped to a pipeline
+  step, so two annotate steps would silently share one task rather than failing.
 - **Cross-platform exports need a build step first.** Run
   `./script/build-platforms.sh` to cross-compile the platform binary for
   macOS (both architectures), Windows and Linux into `binaries/`. The composer
@@ -206,13 +221,16 @@ Worth naming before anyone finds them in a demo.
 
 Not implemented, deliberately. Two seams exist for it:
 
-- **`store.Store`** ([`internal/store`](internal/store/store.go)) is a
-  four-method interface. Per-user scoping lands in an implementation of it, and
-  a hosted database is a drop-in replacement.
-- **The annotator selector** in the runtime is a dropdown reading
-  `localStorage`. Everything downstream already takes the annotator as an
-  input rather than assuming a single user, so replacing the dropdown with a
-  real identity does not touch any module.
+- **The `users` table** already owns everything: labelsets, datasets, tasks and
+  assignments all hang off a user, and `external_id` is where a real identity
+  (an OIDC subject, a Supabase user id) attaches. `role` is recorded and
+  nothing enforces it yet.
+- **The "Working as" selector** picks one of those users. Every query already
+  takes a user id, so replacing the dropdown with an authenticated identity
+  touches that one component and no module.
+- **`owner()` in [`internal/host/data.go`](internal/host/data.go)** is the
+  single place that assumes "everything belongs to the first user". A login
+  replaces it there rather than in every query.
 
 Manifests also carry an optional `requiredRole` that nothing reads yet — so
 enforcing authorisation later is a matter of using a field that already exists
@@ -227,7 +245,7 @@ cmd/legal-blocks/     entry point: `compose` and `run` modes
 registry/*.json       the module catalogue — start here
 internal/manifest/    manifest types, registry loading, type compatibility
 internal/pipeline/    pipeline model and validation
-internal/store/       persistence
+internal/db/          the database: schema, queries, the domain model
 internal/service/     the Go backend contract
 internal/services/    Go backends (currently: lawnotation-iaa)
 internal/host/        the server both modes run on
