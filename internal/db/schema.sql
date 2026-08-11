@@ -7,8 +7,16 @@
 --   users
 --     ├── labelsets
 --     ├── datasets ──── documents
---     ├── tasks ────────────┐
---     └── assignments ──────┴──── annotations ──── relations
+--     ├── tasks
+--     └── assignments ──┬── span_annotations ──── span_relations
+--                       ├── document_annotations
+--                       └── document_relations ── documents
+--
+-- Span-level and document-level work are separate tables rather than one table
+-- with a level column. They genuinely differ: a span has an extent and text, a
+-- document tag has neither, and their relations differ too — a span relation is
+-- directed between two spans, a document relation is an undirected claim about
+-- another document, held only by the side that made it.
 --
 -- Column names follow the packages rather than Lawnotation wherever the two
 -- disagree, because the packages are what an exported platform actually runs:
@@ -17,6 +25,10 @@
 -- "desc" are SQL keywords and are quoted throughout. That is the price of a
 -- column meaning exactly what the field it stores means, and it is worth
 -- paying: every name that shifts in transit is a place for a mapping bug.
+--
+-- A pipeline holds at most one of each module, so nothing here is scoped to a
+-- pipeline step. If that ever stops being true, this is where it shows up
+-- first: two annotate steps would have no way to tell their tasks apart.
 
 -- ---------------------------------------------------------------------------
 -- users
@@ -41,10 +53,10 @@ CREATE TABLE users (
 -- content
 -- ---------------------------------------------------------------------------
 
--- A named set of labels. Kept as a JSON array of {name, color} the way the
--- packages hand it over, rather than a labels table: a labelset is edited and
--- read whole, and nothing joins to an individual label — annotations store the
--- label's name as text, exactly as the packages do.
+-- A named set of labels, kept as a JSON array of {name, color} the way the
+-- packages hand it over. A labelset is read and edited whole and nothing joins
+-- to an individual label — annotations store the label's name as text, exactly
+-- as the packages do.
 CREATE TABLE labelsets (
     id         INTEGER PRIMARY KEY,
     user_id    INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -83,22 +95,19 @@ CREATE TABLE documents (
 );
 
 -- ---------------------------------------------------------------------------
--- annotation
+-- tasks and assignments
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE tasks (
     id               INTEGER PRIMARY KEY,
     user_id          INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    -- ADDED, not in the given spec: a task is unusable without knowing which
-    -- labels it offers, and legal-annotation-kit takes a labelset as a
-    -- required prop. Lawnotation carries the same column.
     labelset_id      INTEGER REFERENCES labelsets (id) ON DELETE SET NULL,
     name             TEXT NOT NULL DEFAULT '',
     "desc"           TEXT NOT NULL DEFAULT '',
     ann_guidelines   TEXT NOT NULL DEFAULT '',
-    -- The level this task asks for. Annotations record their own level too,
-    -- so a task whose level changes does not silently reinterpret work already
-    -- done at the old one.
+    -- Decides which kind of work this task collects: 'document' means whole
+    -- document tagging, and those tasks fill document_annotations and leave
+    -- span_annotations empty. The others are span granularities.
     annotation_level TEXT NOT NULL DEFAULT 'word'
         CHECK (annotation_level IN ('character', 'word', 'sentence', 'paragraph', 'document')),
     created_at       TEXT NOT NULL DEFAULT (datetime('now'))
@@ -124,23 +133,18 @@ CREATE TABLE assignments (
     UNIQUE (task_id, document_id, user_id)
 );
 
--- A labelled annotation, span-level or whole-document.
---
--- Document-level tags are annotations with level = 'document': text is empty
--- and "start"/"end" are both 0. One table rather than two means the metrics
--- module reads agreement the same way at either level, and a task that changes
--- level does not need its history moved between tables.
---
--- "start" and "end" are character offsets into the document's full_text,
--- 0-indexed and half-open, matching the packages exactly.
-CREATE TABLE annotations (
+-- ---------------------------------------------------------------------------
+-- span-level annotation
+-- ---------------------------------------------------------------------------
+
+-- A labelled stretch of text. "start" and "end" are character offsets into the
+-- document's full_text, 0-indexed and half-open, matching the packages exactly.
+CREATE TABLE span_annotations (
     id            INTEGER PRIMARY KEY,
     assignment_id INTEGER NOT NULL REFERENCES assignments (id) ON DELETE CASCADE,
     label         TEXT NOT NULL,
-    level         TEXT NOT NULL DEFAULT 'word'
-        CHECK (level IN ('character', 'word', 'sentence', 'paragraph', 'document')),
-    "start"       INTEGER NOT NULL DEFAULT 0,
-    "end"         INTEGER NOT NULL DEFAULT 0,
+    "start"       INTEGER NOT NULL,
+    "end"         INTEGER NOT NULL,
     text          TEXT NOT NULL DEFAULT '',
     -- Per-annotation confidence, 0-5 stars. Lawnotation has no equivalent;
     -- legal-annotation-kit does, so it is stored.
@@ -149,27 +153,57 @@ CREATE TABLE annotations (
     origin        TEXT NOT NULL DEFAULT 'manual'
         CHECK (origin IN ('manual', 'imported', 'model')),
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-    CHECK ("end" >= "start"),
-    -- A document-level tag has no extent; a span-level one must not be empty
-    -- of both text and extent. Cheap to state, and it stops the two kinds
-    -- being confused by a module that forgets to set the level.
-    CHECK (level <> 'document' OR ("start" = 0 AND "end" = 0 AND text = ''))
+    CHECK ("end" >= "start")
 );
 
--- A directed link between two annotations. The packages nest these inside the
--- annotation that owns them; as rows, "everything pointing at this one"
--- becomes a query rather than a scan of every annotation in the task.
-CREATE TABLE relations (
-    id                 INTEGER PRIMARY KEY,
-    from_annotation_id INTEGER NOT NULL REFERENCES annotations (id) ON DELETE CASCADE,
-    to_annotation_id   INTEGER NOT NULL REFERENCES annotations (id) ON DELETE CASCADE,
-    direction          TEXT NOT NULL DEFAULT 'bi'
+-- A directed link between two spans. The packages nest these inside the span
+-- that owns them; as rows, "everything pointing at this span" becomes a query
+-- rather than a scan of every annotation in the task.
+CREATE TABLE span_relations (
+    id         INTEGER PRIMARY KEY,
+    from_id    INTEGER NOT NULL REFERENCES span_annotations (id) ON DELETE CASCADE,
+    to_id      INTEGER NOT NULL REFERENCES span_annotations (id) ON DELETE CASCADE,
+    direction  TEXT NOT NULL DEFAULT 'bi'
         CHECK (direction IN ('bi', 'left', 'right')),
     -- JSON array of relation labels ("Is a", "Part of", ...). Free-standing
     -- strings with no identity of their own; a join table would be ceremony.
-    labels             TEXT NOT NULL DEFAULT '[]',
-    created_at         TEXT NOT NULL DEFAULT (datetime('now')),
-    CHECK (from_annotation_id <> to_annotation_id)
+    labels     TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (from_id <> to_id)
+);
+
+-- ---------------------------------------------------------------------------
+-- document-level annotation
+-- ---------------------------------------------------------------------------
+
+-- A label applied to a whole document rather than a stretch of it. No extent
+-- and no text, which is why this is its own table.
+CREATE TABLE document_annotations (
+    id            INTEGER PRIMARY KEY,
+    assignment_id INTEGER NOT NULL REFERENCES assignments (id) ON DELETE CASCADE,
+    label         TEXT NOT NULL,
+    confidence    INTEGER NOT NULL DEFAULT 0 CHECK (confidence BETWEEN 0 AND 5),
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    -- One document cannot carry the same tag twice within one assignment.
+    UNIQUE (assignment_id, label)
+);
+
+-- "the document I am annotating relates to that other document".
+--
+-- It hangs off the assignment, not off a document_annotation, because the
+-- annotation kit records it that way: the claim belongs to the annotator who
+-- made it, and can be made whether or not either document carries any tag.
+-- It is stored only on the side that created it — the reverse view is computed
+-- and never written, so every relation exists exactly once and counting them
+-- needs no de-duplication. That asymmetry is also why there is no direction
+-- column here, unlike span_relations.
+CREATE TABLE document_relations (
+    id             INTEGER PRIMARY KEY,
+    assignment_id  INTEGER NOT NULL REFERENCES assignments (id) ON DELETE CASCADE,
+    to_document_id INTEGER NOT NULL REFERENCES documents (id) ON DELETE CASCADE,
+    labels         TEXT NOT NULL DEFAULT '[]',
+    created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (assignment_id, to_document_id)
 );
 
 -- ---------------------------------------------------------------------------
@@ -182,8 +216,10 @@ CREATE TABLE relations (
 CREATE INDEX idx_assignments_queue ON assignments (task_id, user_id, "order");
 CREATE INDEX idx_assignments_document ON assignments (document_id);
 CREATE INDEX idx_assignments_task ON assignments (task_id);
-CREATE INDEX idx_annotations_assignment ON annotations (assignment_id);
-CREATE INDEX idx_annotations_label ON annotations (label);
+CREATE INDEX idx_span_annotations_assignment ON span_annotations (assignment_id);
+CREATE INDEX idx_span_annotations_label ON span_annotations (label);
+CREATE INDEX idx_document_annotations_assignment ON document_annotations (assignment_id);
 CREATE INDEX idx_documents_dataset ON documents (dataset_id);
-CREATE INDEX idx_relations_from ON relations (from_annotation_id);
-CREATE INDEX idx_relations_to ON relations (to_annotation_id);
+CREATE INDEX idx_span_relations_from ON span_relations (from_id);
+CREATE INDEX idx_span_relations_to ON span_relations (to_id);
+CREATE INDEX idx_document_relations_target ON document_relations (to_document_id);
