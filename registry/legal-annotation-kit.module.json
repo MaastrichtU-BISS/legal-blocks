@@ -1,0 +1,70 @@
+{
+  "id": "legal-annotation-kit",
+  "name": "Annotate",
+  "description": "Span and document-level annotation. Each annotator works through their own queue of assigned documents.",
+  "version": "1.0.0",
+  "kind": "ui",
+  "runtime": "web",
+  "entry": {
+    "package": "legal-annotation-kit",
+    "component": "AnnotatorQueue",
+    "style": "legal-annotation-kit/style.css"
+  },
+  "host": "AnnotationSource",
+  "inputs": [
+    {
+      "name": "corpus",
+      "type": "corpus@1",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "task",
+      "type": "annotated-task@1"
+    }
+  ],
+  "config": [
+    {
+      "key": "task_name",
+      "label": "Task name",
+      "type": "text",
+      "default": "Annotation task"
+    },
+    {
+      "key": "labels",
+      "label": "Labels",
+      "type": "labelset",
+      "default": "Actor, Act, Precondition, Postcondition",
+      "help": "Comma-separated. Colours are assigned automatically."
+    },
+    {
+      "key": "annotation_level",
+      "label": "Annotation level",
+      "type": "select",
+      "options": [
+        "character",
+        "word",
+        "sentence",
+        "paragraph",
+        "document"
+      ],
+      "default": "word",
+      "help": "Span granularity. 'document' tags whole documents instead of spans."
+    },
+    {
+      "key": "annotators",
+      "label": "Number of annotators",
+      "type": "number",
+      "default": 2,
+      "help": "Every annotator is assigned every document. Agreement metrics need at least two."
+    },
+    {
+      "key": "guidelines_url",
+      "label": "Guidelines URL",
+      "type": "text",
+      "default": "",
+      "help": "Optional link shown to annotators."
+    }
+  ]
+}

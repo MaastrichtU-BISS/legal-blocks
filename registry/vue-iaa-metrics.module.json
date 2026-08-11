@@ -1,0 +1,39 @@
+{
+  "id": "vue-iaa-metrics",
+  "name": "Agreement metrics",
+  "description": "Browse annotations and compute inter-annotator agreement. Calls the lawnotation-iaa service, which is compiled into the platform binary.",
+  "version": "1.0.2",
+  "kind": "ui",
+  "runtime": "web",
+  "entry": {
+    "package": "vue-iaa-metrics",
+    "component": "MetricsPage",
+    "style": "vue-iaa-metrics/style.css"
+  },
+  "host": "MetricsSource",
+  "services": ["lawnotation-iaa"],
+  "inputs": [
+    { "name": "task", "type": "annotated-task@1", "required": true }
+  ],
+  "outputs": [
+    { "name": "report", "type": "iaa-report@1" }
+  ],
+  "config": [
+    {
+      "key": "criterion",
+      "label": "Match criterion",
+      "type": "select",
+      "options": ["exact", "contained"],
+      "default": "exact",
+      "help": "How two spans must overlap to count as agreeing."
+    },
+    {
+      "key": "granularity",
+      "label": "Coverage granularity",
+      "type": "select",
+      "options": ["word", "char"],
+      "default": "word",
+      "help": "Unit used for the coverage agreement view."
+    }
+  ]
+}

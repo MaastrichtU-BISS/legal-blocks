@@ -1,0 +1,19 @@
+{
+  "id": "corpus-source",
+  "name": "Document folder",
+  "description": "Reads the .txt files shipped in the platform's corpus/ folder and makes them available to the rest of the pipeline. Stands in for the import package that does not exist yet \u2014 when it does, it becomes another module producing the same corpus@1 type, and nothing downstream changes.",
+  "version": "1.0.0",
+  "kind": "source",
+  "runtime": "web",
+  "entry": {
+    "package": "@legal-blocks/builtin",
+    "component": "CorpusSource"
+  },
+  "host": "Corpus",
+  "outputs": [
+    {
+      "name": "corpus",
+      "type": "corpus@1"
+    }
+  ]
+}

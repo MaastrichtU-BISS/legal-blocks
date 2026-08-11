@@ -1,0 +1,35 @@
+{
+  "id": "vue-legal-query-builder",
+  "name": "Search documents",
+  "description": "Query Rechtspraak or ECHR case law and hand the results to the rest of the pipeline. Needs the legal-docs API to be reachable.",
+  "version": "1.0.6",
+  "kind": "source",
+  "runtime": "web",
+  "entry": {
+    "package": "vue-legal-query-builder",
+    "component": "LegalDocsForm",
+    "style": "vue-legal-query-builder/style.css"
+  },
+  "host": "DocumentSearch",
+  "outputs": [
+    {
+      "name": "documents",
+      "type": "document-set@1"
+    }
+  ],
+  "config": [
+    {
+      "key": "title",
+      "label": "Form title",
+      "type": "text",
+      "default": "Find documents"
+    },
+    {
+      "key": "api_base_url",
+      "label": "legal-docs API base URL",
+      "type": "text",
+      "default": "",
+      "help": "Required. This module calls a remote API directly, so unlike the Go services it does not work offline."
+    }
+  ]
+}

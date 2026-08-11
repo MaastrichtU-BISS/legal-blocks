@@ -1,0 +1,27 @@
+{
+  "id": "vue-legal-docs-visualizer",
+  "name": "Explore documents",
+  "description": "Table and citation-graph views over a set of legal documents. Passes its input through, so it can sit anywhere in a chain.",
+  "version": "1.1.0",
+  "kind": "ui",
+  "runtime": "web",
+  "entry": {
+    "package": "vue-legal-docs-visualizer",
+    "component": "LegalDocVisualizer",
+    "style": "vue-legal-docs-visualizer/style.css"
+  },
+  "host": "DocumentPassthrough",
+  "inputs": [
+    {
+      "name": "documents",
+      "type": "document-set@1",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "documents",
+      "type": "document-set@1"
+    }
+  ]
+}
