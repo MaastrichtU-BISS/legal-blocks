@@ -1,0 +1,16 @@
+# Runtime state, created on first run.
+/data/
+
+# Editor and OS noise.
+/.vscode/
+.DS_Store
+
+/web/node_modules/
+
+# web/dist is deliberately NOT ignored: the Go binary embeds it, so committing
+# it is what lets someone clone this and run `go run ./cmd/legal-blocks compose`
+# with no Node installed at all. Rebuild it with `cd web && npm run build`.
+
+# Exported platforms and local builds.
+*.zip
+/legal-blocks
