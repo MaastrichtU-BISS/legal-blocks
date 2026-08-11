@@ -222,9 +222,10 @@ func (s *server) handleExport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 
 	if err := export.Write(w, export.Options{
-		Pipeline:  p,
-		Registry:  s.cfg.Registry,
-		CorpusDir: filepath.Join(s.cfg.Dir, "corpus"),
+		Pipeline:    p,
+		Registry:    s.cfg.Registry,
+		CorpusDir:   filepath.Join(s.cfg.Dir, "corpus"),
+		BinariesDir: filepath.Join(s.cfg.Dir, "binaries"),
 	}); err != nil {
 		// Headers are already sent, so the client sees a truncated zip. Log
 		// loudly; there is nothing useful left to say over the wire.

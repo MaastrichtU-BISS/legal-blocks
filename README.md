@@ -28,6 +28,12 @@ To rebuild the frontend after changing anything under `web/src`:
 cd web && npm install && npm run build
 ```
 
+And to make exports that run on Windows and Linux as well as your own machine:
+
+```bash
+./script/build-platforms.sh
+```
+
 The Go binary embeds `web/dist`, so a frontend change needs that build before
 `go run` picks it up. While working on the frontend, run the composer with
 `-no-open` and use `npm run dev` instead — it proxies `/api` to port 7788.
@@ -52,8 +58,7 @@ settings forms are all driven by these files.
   "host": "MetricsSource",
   "services": ["lawnotation-iaa"],
   "inputs":  [{ "name": "task", "type": "annotated-task@1", "required": true }],
-  "outputs": [{ "name": "report", "type": "iaa-report@1" }],
-  "config":  [{ "key": "criterion", "type": "select", "options": ["exact", "contained"] }]
+  "outputs": [{ "name": "report", "type": "iaa-report@1" }]
 }
 ```
 
@@ -98,14 +103,23 @@ contracts rather than modules — a second annotation module declaring
 
 ```
 my-platform/
-  platform          the same binary that built it, ~12 MB, everything inside
-  Start.command     macOS: double-click
-  Start.bat         Windows: double-click
-  pipeline.json     the only file that differs between exports
-  corpus/*.txt      the input documents
-  data/             created on first run — this is the persistence
-  README.txt        written for someone who has never used a terminal
+  platform-darwin-arm64        one binary per operating system, ~9 MB each,
+  platform-darwin-amd64        everything inside — frontend, services, all of it
+  platform-windows-amd64.exe
+  platform-linux-amd64
+  Start.command                macOS: double-click
+  Start.bat                    Windows: double-click
+  start.sh                     Linux
+  pipeline.json                the only file that differs between exports
+  corpus/*.txt                 the input documents
+  data/                        created on first run — this is the persistence
+  README.txt                   written for someone who has never used a terminal
 ```
+
+Each start script picks the binary matching the machine it is run on, and only
+ships when there is a binary it can actually launch — a zip with no Windows
+binary contains no `Start.bat`, rather than one that fails with "not
+recognized as an internal or external command".
 
 Nothing is compiled or bundled at export time. The frontend is prebuilt and
 identical in every export — it reads `pipeline.json` at startup and dynamically
@@ -152,10 +166,17 @@ Worth naming before anyone finds them in a demo.
   whole on each save, so two people annotating the same task from two browsers
   would overwrite each other. The fix is per-assignment storage keys; it is not
   worth doing before there is a login to attach it to.
-- **Exports are for the current platform only.** The export copies the running
-  binary, so exporting from a Mac produces a Mac platform. Cross-platform
-  exports need a CI matrix building the binary for each OS and the composer
-  embedding that set.
+- **Cross-platform exports need a build step first.** Run
+  `./script/build-platforms.sh` to cross-compile the platform binary for
+  macOS (both architectures), Windows and Linux into `binaries/`. The composer
+  ships whatever it finds there, so one zip runs everywhere — about 14 MB.
+  Skip it and an export carries only the binary that built it, runs on that
+  one operating system, and says so in its README rather than shipping start
+  scripts it cannot honour.
+
+  This works because the code is CGO-free. A future service needing a C
+  library would break cross-compilation and need a CI matrix building on each
+  operating system instead.
 - **Unsigned binaries.** macOS refuses to run anything downloaded from a
   browser that is not notarised — and it *kills the process with SIGKILL and
   no message* rather than warning, so a user who gets past the dialog on
@@ -216,6 +237,8 @@ web/src/composer/     the composer UI
 web/src/sources/      host implementations of each package's Source contract
 web/src/adapters.ts   conversions between port types
 corpus/*.txt          sample input documents
+binaries/             cross-compiled platform binaries (build-platforms.sh)
+script/               build helpers
 ```
 
 ## Dependencies

@@ -11,6 +11,10 @@
 # it is what lets someone clone this and run `go run ./cmd/legal-blocks compose`
 # with no Node installed at all. Rebuild it with `cd web && npm run build`.
 
+# Cross-compiled platform binaries. Build artifacts, ~36 MB; regenerate with
+# ./script/build-platforms.sh.
+/binaries/
+
 # Exported platforms and local builds.
 *.zip
 /legal-blocks

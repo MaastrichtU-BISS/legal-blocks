@@ -21,7 +21,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/manifest"
@@ -30,9 +32,86 @@ import (
 
 // Options describes one export.
 type Options struct {
-	Pipeline  *pipeline.Pipeline
-	Registry  *manifest.Registry
+	Pipeline *pipeline.Pipeline
+	Registry *manifest.Registry
+	// CorpusDir holds the input documents to ship.
 	CorpusDir string
+	// BinariesDir holds cross-compiled platform binaries, one per operating
+	// system, produced by script/build-platforms.sh. Whatever is found there
+	// is shipped, so an export made on one machine runs on a colleague's
+	// different one. When it is empty or missing, only the binary running this
+	// export is shipped and the export runs on this operating system alone.
+	BinariesDir string
+}
+
+// target is one operating system an export can run on.
+type target struct {
+	os   string
+	arch string
+	// name is the file name inside the zip.
+	name string
+	// path is where to read it from; empty means "the running binary".
+	path string
+}
+
+// binaryPattern matches the names build-platforms.sh produces.
+var binaryPattern = regexp.MustCompile(`^platform-([a-z0-9]+)-([a-z0-9]+)(\.exe)?$`)
+
+// targets lists the platform binaries to ship, newest-wins per os/arch.
+//
+// The running binary is always included as a fallback for its own os/arch, so
+// an export is never left with nothing to run — but a cross-compiled build for
+// the same pair is preferred, because those are stripped and smaller.
+func targets(binariesDir string) []target {
+	found := map[string]target{}
+
+	entries, err := os.ReadDir(binariesDir)
+	if err == nil {
+		for _, e := range entries {
+			m := binaryPattern.FindStringSubmatch(e.Name())
+			if e.IsDir() || m == nil {
+				continue
+			}
+			key := m[1] + "/" + m[2]
+			found[key] = target{
+				os:   m[1],
+				arch: m[2],
+				name: e.Name(),
+				path: filepath.Join(binariesDir, e.Name()),
+			}
+		}
+	}
+
+	selfKey := runtime.GOOS + "/" + runtime.GOARCH
+	if _, ok := found[selfKey]; !ok {
+		name := fmt.Sprintf("platform-%s-%s", runtime.GOOS, runtime.GOARCH)
+		if runtime.GOOS == "windows" {
+			name += ".exe"
+		}
+		found[selfKey] = target{os: runtime.GOOS, arch: runtime.GOARCH, name: name}
+	}
+
+	list := make([]target, 0, len(found))
+	for _, t := range found {
+		list = append(list, t)
+	}
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].os != list[j].os {
+			return list[i].os < list[j].os
+		}
+		return list[i].arch < list[j].arch
+	})
+	return list
+}
+
+// hasOS reports whether any shipped binary runs on the given operating system.
+func hasOS(ts []target, goos string) bool {
+	for _, t := range ts {
+		if t.os == goos {
+			return true
+		}
+	}
+	return false
 }
 
 // Write streams the platform zip to w.
@@ -47,66 +126,76 @@ func Write(w io.Writer, opts Options) error {
 		return err
 	}
 
-	// The binary running this export is the same one the exported platform
-	// runs. Copying it is what makes the result self-contained: the recipient
-	// needs no Go, no Node, no Docker, nothing.
-	if err := addSelf(zw); err != nil {
-		return err
+	// The platform binaries. Copying them is what makes the result
+	// self-contained: the recipient needs no Go, no Node, no Docker, nothing.
+	//
+	// The frontend bundle is not copied separately — it is already embedded in
+	// each binary, and shipping it twice would only create two copies that can
+	// disagree.
+	ts := targets(opts.BinariesDir)
+	for _, t := range ts {
+		if err := addBinary(zw, t); err != nil {
+			return err
+		}
 	}
 
-	// The frontend bundle is not copied separately: it is already embedded in
-	// the binary above. Shipping it twice would only create two copies that
-	// can disagree.
 	if err := addCorpus(zw, opts.CorpusDir); err != nil {
 		return err
 	}
 
-	if err := addFile(zw, "Start.command", []byte(startCommand), 0o755); err != nil {
-		return err
+	// A start script only ships when there is a binary it can actually launch.
+	// Shipping Start.bat next to a macOS binary is worse than shipping nothing
+	// — it looks like Windows is supported and fails with "not recognized as
+	// an internal or external command" on someone else's machine.
+	if hasOS(ts, "darwin") {
+		if err := addFile(zw, "Start.command", []byte(startCommand), 0o755); err != nil {
+			return err
+		}
 	}
-	if err := addFile(zw, "Start.bat", []byte(startBat), 0o644); err != nil {
-		return err
+	if hasOS(ts, "windows") {
+		if err := addFile(zw, "Start.bat", []byte(startBat), 0o644); err != nil {
+			return err
+		}
 	}
-	if err := addFile(zw, "README.txt", []byte(readme(opts)), 0o644); err != nil {
+	if hasOS(ts, "linux") {
+		if err := addFile(zw, "start.sh", []byte(startSh), 0o755); err != nil {
+			return err
+		}
+	}
+
+	if err := addFile(zw, "README.txt", []byte(readme(opts, ts)), 0o644); err != nil {
 		return err
 	}
 
 	return zw.Close()
 }
 
-// binaryName is what the platform executable is called inside the zip.
-func binaryName() string {
-	if runtime.GOOS == "windows" {
-		return "platform.exe"
+// addBinary copies one platform binary into the zip. A target with no path is
+// the currently running executable.
+func addBinary(zw *zip.Writer, t target) error {
+	path := t.path
+	if path == "" {
+		self, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("locating this binary: %w", err)
+		}
+		path = self
 	}
-	return "platform"
-}
 
-// addSelf copies the currently running executable into the zip.
-//
-// Only the current platform's binary is exported. Cross-platform exports mean
-// shipping binaries built for other systems, which this process does not have
-// — that is a CI matrix producing a set of binaries the composer embeds, and
-// it is deliberately out of scope here.
-func addSelf(zw *zip.Writer) error {
-	self, err := os.Executable()
+	f, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("locating this binary: %w", err)
-	}
-	f, err := os.Open(self)
-	if err != nil {
-		return fmt.Errorf("opening this binary: %w", err)
+		return fmt.Errorf("opening %s: %w", t.name, err)
 	}
 	defer f.Close()
 
-	hdr := &zip.FileHeader{Name: binaryName(), Method: zip.Deflate}
+	hdr := &zip.FileHeader{Name: t.name, Method: zip.Deflate}
 	hdr.SetMode(0o755)
 	out, err := zw.CreateHeader(hdr)
 	if err != nil {
-		return fmt.Errorf("adding binary: %w", err)
+		return fmt.Errorf("adding %s: %w", t.name, err)
 	}
 	if _, err := io.Copy(out, f); err != nil {
-		return fmt.Errorf("copying binary: %w", err)
+		return fmt.Errorf("copying %s: %w", t.name, err)
 	}
 	return nil
 }
@@ -185,15 +274,58 @@ const startCommand = `#!/bin/sh
 # Double-click this file to start the platform.
 cd "$(dirname "$0")" || exit 1
 xattr -dr com.apple.quarantine . 2>/dev/null
-chmod +x ./platform 2>/dev/null
-./platform run
+
+# Apple Silicon Macs run the arm64 build; Intel Macs run the amd64 one. If the
+# exact match is missing, any macOS build will do — an amd64 binary still runs
+# on Apple Silicon through Rosetta.
+case "$(uname -m)" in
+  arm64) BIN=./platform-darwin-arm64 ;;
+  *)     BIN=./platform-darwin-amd64 ;;
+esac
+[ -f "$BIN" ] || BIN=$(ls ./platform-darwin-* 2>/dev/null | head -1)
+
+if [ ! -f "$BIN" ]; then
+  echo "This folder has no macOS version of the platform in it."
+  echo "Ask whoever sent it for a version built for macOS."
+  exit 1
+fi
+
+chmod +x "$BIN" 2>/dev/null
+"$BIN" run
 `
 
 const startBat = `@echo off
 rem Double-click this file to start the platform.
 cd /d "%~dp0"
-platform.exe run
+
+if not exist platform-windows-amd64.exe (
+  echo This folder has no Windows version of the platform in it.
+  echo Ask whoever sent it for a version built for Windows.
+  pause
+  exit /b 1
+)
+
+platform-windows-amd64.exe run
 pause
+`
+
+const startSh = `#!/bin/sh
+# Run this file to start the platform:  ./start.sh
+cd "$(dirname "$0")" || exit 1
+
+case "$(uname -m)" in
+  aarch64|arm64) BIN=./platform-linux-arm64 ;;
+  *)             BIN=./platform-linux-amd64 ;;
+esac
+[ -f "$BIN" ] || BIN=$(ls ./platform-linux-* 2>/dev/null | head -1)
+
+if [ ! -f "$BIN" ]; then
+  echo "This folder has no Linux version of the platform in it."
+  exit 1
+fi
+
+chmod +x "$BIN" 2>/dev/null
+"$BIN" run
 `
 
 const corpusReadme = `Put the documents you want to work on in this folder, as .txt files.
@@ -205,7 +337,50 @@ Files whose name starts with an underscore are ignored, so you can set a
 document aside without deleting it. That is why this file is called _readme.
 `
 
-func readme(opts Options) string {
+// osLabel names an operating system the way a non-technical reader does.
+func osLabel(goos string) string {
+	switch goos {
+	case "darwin":
+		return "macOS"
+	case "windows":
+		return "Windows"
+	case "linux":
+		return "Linux"
+	default:
+		return goos
+	}
+}
+
+// startInstructions describes only the systems this export can actually run
+// on, so nobody is told to double-click a file that is not in the folder.
+func startInstructions(ts []target) string {
+	var b strings.Builder
+	if hasOS(ts, "windows") {
+		b.WriteString("  Windows : double-click \"Start.bat\"\n")
+	}
+	if hasOS(ts, "darwin") {
+		b.WriteString("  macOS   : double-click \"Start.command\"  (read FIRST TIME ON macOS below)\n")
+	}
+	if hasOS(ts, "linux") {
+		b.WriteString("  Linux   : run  ./start.sh\n")
+	}
+
+	var systems []string
+	seen := map[string]bool{}
+	for _, t := range ts {
+		if !seen[t.os] {
+			seen[t.os] = true
+			systems = append(systems, osLabel(t.os))
+		}
+	}
+	fmt.Fprintf(&b, "\n  This copy runs on: %s.\n", strings.Join(systems, ", "))
+	if len(systems) == 1 {
+		b.WriteString("  It will not run on anything else — ask for a copy built for your\n  system if you need one.\n")
+	}
+	return b.String()
+}
+
+func readme(opts Options, ts []target) string {
 	var steps strings.Builder
 	for i, id := range opts.Pipeline.Order() {
 		for _, n := range opts.Pipeline.Nodes {
@@ -234,11 +409,19 @@ WHAT THIS IS
 
 HOW TO START IT
 
-  Windows : double-click "Start.bat"
-  macOS   : double-click "Start.command"  (but read the next section first)
-
+%s
   A window opens and your browser goes to the platform. Leave that window
   open while you work; closing it stops the platform.
+
+  The folder contains one program file per operating system. You only need
+  the one for yours; the others are harmless and can be deleted.
+
+FIRST TIME ON WINDOWS
+
+  Windows may show a blue "Windows protected your PC" box. Click "More info",
+  then "Run anyway". This appears because the program is not registered with
+  Microsoft under a paid certificate, not because anything is wrong with it.
+  You only do this once.
 
 FIRST TIME ON macOS
 
@@ -275,5 +458,5 @@ YOUR WORK
 
   To back up your work, copy the "data" folder. To send it to someone, zip it.
   To start over, delete it — it will be recreated empty.
-`, opts.Pipeline.Name, strings.Repeat("=", len(opts.Pipeline.Name)), steps.String())
+`, opts.Pipeline.Name, strings.Repeat("=", len(opts.Pipeline.Name)), steps.String(), startInstructions(ts))
 }
