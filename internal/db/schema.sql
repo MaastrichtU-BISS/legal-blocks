@@ -10,13 +10,13 @@
 --     ├── tasks
 --     └── assignments ──┬── span_annotations ──── span_relations
 --                       ├── document_annotations
---                       └── document_relations ── documents
+--                       └── document_relations (assignment ─> assignment)
 --
 -- Span-level and document-level work are separate tables rather than one table
 -- with a level column. They genuinely differ: a span has an extent and text, a
--- document tag has neither, and their relations differ too — a span relation is
--- directed between two spans, a document relation is an undirected claim about
--- another document, held only by the side that made it.
+-- document tag has neither. Their relations differ in what they join — spans to
+-- spans, assignments to assignments — because a claim about a whole document is
+-- one annotator's reading of it, not a fact about the document itself.
 --
 -- Column names follow the packages rather than Lawnotation wherever the two
 -- disagree, because the packages are what an exported platform actually runs:
@@ -160,16 +160,16 @@ CREATE TABLE span_annotations (
 -- that owns them; as rows, "everything pointing at this span" becomes a query
 -- rather than a scan of every annotation in the task.
 CREATE TABLE span_relations (
-    id         INTEGER PRIMARY KEY,
-    from_id    INTEGER NOT NULL REFERENCES span_annotations (id) ON DELETE CASCADE,
-    to_id      INTEGER NOT NULL REFERENCES span_annotations (id) ON DELETE CASCADE,
-    direction  TEXT NOT NULL DEFAULT 'bi'
+    id           INTEGER PRIMARY KEY,
+    from_span_id INTEGER NOT NULL REFERENCES span_annotations (id) ON DELETE CASCADE,
+    to_span_id   INTEGER NOT NULL REFERENCES span_annotations (id) ON DELETE CASCADE,
+    direction    TEXT NOT NULL DEFAULT 'bi'
         CHECK (direction IN ('bi', 'left', 'right')),
     -- JSON array of relation labels ("Is a", "Part of", ...). Free-standing
     -- strings with no identity of their own; a join table would be ceremony.
-    labels     TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    CHECK (from_id <> to_id)
+    labels       TEXT NOT NULL DEFAULT '[]',
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (from_span_id <> to_span_id)
 );
 
 -- ---------------------------------------------------------------------------
@@ -190,20 +190,28 @@ CREATE TABLE document_annotations (
 
 -- "the document I am annotating relates to that other document".
 --
--- It hangs off the assignment, not off a document_annotation, because the
--- annotation kit records it that way: the claim belongs to the annotator who
--- made it, and can be made whether or not either document carries any tag.
--- It is stored only on the side that created it — the reverse view is computed
--- and never written, so every relation exists exactly once and counting them
--- needs no de-duplication. That asymmetry is also why there is no direction
--- column here, unlike span_relations.
+-- Between two assignments rather than two documents: an assignment is one
+-- annotator's reading of one document, so the relation is a claim that reading
+-- makes, not a fact about the documents themselves. Two annotators can link
+-- the same pair of documents differently, and each keeps their own.
+--
+-- The annotation kit names its target by document, so the runtime resolves
+-- that name to the same annotator's assignment for it within the same task.
+-- Nothing here enforces that both sides belong to one task — SQLite cannot
+-- express it as a constraint, so it stays the runtime's job.
+--
+-- Stored only on the side that created it: the reverse view is computed and
+-- never written, so every relation exists exactly once and counting them needs
+-- no de-duplication. That is also why there is no direction column, unlike
+-- span_relations — from and to already carry the only direction there is.
 CREATE TABLE document_relations (
-    id             INTEGER PRIMARY KEY,
-    assignment_id  INTEGER NOT NULL REFERENCES assignments (id) ON DELETE CASCADE,
-    to_document_id INTEGER NOT NULL REFERENCES documents (id) ON DELETE CASCADE,
-    labels         TEXT NOT NULL DEFAULT '[]',
-    created_at     TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (assignment_id, to_document_id)
+    id                 INTEGER PRIMARY KEY,
+    from_assignment_id INTEGER NOT NULL REFERENCES assignments (id) ON DELETE CASCADE,
+    to_assignment_id   INTEGER NOT NULL REFERENCES assignments (id) ON DELETE CASCADE,
+    labels             TEXT NOT NULL DEFAULT '[]',
+    created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (from_assignment_id, to_assignment_id),
+    CHECK (from_assignment_id <> to_assignment_id)
 );
 
 -- ---------------------------------------------------------------------------
@@ -220,6 +228,7 @@ CREATE INDEX idx_span_annotations_assignment ON span_annotations (assignment_id)
 CREATE INDEX idx_span_annotations_label ON span_annotations (label);
 CREATE INDEX idx_document_annotations_assignment ON document_annotations (assignment_id);
 CREATE INDEX idx_documents_dataset ON documents (dataset_id);
-CREATE INDEX idx_span_relations_from ON span_relations (from_id);
-CREATE INDEX idx_span_relations_to ON span_relations (to_id);
-CREATE INDEX idx_document_relations_target ON document_relations (to_document_id);
+CREATE INDEX idx_span_relations_from ON span_relations (from_span_id);
+CREATE INDEX idx_span_relations_to ON span_relations (to_span_id);
+CREATE INDEX idx_document_relations_from ON document_relations (from_assignment_id);
+CREATE INDEX idx_document_relations_to ON document_relations (to_assignment_id);
