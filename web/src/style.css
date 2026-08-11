@@ -1,0 +1,87 @@
+/* Deliberately minimal: enough structure to read, nothing that competes with
+   the modules' own styling. This is a proof of concept for the wiring, not a
+   design system. */
+
+:root {
+  --border: #d4d4d8;
+  --muted: #71717a;
+  --bg-soft: #fafafa;
+  --accent: #2563eb;
+  --danger: #b91c1c;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  color: #18181b;
+
+  /* The modules are all light-themed, so the shell commits to light too
+     rather than leaving half the page following the OS and half not. */
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+}
+
+button {
+  font: inherit;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button.primary:hover:not(:disabled) {
+  color: #fff;
+  opacity: 0.9;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  width: 100%;
+  background: #fff;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+  white-space: pre-wrap;
+}
+
+.pad {
+  padding: 1rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
