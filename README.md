@@ -156,9 +156,20 @@ Worth naming before anyone finds them in a demo.
   binary, so exporting from a Mac produces a Mac platform. Cross-platform
   exports need a CI matrix building the binary for each OS and the composer
   embedding that set.
-- **Unsigned binaries.** macOS Gatekeeper will warn on first launch;
-  `README.txt` tells the recipient to right-click → Open. Getting rid of that
-  needs an Apple Developer ID and notarisation.
+- **Unsigned binaries.** macOS refuses to run anything downloaded from a
+  browser that is not notarised — and it *kills the process with SIGKILL and
+  no message* rather than warning, so a user who gets past the dialog on
+  `Start.command` would otherwise watch the platform die silently. `Start.command`
+  therefore clears the quarantine flag on the extracted folder before
+  launching, which is what Finder's "Open Anyway" does and needs no password.
+  The recipient still meets Gatekeeper once; `README.txt` walks them through
+  starting from the Terminal, which avoids the dialog entirely.
+
+  Note that the old right-click → Open workaround no longer exists on macOS
+  Sequoia — the only routes are the Terminal, or System Settings → Privacy &
+  Security → Open Anyway. Removing the friction properly needs an Apple
+  Developer ID ($99/yr) and notarisation, and Windows will want its own
+  code-signing certificate.
 - **Exports carry unused modules.** A few MB of JavaScript for modules the
   pipeline does not use. Trimming it means per-export builds, i.e. a build
   service rather than a zip writer.

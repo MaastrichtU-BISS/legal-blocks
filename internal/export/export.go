@@ -169,9 +169,22 @@ func Filename(name string) string {
 	return slug + ".zip"
 }
 
+// startCommand clears the quarantine flag before launching.
+//
+// macOS tags anything that arrives from a browser, and kills tagged
+// executables outright — with SIGKILL and no message — unless they are signed
+// by a paid Apple developer account. That applies to the platform binary
+// however it is launched, so without this the user would get past Gatekeeper
+// on this script only to have the program die silently.
+//
+// Clearing the tag on our own extracted files is exactly what Finder's "Open
+// Anyway" button does, needs no password, and covers the whole folder so a
+// second launch is prompt-free too. It is a workaround for not being
+// notarised, not a substitute for it.
 const startCommand = `#!/bin/sh
 # Double-click this file to start the platform.
 cd "$(dirname "$0")" || exit 1
+xattr -dr com.apple.quarantine . 2>/dev/null
 chmod +x ./platform 2>/dev/null
 ./platform run
 `
@@ -221,15 +234,35 @@ WHAT THIS IS
 
 HOW TO START IT
 
-  macOS   : double-click "Start.command"
   Windows : double-click "Start.bat"
+  macOS   : double-click "Start.command"  (but read the next section first)
 
   A window opens and your browser goes to the platform. Leave that window
   open while you work; closing it stops the platform.
 
-  The first time on macOS, you may see "cannot be opened because it is from an
-  unidentified developer". Right-click "Start.command", choose Open, then
-  click Open in the dialog. You only need to do this once.
+FIRST TIME ON macOS
+
+  macOS will refuse to open the file and say it "could not verify" it is free
+  of malware. Nothing is wrong with the file. macOS says this about every
+  program that is not registered with Apple under a paid developer account,
+  which this one is not yet.
+
+  The easiest way past it is to start the platform from the Terminal once:
+
+    1. Open Terminal (press Cmd+Space, type Terminal, press Enter).
+    2. Type  cd  followed by a space. Do not press Enter yet.
+    3. Drag this folder into the Terminal window. The path appears.
+    4. Press Enter.
+    5. Type  ./Start.command  and press Enter.
+
+  No warning appears this way, and afterwards double-clicking
+  "Start.command" works normally.
+
+  If you would rather not use the Terminal: open System Settings >
+  Privacy & Security, scroll to the message about "Start.command", click
+  "Open Anyway", then double-click "Start.command" again.
+
+  Either way, you only do this once.
 
 YOUR DOCUMENTS
 
