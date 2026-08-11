@@ -75,18 +75,19 @@ function allAnnotations(task: TaskData): RichAnnotation[] {
   return out;
 }
 
-export function createMetricsSource(task: TaskData, config: Record<string, unknown>): MetricsSource {
-  // The node's configured criterion/granularity are the starting point; the
-  // package lets the user change them per computation, and passes the current
-  // values back in through IaaParams.
-  const defaults: IaaParams = {
-    criterion: (config.criterion as IaaParams["criterion"]) ?? "exact",
-    granularity: (config.granularity as IaaParams["granularity"]) ?? "word",
-  };
-
-  const params = (p?: IaaParams) => ({
-    criterion: p?.criterion ?? defaults.criterion,
-    granularity: p?.granularity ?? defaults.granularity,
+/**
+ * Builds a source over an annotated task.
+ *
+ * Criterion and granularity are deliberately not parameters here. They are
+ * properties of a question a user asks — "would these annotators agree if I
+ * accepted contained matches?" — so they belong to the request, not to the
+ * platform. The package already puts them in front of the user and passes the
+ * current values in with every call; this just forwards them.
+ */
+export function createMetricsSource(task: TaskData): MetricsSource {
+  const params = (p: IaaParams) => ({
+    criterion: p.criterion,
+    granularity: p.granularity,
   });
 
   return {

@@ -72,7 +72,7 @@ const bindings: Record<string, Binding> = {
     async props(ctx) {
       const task = (await ctx.input("task")) as Awaited<ReturnType<typeof loadTask>>;
       return {
-        source: createMetricsSource(task, ctx.config),
+        source: createMetricsSource(task),
         reportFilename: `${task.name || "iaa"}-report.zip`,
       };
     },
