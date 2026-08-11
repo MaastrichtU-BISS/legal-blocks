@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/export"
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/pipeline"
-	"github.com/MaastrichtU-BISS/legal-blocks/internal/store"
 )
 
 // maxBodyBytes caps request bodies. Documents can be long, so this is generous
@@ -26,8 +24,7 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/registry", s.handleRegistry)
 	mux.HandleFunc("/api/corpus", s.handleCorpus)
 	mux.HandleFunc("/api/pipeline", s.handlePipeline)
-	mux.HandleFunc("/api/store", s.handleStoreKeys)
-	mux.HandleFunc("/api/store/", s.handleStoreItem)
+	s.dataRoutes(mux)
 
 	if s.cfg.Mode == ModeCompose {
 		mux.HandleFunc("/api/validate", s.handleValidate)
@@ -123,70 +120,6 @@ func (s *server) handleCorpus(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Slice(docs, func(i, j int) bool { return docs[i].Name < docs[j].Name })
 	writeJSON(w, http.StatusOK, docs)
-}
-
-func (s *server) handleStoreKeys(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "use GET")
-		return
-	}
-	keys, err := s.store.Keys()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "%v", err)
-		return
-	}
-	if keys == nil {
-		keys = []string{}
-	}
-	writeJSON(w, http.StatusOK, keys)
-}
-
-// handleStoreItem is the whole persistence API: GET, PUT and DELETE one JSON
-// document. Every module's data-access contract in the runtime is implemented
-// on top of these three calls.
-func (s *server) handleStoreItem(w http.ResponseWriter, r *http.Request) {
-	key := strings.TrimPrefix(r.URL.Path, "/api/store/")
-	if key == "" {
-		writeError(w, http.StatusBadRequest, "missing key")
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		raw, err := s.store.Get(key)
-		if errors.Is(err, store.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "no value for %q", key)
-			return
-		}
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "%v", err)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(raw)
-
-	case http.MethodPut:
-		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "reading body: %v", err)
-			return
-		}
-		if err := s.store.Put(key, body); err != nil {
-			writeError(w, http.StatusBadRequest, "%v", err)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-
-	case http.MethodDelete:
-		if err := s.store.Delete(key); err != nil {
-			writeError(w, http.StatusBadRequest, "%v", err)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-
-	default:
-		writeError(w, http.StatusMethodNotAllowed, "use GET, PUT or DELETE")
-	}
 }
 
 // handleValidate type-checks a draft pipeline. The composer prevents illegal

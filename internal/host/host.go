@@ -24,10 +24,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/MaastrichtU-BISS/legal-blocks/internal/db"
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/manifest"
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/pipeline"
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/service"
-	"github.com/MaastrichtU-BISS/legal-blocks/internal/store"
 )
 
 // Mode selects which half of the product this process is.
@@ -60,7 +60,7 @@ type Config struct {
 
 type server struct {
 	cfg      Config
-	store    *store.FileStore
+	db       *db.DB
 	pipeline *pipeline.Pipeline
 }
 
@@ -70,16 +70,20 @@ func Run(cfg Config) error {
 		cfg.Dir = "."
 	}
 
-	st, err := store.NewFileStore(filepath.Join(cfg.Dir, "data"))
+	if err := os.MkdirAll(filepath.Join(cfg.Dir, "data"), 0o755); err != nil {
+		return fmt.Errorf("creating data directory: %w", err)
+	}
+	database, err := db.Open(filepath.Join(cfg.Dir, "data", "platform.db"))
 	if err != nil {
 		return err
 	}
-	s := &server{cfg: cfg, store: st}
+	defer database.Close()
+	s := &server{cfg: cfg, db: database}
 
 	mux := http.NewServeMux()
 
 	// A pipeline is required to run a platform, and optional while composing
-	// one — the composer holds its draft in the store until it is exported.
+	// one — the composer keeps its draft in the browser until it is exported.
 	if cfg.Mode == ModeRun {
 		p, err := s.loadPipeline()
 		if err != nil {
