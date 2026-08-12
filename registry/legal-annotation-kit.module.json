@@ -1,7 +1,7 @@
 {
   "id": "legal-annotation-kit",
   "name": "Annotate",
-  "description": "Span and document-level annotation. Each annotator works through their own queue of assigned documents.",
+  "description": "Span and document-level annotation. Works with or without storage: with it, annotators work through durable assigned queues; without it, one pass over whatever the previous step produced, kept in the browser.",
   "version": "1.0.0",
   "kind": "ui",
   "runtime": "web",
@@ -11,6 +11,10 @@
     "style": "legal-annotation-kit/style.css"
   },
   "host": "AnnotationSource",
+  "modes": [
+    "ephemeral",
+    "persistent"
+  ],
   "inputs": [
     {
       "name": "corpus",
@@ -29,14 +33,15 @@
       "key": "task_name",
       "label": "Task name",
       "type": "text",
-      "default": "Annotation task"
+      "default": "Annotation task",
+      "help": "Describes one task. Belongs to the composer only until there is a runtime screen for creating tasks; then it becomes a session-only setting."
     },
     {
       "key": "labels",
       "label": "Labels",
       "type": "labelset",
       "default": "Actor, Act, Precondition, Postcondition",
-      "help": "Comma-separated. Colours are assigned automatically."
+      "help": "Comma-separated. Colours are assigned automatically. Belongs to the composer only until there is a runtime screen for creating labelsets."
     },
     {
       "key": "annotation_level",

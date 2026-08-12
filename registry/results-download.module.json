@@ -1,0 +1,17 @@
+{
+  "id": "results-download",
+  "name": "Download results",
+  "description": "Saves the annotated task as a JSON file. The way work leaves a platform that stores nothing — with storage, the data is already in the database and this is unnecessary.",
+  "version": "1.0.0",
+  "kind": "ui",
+  "runtime": "web",
+  "entry": {
+    "package": "@legal-blocks/builtin",
+    "component": "ResultsDownload"
+  },
+  "host": "ResultsDownload",
+  "modes": ["ephemeral"],
+  "inputs": [
+    { "name": "task", "type": "annotated-task@1", "required": true }
+  ]
+}

@@ -11,6 +11,10 @@
     "style": "vue-legal-query-builder/style.css"
   },
   "host": "DocumentSearch",
+  "modes": [
+    "ephemeral",
+    "persistent"
+  ],
   "outputs": [
     {
       "name": "documents",

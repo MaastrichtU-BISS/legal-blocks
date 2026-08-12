@@ -11,6 +11,10 @@
     "style": "vue-legal-docs-visualizer/style.css"
   },
   "host": "DocumentPassthrough",
+  "modes": [
+    "ephemeral",
+    "persistent"
+  ],
   "inputs": [
     {
       "name": "documents",

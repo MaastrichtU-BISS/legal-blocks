@@ -1,7 +1,7 @@
 {
   "id": "vue-iaa-metrics",
   "name": "Agreement metrics",
-  "description": "Browse annotations and compute inter-annotator agreement. Match criterion and coverage granularity are chosen by the user at the moment they compute, not fixed when the platform is composed.",
+  "description": "Browse annotations and compute inter-annotator agreement. Match criterion and coverage granularity are chosen by the user at the moment they compute, not fixed when the platform is composed. Reports are produced on demand rather than flowing onward, so this passes its task through unchanged.",
   "version": "1.0.2",
   "kind": "ui",
   "runtime": "web",
@@ -11,11 +11,24 @@
     "style": "vue-iaa-metrics/style.css"
   },
   "host": "MetricsSource",
-  "services": ["lawnotation-iaa"],
+  "modes": [
+    "ephemeral",
+    "persistent"
+  ],
+  "services": [
+    "lawnotation-iaa"
+  ],
   "inputs": [
-    { "name": "task", "type": "annotated-task@1", "required": true }
+    {
+      "name": "task",
+      "type": "annotated-task@1",
+      "required": true
+    }
   ],
   "outputs": [
-    { "name": "report", "type": "iaa-report@1" }
+    {
+      "name": "task",
+      "type": "annotated-task@1"
+    }
   ]
 }
