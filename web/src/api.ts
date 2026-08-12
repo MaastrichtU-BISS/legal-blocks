@@ -231,6 +231,32 @@ export async function validatePipeline(p: Pipeline): Promise<{ valid: boolean; e
   return post("/api/validate", p, "validating pipeline");
 }
 
+/**
+ * Hands the draft to the composer's own server before previewing it, so any
+ * access token it carries reaches the proxy.
+ *
+ * The token goes from the composer's form to the server and stops there: it is
+ * held in memory, never written, and never read back. Preview then behaves
+ * exactly like the exported platform, where the token comes from
+ * credentials.json instead.
+ */
+export async function preparePreview(p: Pipeline): Promise<void> {
+  const res = await fetch("/api/preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(p),
+  });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      detail = ((await res.json()) as { error?: string }).error ?? detail;
+    } catch {
+      // Keep the status text.
+    }
+    throw new Error(`preparing preview: ${detail}`);
+  }
+}
+
 /** Asks the host to build the platform zip and hands it to the browser. */
 export async function exportPipeline(p: Pipeline): Promise<void> {
   const res = await fetch("/api/export", {

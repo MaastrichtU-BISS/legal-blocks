@@ -45,6 +45,16 @@ function set(current: Record<string, unknown>, key: string, value: unknown) {
     ></textarea>
 
     <input
+      v-else-if="field.type === 'secret'"
+      :id="field.key"
+      type="password"
+      autocomplete="off"
+      spellcheck="false"
+      :value="String(modelValue[field.key] ?? '')"
+      @input="set(modelValue, field.key, ($event.target as HTMLInputElement).value)"
+    />
+
+    <input
       v-else
       :id="field.key"
       type="text"
@@ -52,6 +62,11 @@ function set(current: Record<string, unknown>, key: string, value: unknown) {
       @input="set(modelValue, field.key, ($event.target as HTMLInputElement).value)"
     />
 
+    <p v-if="field.link" class="help">
+      <a :href="field.link" target="_blank" rel="noreferrer noopener">
+        {{ field.linkText || "Where to get this" }} ↗
+      </a>
+    </p>
     <p v-if="field.help" class="muted help">{{ field.help }}</p>
   </div>
 </template>
@@ -70,5 +85,10 @@ label {
 .help {
   margin: 0.25rem 0 0;
   font-size: 0.9em;
+  line-height: 1.45;
+}
+
+.help a {
+  color: var(--accent);
 }
 </style>

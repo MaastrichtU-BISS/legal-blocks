@@ -22,18 +22,29 @@ export interface Port {
 export interface ConfigField {
   key: string;
   label: string;
-  type: "text" | "number" | "select" | "labelset";
+  type: "text" | "number" | "select" | "labelset" | "secret";
   default?: unknown;
   options?: string[];
   help?: string;
   /** Modes this setting applies in. Absent means all of them. */
   modes?: Mode[];
+  /** Where the value is obtained — an account page for a token, say. */
+  link?: string;
+  linkText?: string;
 }
 
 export interface Entry {
   package: string;
   component: string;
   style?: string;
+}
+
+/** An outside API a module calls, forwarded by the host so the token stays server-side. */
+export interface Proxy {
+  id: string;
+  baseUrlKey: string;
+  tokenKey?: string;
+  envVar?: string;
 }
 
 export interface Manifest {
@@ -50,6 +61,7 @@ export interface Manifest {
   outputs?: Port[];
   host?: string;
   services?: string[];
+  proxy?: Proxy;
   config?: ConfigField[];
   requiredRole?: string;
 }

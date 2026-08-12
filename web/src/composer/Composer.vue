@@ -10,7 +10,7 @@
 import { computed, ref, watch } from "vue";
 import ConfigForm from "./ConfigForm.vue";
 import Runtime from "../runtime/Runtime.vue";
-import { exportPipeline, validatePipeline } from "../api";
+import { exportPipeline, preparePreview, validatePipeline } from "../api";
 import type { Manifest, Mode, Node, Pipeline, Registry } from "../types";
 import { canConnect, configWithDefaults, fieldAppliesIn, storageMode, supportsMode } from "../types";
 
@@ -175,6 +175,14 @@ async function preview() {
   const result = await validatePipeline(pipeline.value);
   if (!result.valid) {
     problem.value = result.error ?? "This pipeline is not valid.";
+    return;
+  }
+  try {
+    // Preview runs against the real services, so the server needs whatever
+    // access tokens this draft carries before the first request goes out.
+    await preparePreview(pipeline.value);
+  } catch (e) {
+    problem.value = e instanceof Error ? e.message : String(e);
     return;
   }
   previewing.value = true;

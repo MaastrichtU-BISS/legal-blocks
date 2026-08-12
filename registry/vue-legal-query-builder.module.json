@@ -1,7 +1,7 @@
 {
   "id": "vue-legal-query-builder",
   "name": "Search documents",
-  "description": "Query Rechtspraak or ECHR case law and hand the results to the rest of the pipeline. Needs the legal-docs API to be reachable.",
+  "description": "Search Rechtspraak and ECHR case law. Uses the hosted Case Law Explorer service, which needs an access token you create yourself \u2014 the platform keeps it on the server and never shows it to the people using it.",
   "version": "1.0.6",
   "kind": "source",
   "runtime": "web",
@@ -29,11 +29,26 @@
       "default": "Find documents"
     },
     {
-      "key": "api_base_url",
-      "label": "legal-docs API base URL",
-      "type": "text",
+      "key": "api_token",
+      "label": "Case Law Explorer access token",
+      "type": "secret",
       "default": "",
-      "help": "Required. This module calls a remote API directly, so unlike the Go services it does not work offline."
+      "help": "Required. Sign in, generate a key, and paste it here. It is written to the exported platform's credentials.json rather than into the pipeline, and every request is made by the platform itself \u2014 so the people using it never see the token. Anyone holding the exported folder does, so pass that folder on as carefully as the token itself. A deployment can leave this blank and set CITATIONS_API_KEY instead.",
+      "link": "https://api.caselawexplorer.tech/login.html?next=/account.html",
+      "linkText": "Create a token"
+    },
+    {
+      "key": "api_base_url",
+      "label": "Service address",
+      "type": "text",
+      "default": "https://api.caselawexplorer.tech/api",
+      "help": "The hosted service. Change this only to point at your own deployment."
     }
-  ]
+  ],
+  "proxy": {
+    "id": "legal-docs",
+    "baseUrlKey": "api_base_url",
+    "tokenKey": "api_token",
+    "envVar": "CITATIONS_API_KEY"
+  }
 }
