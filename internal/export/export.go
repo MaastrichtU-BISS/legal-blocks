@@ -337,6 +337,31 @@ Files whose name starts with an underscore are ignored, so you can set a
 document aside without deleting it. That is why this file is called _readme.
 `
 
+// storageSection tells the recipient where their work lives, which differs
+// completely between the two kinds of platform and is the thing they most need
+// to know before they start typing into one.
+func storageSection(mode manifest.Mode) string {
+	if mode == manifest.ModeEphemeral {
+		return `YOUR WORK
+
+  This platform does not save anything on your computer beyond your browser.
+  Work stays in the browser you did it in: it survives reloading the page and
+  restarting the platform, but it is lost if you clear your browsing data, and
+  it is not visible in another browser or to anyone else.
+
+  Use the download step to save your results before you finish.
+`
+	}
+	return `YOUR WORK
+
+  Everything you do is saved in the "data" folder as you go, so closing the
+  browser or refreshing the page does not lose anything.
+
+  To back up your work, copy the "data" folder. To send it to someone, zip it.
+  To start over, delete it — it will be recreated empty.
+`
+}
+
 // osLabel names an operating system the way a non-technical reader does.
 func osLabel(goos string) string {
 	switch goos {
@@ -451,12 +476,6 @@ YOUR DOCUMENTS
 
   Put .txt files in the "corpus" folder. Reload the page to pick up changes.
 
-YOUR WORK
-
-  Everything you do is saved in the "data" folder as you go, so closing the
-  browser or refreshing the page does not lose anything.
-
-  To back up your work, copy the "data" folder. To send it to someone, zip it.
-  To start over, delete it — it will be recreated empty.
-`, opts.Pipeline.Name, strings.Repeat("=", len(opts.Pipeline.Name)), steps.String(), startInstructions(ts))
+%s`, opts.Pipeline.Name, strings.Repeat("=", len(opts.Pipeline.Name)), steps.String(),
+		startInstructions(ts), storageSection(opts.Pipeline.StorageMode()))
 }

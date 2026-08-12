@@ -70,15 +70,7 @@ func Run(cfg Config) error {
 		cfg.Dir = "."
 	}
 
-	if err := os.MkdirAll(filepath.Join(cfg.Dir, "data"), 0o755); err != nil {
-		return fmt.Errorf("creating data directory: %w", err)
-	}
-	database, err := db.Open(filepath.Join(cfg.Dir, "data", "platform.db"))
-	if err != nil {
-		return err
-	}
-	defer database.Close()
-	s := &server{cfg: cfg, db: database}
+	s := &server{cfg: cfg}
 
 	mux := http.NewServeMux()
 
@@ -93,13 +85,31 @@ func Run(cfg Config) error {
 		if err := cfg.Services.Mount(mux, p.ServiceIDs(cfg.Registry)); err != nil {
 			return err
 		}
-		log.Printf("pipeline %q: %d steps", p.Name, len(p.Nodes))
+		log.Printf("pipeline %q: %d steps, %s", p.Name, len(p.Nodes), p.StorageMode())
 	} else {
 		// The composer previews any pipeline the user builds, so every
 		// service in the build has to be reachable.
 		if err := cfg.Services.Mount(mux, cfg.Services.IDs()); err != nil {
 			return err
 		}
+	}
+
+	// A platform that stores nothing opens no database and creates no data
+	// directory — there is nothing to put in one. That is not an optimisation:
+	// it is what makes an exported case-law explorer the same shape as the
+	// hand-written demo it replaces, a frontend and nothing else.
+	//
+	// The composer always opens one, because it previews both kinds.
+	if s.needsDatabase() {
+		if err := os.MkdirAll(filepath.Join(cfg.Dir, "data"), 0o755); err != nil {
+			return fmt.Errorf("creating data directory: %w", err)
+		}
+		database, err := db.Open(filepath.Join(cfg.Dir, "data", "platform.db"))
+		if err != nil {
+			return err
+		}
+		defer database.Close()
+		s.db = database
 	}
 
 	s.routes(mux)
@@ -139,6 +149,14 @@ func Run(cfg Config) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return srv.Shutdown(ctx)
+}
+
+// needsDatabase reports whether this server has to open one.
+func (s *server) needsDatabase() bool {
+	if s.cfg.Mode == ModeCompose {
+		return true
+	}
+	return s.pipeline.StorageMode() == manifest.ModePersistent
 }
 
 func productName(m Mode) string {

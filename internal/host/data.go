@@ -16,6 +16,22 @@ import (
 // same task are looking at the same rows.
 
 func (s *server) dataRoutes(mux *http.ServeMux) {
+	// A platform running without storage has no database behind these, so they
+	// answer with a reason rather than crashing. Reaching one at all means a
+	// binding asked for stored data in a platform that stores none, which is a
+	// wiring mistake worth saying out loud.
+	if s.db == nil {
+		mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/api/services/") {
+				http.NotFound(w, r)
+				return
+			}
+			writeError(w, http.StatusNotImplemented,
+				"this platform stores nothing, so %s does not exist here", r.URL.Path)
+		})
+		return
+	}
+
 	mux.HandleFunc("/api/users", s.handleUsers)
 	mux.HandleFunc("/api/datasets/sync", s.handleSyncDataset)
 	mux.HandleFunc("/api/datasets/", s.handleDatasetScoped)
