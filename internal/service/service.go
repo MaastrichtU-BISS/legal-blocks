@@ -28,6 +28,25 @@ type Service interface {
 	Handler() http.Handler
 }
 
+// Credentialed is a service that calls an API outside the platform and so
+// needs its address and access token.
+//
+// Those arrive after the service is built — from the pipeline at startup, or
+// from the composer on every preview — which is why this is a method rather
+// than a constructor argument. Implementations are called while serving and
+// have to guard the change themselves.
+//
+// Keeping it separate from Service is what lets a credential stay out of the
+// services that have no business holding one: lawnotation-iaa is handed a task
+// and returns a report, and there is nothing here for it to implement.
+type Credentialed interface {
+	Service
+	// SetCredentials points the service at its upstream API. An empty token is
+	// allowed — the service should say so when asked to work rather than
+	// prevent the platform from starting, since every other step still runs.
+	SetCredentials(baseURL, token string) error
+}
+
 // Registry holds every service compiled into this binary. A pipeline mounts
 // the subset its modules declare.
 type Registry struct {

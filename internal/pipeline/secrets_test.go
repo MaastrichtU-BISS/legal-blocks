@@ -43,18 +43,18 @@ func TestSplitSecretsRemovesTokenFromPipeline(t *testing.T) {
 	}
 }
 
-func TestProxyTargetsResolveTokenAndAddress(t *testing.T) {
+func TestUpstreamsResolveTokenAndAddress(t *testing.T) {
 	reg := loadRegistry(t)
 	p, _ := Parse(strings.NewReader(withToken), reg)
 	_, secrets := p.SplitSecrets(reg)
 
-	targets := p.ProxyTargets(reg, secrets)
-	if len(targets) != 1 {
-		t.Fatalf("got %d proxy targets, want 1", len(targets))
+	upstreams := p.Upstreams(reg, secrets)
+	if len(upstreams) != 1 {
+		t.Fatalf("got %d upstreams, want 1", len(upstreams))
 	}
-	got := targets[0]
-	if got.ID != "legal-docs" || got.Token != "SUPERSECRET" || got.BaseURL != "https://example.test/api" {
-		t.Errorf("target = %+v", got)
+	got := upstreams[0]
+	if got.Service != "legal-docs" || got.Token != "SUPERSECRET" || got.BaseURL != "https://example.test/api" {
+		t.Errorf("upstream = %+v", got)
 	}
 	if got.EnvVar != "CITATIONS_API_KEY" {
 		t.Errorf("EnvVar = %q, want the manifest's override name", got.EnvVar)
@@ -62,7 +62,7 @@ func TestProxyTargetsResolveTokenAndAddress(t *testing.T) {
 }
 
 // A node that never had its address edited must still reach the hosted service.
-func TestProxyFallsBackToManifestDefault(t *testing.T) {
+func TestUpstreamFallsBackToManifestDefault(t *testing.T) {
 	reg := loadRegistry(t)
 	p, err := Parse(strings.NewReader(`{
 		"mode":"ephemeral",
@@ -70,8 +70,8 @@ func TestProxyFallsBackToManifestDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	targets := p.ProxyTargets(reg, Secrets{})
-	if len(targets) != 1 || targets[0].BaseURL != "https://api.caselawexplorer.tech/api" {
-		t.Errorf("targets = %+v, want the hosted default", targets)
+	upstreams := p.Upstreams(reg, Secrets{})
+	if len(upstreams) != 1 || upstreams[0].BaseURL != "https://api.caselawexplorer.tech/api" {
+		t.Errorf("upstreams = %+v, want the hosted default", upstreams)
 	}
 }

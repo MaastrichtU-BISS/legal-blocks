@@ -39,9 +39,9 @@ export interface Entry {
   style?: string;
 }
 
-/** An outside API a module calls, forwarded by the host so the token stays server-side. */
-export interface Proxy {
-  id: string;
+/** An outside API a module's service calls, with the credentials it needs. */
+export interface Upstream {
+  service: string;
   baseUrlKey: string;
   tokenKey?: string;
   envVar?: string;
@@ -61,7 +61,7 @@ export interface Manifest {
   outputs?: Port[];
   host?: string;
   services?: string[];
-  proxy?: Proxy;
+  upstream?: Upstream;
   config?: ConfigField[];
   requiredRole?: string;
 }

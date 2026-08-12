@@ -159,13 +159,13 @@ type Manifest struct {
 	// mounts only the services a pipeline actually references.
 	Services []string `json:"services,omitempty"`
 
-	// Proxy declares that this module calls an API outside the platform. The
-	// host forwards /api/proxy/<id>/ to it and attaches the credential, so the
-	// module talks to a same-origin path and the token never reaches a
-	// browser. Without this the only way to authenticate from the frontend is
-	// to ship the token to it, which is how the package's own documentation
-	// suggests doing it and is exactly what should be avoided.
-	Proxy *Proxy `json:"proxy,omitempty"`
+	// Upstream declares that one of this module's services calls an API
+	// outside the platform, and where its credentials come from. The host
+	// hands them to that service at startup; the module calls the service and
+	// never holds a token. Without this the only way to authenticate from the
+	// frontend is to ship the token to it, which is what the package's own
+	// documentation suggests and exactly what should be avoided.
+	Upstream *Upstream `json:"upstream,omitempty"`
 
 	Config []ConfigField `json:"config,omitempty"`
 
@@ -178,10 +178,11 @@ type Manifest struct {
 // SupportsMode reports whether the module can work in the given mode.
 func (m Manifest) SupportsMode(mode Mode) bool { return modeAllowed(m.Modes, mode) }
 
-// Proxy describes an outside API a module depends on.
-type Proxy struct {
-	// ID is the path segment: /api/proxy/<id>/.
-	ID string `json:"id"`
+// Upstream describes an outside API a module's service depends on.
+type Upstream struct {
+	// Service is the id of the Go service that makes the calls. It must also
+	// appear in Services, and must implement service.Credentialed.
+	Service string `json:"service"`
 	// BaseURLKey names the config field holding the API's address.
 	BaseURLKey string `json:"baseUrlKey"`
 	// TokenKey names the secret config field holding the credential.
@@ -237,6 +238,9 @@ func Load(dir fs.FS) (*Registry, error) {
 		if _, dup := reg.Modules[m.ID]; dup {
 			return nil, fmt.Errorf("duplicate module id %q", m.ID)
 		}
+		if err := m.validateUpstream(); err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
+		}
 		reg.Modules[m.ID] = m
 	}
 
@@ -249,6 +253,25 @@ func Load(dir fs.FS) (*Registry, error) {
 	}
 
 	return reg, nil
+}
+
+// validateUpstream checks that a declared upstream names a service the module
+// actually uses. A credential handed to a service nobody mounts is a token
+// sitting in an export for no reason.
+func (m Manifest) validateUpstream() error {
+	if m.Upstream == nil {
+		return nil
+	}
+	if m.Upstream.Service == "" {
+		return fmt.Errorf("upstream does not say which service makes the calls")
+	}
+	for _, id := range m.Services {
+		if id == m.Upstream.Service {
+			return nil
+		}
+	}
+	return fmt.Errorf("upstream names service %q, which this module does not list in \"services\"",
+		m.Upstream.Service)
 }
 
 // CanConnect reports whether a value of type from can feed a port of type to,

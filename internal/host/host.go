@@ -64,11 +64,10 @@ type server struct {
 	db       *db.DB
 	pipeline *pipeline.Pipeline
 
-	// Guards state that changes while serving: the composer rebuilds these
+	// Guards state that changes while serving: the composer replaces this
 	// every time it previews a draft.
 	mu      sync.RWMutex
 	secrets pipeline.Secrets
-	proxies map[string]http.Handler
 }
 
 // Run starts the server and blocks until interrupted.
@@ -99,12 +98,12 @@ func Run(cfg Config) error {
 			return err
 		}
 		s.secrets = secrets
-		targets := p.ProxyTargets(cfg.Registry, secrets)
-		if err := s.setProxies(targets); err != nil {
+		upstreams := p.Upstreams(cfg.Registry, secrets)
+		if err := s.applyUpstreams(upstreams); err != nil {
 			return err
 		}
-		if len(targets) > 0 {
-			log.Printf("outside services: %s", describeTargets(targets))
+		if len(upstreams) > 0 {
+			log.Printf("outside services: %s", describeUpstreams(upstreams))
 		}
 	} else {
 		// The composer previews any pipeline the user builds, so every
@@ -117,7 +116,11 @@ func Run(cfg Config) error {
 	// A platform that stores nothing opens no database and creates no data
 	// directory — there is nothing to put in one. That is not an optimisation:
 	// it is what makes an exported case-law explorer the same shape as the
-	// hand-written demo it replaces, a frontend and nothing else.
+	// hand-written demo it replaces.
+	//
+	// It may still run services. Searching needs the platform's access token,
+	// so it happens here rather than in the page — storing nothing and doing
+	// nothing on the server are different claims.
 	//
 	// The composer always opens one, because it previews both kinds.
 	if s.needsDatabase() {

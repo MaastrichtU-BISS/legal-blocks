@@ -151,9 +151,11 @@ func TestEphemeralPipelineIsValid(t *testing.T) {
 	if p.StorageMode() != manifest.ModeEphemeral {
 		t.Errorf("StorageMode() = %q, want ephemeral", p.StorageMode())
 	}
-	// Nothing here needs a Go service, so an explorer ships none.
-	if got := p.ServiceIDs(reg); len(got) != 0 {
-		t.Errorf("ServiceIDs() = %v, want none", got)
+	// Storing nothing does not mean running nothing: searching happens on the
+	// server, because that is where the access token lives. An explorer has no
+	// database and still has a backend.
+	if got := p.ServiceIDs(reg); len(got) != 1 || got[0] != "legal-docs" {
+		t.Errorf("ServiceIDs() = %v, want the search service", got)
 	}
 }
 

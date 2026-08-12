@@ -11,6 +11,9 @@
     "style": "vue-legal-query-builder/style.css"
   },
   "host": "DocumentSearch",
+  "services": [
+    "legal-docs"
+  ],
   "modes": [
     "ephemeral",
     "persistent"
@@ -45,8 +48,8 @@
       "help": "The hosted service. Change this only to point at your own deployment."
     }
   ],
-  "proxy": {
-    "id": "legal-docs",
+  "upstream": {
+    "service": "legal-docs",
     "baseUrlKey": "api_base_url",
     "tokenKey": "api_token",
     "envVar": "CITATIONS_API_KEY"

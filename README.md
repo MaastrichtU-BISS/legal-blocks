@@ -165,14 +165,22 @@ somebody's annotations without running the platform at all.
 
 ## Access tokens
 
-A module that calls an outside API declares a `proxy` in its manifest, and its
-token is a `"secret"` config field. Two things follow.
+A module that calls an outside API declares an `upstream` in its manifest,
+naming the Go service that makes those calls, and its token is a `"secret"`
+config field. Three things follow.
 
-**The token never reaches a browser.** The module is pointed at a same-origin
-`/api/proxy/<id>` path and holds no credential; the host attaches it on the way
-out. `legal-docs-client`'s own docs suggest `VITE_CITATIONS_API_KEY`, which
+**The token never reaches a browser.** The host hands it to the service; the
+module calls a same-origin `/api/services/<id>/…` path and holds no credential.
+`legal-docs-client`'s own docs suggested `VITE_CITATIONS_API_KEY`, which
 compiles the token into the JavaScript every visitor downloads — fine for a
 personal key on a local demo, wrong for a platform handed to other people.
+
+**The browser cannot spend it either.** The service exposes named operations —
+"search this dataset", "search legislation" — and builds each upstream request
+itself. An earlier version forwarded `/api/proxy/<id>/<anything>`, which kept
+the token off the page but still let a script on that page call any endpoint of
+the API as the platform's owner. A credential you cannot read but can still
+spend is only half a fix.
 
 **The token never reaches `pipeline.json`.** Exports split it into
 `credentials.json` at `0600`, so the pipeline stays safe to read, copy and
@@ -207,6 +215,12 @@ directly.
 
 `internal/services/iaa/iaa.go` is the whole adapter for the IAA tool. It is
 twelve lines.
+
+A backend that calls an API outside the platform also implements
+`SetCredentials(baseURL, token)`, and its module declares an `upstream` naming
+it. That is the only way an access token gets anywhere near it — which is why
+it is a separate interface rather than a field on every service.
+`internal/services/legaldocs` is the worked example.
 
 ---
 

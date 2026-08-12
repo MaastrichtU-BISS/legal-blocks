@@ -65,47 +65,48 @@ func (p *Pipeline) SplitSecrets(reg *manifest.Registry) (*Pipeline, Secrets) {
 	return &clean, secrets
 }
 
-// ProxyTarget is one outside API the host forwards to on a module's behalf.
-type ProxyTarget struct {
-	// ID is the path segment: /api/proxy/<id>/.
-	ID string
-	// BaseURL is the API this forwards to.
+// Upstream is one outside API a service calls on a module's behalf, with the
+// credentials it needs to do so.
+type Upstream struct {
+	// Service is the id of the Go service that makes the calls.
+	Service string
+	// BaseURL is the API to call.
 	BaseURL string
-	// Token is attached as a bearer credential, if there is one.
+	// Token authenticates the platform to it, if there is one.
 	Token string
 	// EnvVar can supply the token at run time instead.
 	EnvVar string
 }
 
-// ProxyTargets lists the outside APIs this pipeline's modules call, with their
+// Upstreams lists the outside APIs this pipeline's services call, with their
 // credentials resolved from secrets.
-func (p *Pipeline) ProxyTargets(reg *manifest.Registry, secrets Secrets) []ProxyTarget {
-	var out []ProxyTarget
+func (p *Pipeline) Upstreams(reg *manifest.Registry, secrets Secrets) []Upstream {
+	var out []Upstream
 	for _, node := range p.Nodes {
 		m, ok := reg.Modules[node.Module]
-		if !ok || m.Proxy == nil {
+		if !ok || m.Upstream == nil {
 			continue
 		}
 
-		target := ProxyTarget{ID: m.Proxy.ID, EnvVar: m.Proxy.EnvVar}
-		if v, ok := node.Config[m.Proxy.BaseURLKey].(string); ok {
-			target.BaseURL = v
+		up := Upstream{Service: m.Upstream.Service, EnvVar: m.Upstream.EnvVar}
+		if v, ok := node.Config[m.Upstream.BaseURLKey].(string); ok {
+			up.BaseURL = v
 		}
-		if target.BaseURL == "" {
+		if up.BaseURL == "" {
 			// Fall back to the manifest's default, so a node that never had
 			// its address edited still reaches the hosted service.
 			for _, f := range m.Config {
-				if f.Key == m.Proxy.BaseURLKey {
+				if f.Key == m.Upstream.BaseURLKey {
 					if d, ok := f.Default.(string); ok {
-						target.BaseURL = d
+						up.BaseURL = d
 					}
 				}
 			}
 		}
-		if m.Proxy.TokenKey != "" {
-			target.Token = secrets[node.ID][m.Proxy.TokenKey]
+		if m.Upstream.TokenKey != "" {
+			up.Token = secrets[node.ID][m.Upstream.TokenKey]
 		}
-		out = append(out, target)
+		out = append(out, up)
 	}
 	return out
 }
