@@ -11,8 +11,8 @@ import { computed, ref, watch } from "vue";
 import ConfigForm from "./ConfigForm.vue";
 import Runtime from "../runtime/Runtime.vue";
 import { exportPipeline, validatePipeline } from "../api";
-import type { Manifest, Node, Pipeline, Registry } from "../types";
-import { canConnect, configWithDefaults } from "../types";
+import type { Manifest, Mode, Node, Pipeline, Registry } from "../types";
+import { canConnect, configWithDefaults, fieldAppliesIn, storageMode, supportsMode } from "../types";
 
 const props = defineProps<{ registry: Registry }>();
 
@@ -22,7 +22,36 @@ const props = defineProps<{ registry: Registry }>();
 // the runtime's data model.
 const DRAFT_KEY = "legal-blocks:composer-draft";
 
-const pipeline = ref<Pipeline>({ version: 1, name: "My platform", nodes: [], edges: [] });
+const pipeline = ref<Pipeline>({
+  version: 1,
+  name: "My platform",
+  mode: "persistent",
+  nodes: [],
+  edges: [],
+});
+
+const mode = computed<Mode>(() => storageMode(pipeline.value));
+
+/**
+ * Switching modes clears the chain.
+ *
+ * The two are not variants of one platform: modules available in one may not
+ * exist in the other, and settings that belong to the composer without storage
+ * belong to a user with it. Silently keeping a chain that no longer validates
+ * would be worse than making the change explicit.
+ */
+function setMode(next: Mode) {
+  if (next === mode.value) return;
+  if (
+    pipeline.value.nodes.length > 0 &&
+    !confirm("Changing where data lives starts the platform over. Continue?")
+  ) {
+    return;
+  }
+  pipeline.value = { ...pipeline.value, mode: next, nodes: [], edges: [] };
+  selected.value = null;
+  problem.value = "";
+}
 const selected = ref<string | null>(null);
 const previewing = ref(false);
 const status = ref("");
@@ -50,6 +79,11 @@ const palette = computed(() =>
   Object.values(props.registry.modules).sort((a, b) => a.name.localeCompare(b.name)),
 );
 
+/** Settings the composer owns in this mode; the rest belong to runtime users. */
+function fieldsFor(m: Manifest) {
+  return (m.config ?? []).filter((f) => fieldAppliesIn(f, mode.value));
+}
+
 const chain = computed(() =>
   pipeline.value.nodes.map((node) => ({ node, manifest: props.registry.modules[node.module] })),
 );
@@ -66,6 +100,7 @@ const tailType = computed(() => {
  * impossible platform cannot be built in the first place.
  */
 function canAppend(m: Manifest): boolean {
+  if (!supportsMode(m, mode.value)) return false;
   const required = m.inputs?.find((p) => p.required);
   if (!required) return tailType.value === null;
   if (tailType.value === null) return false;
@@ -73,6 +108,11 @@ function canAppend(m: Manifest): boolean {
 }
 
 function whyNot(m: Manifest): string {
+  if (!supportsMode(m, mode.value)) {
+    return mode.value === "ephemeral"
+      ? "Needs somewhere to store things — only available when work is saved."
+      : "Only useful when nothing is stored; with storage the data is already kept.";
+  }
   const required = m.inputs?.find((p) => p.required);
   if (!required) return "Only a starting step can go first — this one produces its own data.";
   if (tailType.value === null) return `Needs ${required.type} as input, but the chain is empty.`;
@@ -91,7 +131,7 @@ function append(m: Manifest) {
     id: nextId(m.id),
     module: m.id,
     label: m.name,
-    config: configWithDefaults(m, { id: "", module: m.id, label: "" }),
+    config: configWithDefaults(m, { id: "", module: m.id, label: "" }, mode.value),
   };
   const previous = chain.value.at(-1);
 
@@ -165,6 +205,17 @@ async function doExport() {
   <div v-else class="app lb-ui">
     <header>
       <input v-model="pipeline.name" class="name" aria-label="Platform name" />
+
+      <div class="row modes">
+        <span class="muted">Data</span>
+        <button :class="{ primary: mode === 'ephemeral' }" @click="setMode('ephemeral')">
+          Session only
+        </button>
+        <button :class="{ primary: mode === 'persistent' }" @click="setMode('persistent')">
+          Saved
+        </button>
+      </div>
+
       <div class="row">
         <span v-if="status" class="muted">{{ status }}</span>
         <button :disabled="pipeline.nodes.length === 0" @click="preview">Preview</button>
@@ -192,6 +243,17 @@ async function doExport() {
 
       <section class="chain">
         <h2>Platform</h2>
+        <p class="muted mode-note">
+          <template v-if="mode === 'ephemeral'">
+            Nothing is stored. Work stays in the browser for the session, and leaves through a
+            download step.
+          </template>
+          <template v-else>
+            Everything is saved in the platform's own database, so work survives and several
+            people can share it.
+          </template>
+        </p>
+
         <p v-if="chain.length === 0" class="muted">
           Add a starting step from the left. Steps can only be connected when the data one produces
           is data the next can read.
@@ -224,7 +286,7 @@ async function doExport() {
             <input id="step-label" v-model="selectedNode.label" />
           </div>
           <ConfigForm
-            :fields="selectedManifest.config ?? []"
+            :fields="fieldsFor(selectedManifest)"
             :model-value="selectedNode.config ?? {}"
             @update:model-value="updateConfig"
           />
@@ -254,8 +316,17 @@ header {
 
 .name {
   width: auto;
-  min-width: 18rem;
+  min-width: 14rem;
   font-weight: 600;
+}
+
+.modes button {
+  padding: 0.25rem 0.6rem;
+}
+
+.mode-note {
+  margin: 0 0 1rem;
+  line-height: 1.5;
 }
 
 .preview-bar {

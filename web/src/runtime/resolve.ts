@@ -6,13 +6,15 @@
 // not opened cost nothing.
 
 import { adapt } from "../adapters";
-import type { Pipeline, Registry } from "../types";
+import type { Mode, Pipeline, Registry } from "../types";
 import { inputPort, outputPort, configWithDefaults } from "../types";
 import { bindingFor, type BindingContext } from "./bindings";
 
 export interface ResolveEnv {
   pipeline: Pipeline;
   registry: Registry;
+  /** Where this platform's data lives. */
+  mode: Mode;
   annotator: number;
   refresh(): void;
 }
@@ -27,7 +29,7 @@ export async function produce(env: ResolveEnv, nodeId: string, portName: string)
   const manifest = env.registry.modules[node.module];
   if (!manifest) throw new Error(`unknown module "${node.module}"`);
 
-  return bindingFor(manifest.host).output(contextFor(env, nodeId), portName);
+  return bindingFor(manifest.host, env.mode).output(contextFor(env, nodeId), portName);
 }
 
 /**
@@ -63,7 +65,8 @@ export function contextFor(env: ResolveEnv, nodeId: string): BindingContext {
   const manifest = env.registry.modules[node.module];
   return {
     nodeId,
-    config: configWithDefaults(manifest, node),
+    config: configWithDefaults(manifest, node, env.mode),
+    mode: env.mode,
     annotator: env.annotator,
     input: (portName) => resolveInput(env, nodeId, portName),
     refresh: env.refresh,

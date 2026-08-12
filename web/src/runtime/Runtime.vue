@@ -9,9 +9,12 @@ import { computed, ref, watch } from "vue";
 import ModuleHost from "./ModuleHost.vue";
 import type { ResolveEnv } from "./resolve";
 import type { Pipeline, Registry } from "../types";
+import { storageMode } from "../types";
 import { ensureUsers, getUsers, type User } from "../api";
 
 const props = defineProps<{ pipeline: Pipeline; registry: Registry }>();
+
+const mode = computed(() => storageMode(props.pipeline));
 
 /**
  * Who is using the platform.
@@ -27,17 +30,43 @@ watch(annotator, (value) => localStorage.setItem(ANNOTATOR_KEY, String(value)));
 
 // Steps must not mount before we know who is working: a queue is per-user, and
 // asking for user 0's queue returns nothing, which looks exactly like a task
-// with no documents. On a fresh database nobody exists yet, so the first call
-// creates a user rather than only reading — otherwise nothing would mount, and
-// the step that would have created the users never gets the chance.
+// with no documents.
 const identified = computed(() => annotator.value > 0);
 
+/**
+ * Who can work here.
+ *
+ * With storage these are rows in the users table, and the first call creates
+ * one if the database is empty — otherwise nothing would mount, and the step
+ * that creates the users would never get the chance. Without storage there is
+ * no users table and nobody to be: the annotators are simply the positions the
+ * platform was composed for.
+ */
 async function loadUsers(create = false) {
-  users.value = create ? await ensureUsers(1) : await getUsers();
+  if (mode.value === "ephemeral") {
+    users.value = sessionAnnotators();
+  } else {
+    users.value = create ? await ensureUsers(1) : await getUsers();
+  }
   if (!users.value.some((u) => u.id === annotator.value)) {
     annotator.value = users.value[0]?.id ?? 0;
   }
 }
+
+/** The annotator slots an ephemeral platform was composed with. */
+function sessionAnnotators(): User[] {
+  let count = 1;
+  for (const node of props.pipeline.nodes) {
+    const n = Number(node.config?.annotators ?? 0);
+    if (Number.isFinite(n) && n > count) count = n;
+  }
+  return Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    name: `Annotator ${i + 1}`,
+    role: "annotator",
+  }));
+}
+
 void loadUsers(true);
 
 const steps = computed(() => {
@@ -79,6 +108,7 @@ const revision = ref(0);
 const env = computed<ResolveEnv>(() => ({
   pipeline: props.pipeline,
   registry: props.registry,
+  mode: mode.value,
   annotator: annotator.value,
   refresh: () => revision.value++,
 }));
