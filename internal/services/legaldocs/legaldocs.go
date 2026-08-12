@@ -42,8 +42,15 @@ func (*Service) ID() string { return "legal-docs" }
 
 // SetCredentials implements service.Credentialed: the host calls this with the
 // address and token the pipeline carries, once at startup or on every preview.
+//
+// An empty token leaves the service unconfigured rather than half-configured.
+// The API would refuse the call anyway, and its 401 reads as an expired key —
+// which sends whoever is searching looking for a token they were never given.
 func (s *Service) SetCredentials(baseURL, token string) error {
-	client := legaldocs.New(token, legaldocs.WithBaseURL(baseURL))
+	var client *legaldocs.Client
+	if token != "" {
+		client = legaldocs.New(token, legaldocs.WithBaseURL(baseURL))
+	}
 	s.mu.Lock()
 	s.client = client
 	s.mu.Unlock()

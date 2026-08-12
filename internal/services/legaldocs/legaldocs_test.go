@@ -209,3 +209,27 @@ func TestWithoutCredentialsTheServiceExplainsItself(t *testing.T) {
 		t.Errorf("body = %s, want the way out", rec.Body.String())
 	}
 }
+
+// An empty token is the same situation, and has to read the same way.
+//
+// Passing it to the client instead would send a request that cannot succeed
+// and answer with the API's 401 — which this service reports as a key that may
+// have expired, sending the user to look for a token nobody ever gave them.
+func TestAnEmptyTokenIsNotAConfiguredService(t *testing.T) {
+	u := newUpstream(t)
+	s := New()
+	if err := s.SetCredentials(u.server.URL, ""); err != nil {
+		t.Fatalf("SetCredentials: %v", err)
+	}
+
+	rec := call(s.Handler(), http.MethodPost, "/search", `{"dataset":"RS","params":{}}`)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("status = %d, want 503", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "CITATIONS_API_KEY") {
+		t.Errorf("body = %s, want the way out rather than a story about expiry", rec.Body.String())
+	}
+	if u.path != "" {
+		t.Errorf("called the API at %q with no credential, which can only fail", u.path)
+	}
+}
