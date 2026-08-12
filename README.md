@@ -136,6 +136,7 @@ my-platform/
   Start.bat                    Windows: double-click
   start.sh                     Linux
   pipeline.json                the only file that differs between exports
+  credentials.json             access tokens, when the platform needs any
   corpus/*.txt                 the input documents
   data/                        created on first run, when the platform stores things
   README.txt                   written for someone who has never used a terminal
@@ -159,6 +160,29 @@ the same seam a hosted Postgres will occupy.
 
 It is also inspectable: `sqlite3 data/platform.db` answers questions about
 somebody's annotations without running the platform at all.
+
+---
+
+## Access tokens
+
+A module that calls an outside API declares a `proxy` in its manifest, and its
+token is a `"secret"` config field. Two things follow.
+
+**The token never reaches a browser.** The module is pointed at a same-origin
+`/api/proxy/<id>` path and holds no credential; the host attaches it on the way
+out. `legal-docs-client`'s own docs suggest `VITE_CITATIONS_API_KEY`, which
+compiles the token into the JavaScript every visitor downloads — fine for a
+personal key on a local demo, wrong for a platform handed to other people.
+
+**The token never reaches `pipeline.json`.** Exports split it into
+`credentials.json` at `0600`, so the pipeline stays safe to read, copy and
+commit.
+
+What this does *not* do: anyone holding the exported folder holds the token.
+That is unavoidable when a credential has to travel with the platform, so
+`README.txt` says it plainly and tells the recipient to delete the file before
+passing the folder on. A deployment that would rather ship none can leave the
+field blank and set the environment variable instead, which wins over the file.
 
 ---
 
