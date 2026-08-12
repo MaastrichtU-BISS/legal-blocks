@@ -7,7 +7,9 @@ one file, and has a working platform — no Node, no npm, no Docker, nothing to
 install.
 
 ```
-Document folder  →  Annotate  →  Agreement metrics
+Document folder  →  Annotate  →  Agreement metrics      saved in a database
+Search           →  Explore                             nothing stored
+Search  →  Annotate  →  Agreement  →  Download          nothing stored
 ```
 
 ---
@@ -86,22 +88,33 @@ The same rule is enforced in Go when a pipeline is exported
 ([`internal/pipeline`](internal/pipeline/pipeline.go)), so an export cannot be
 something the composer would have rejected.
 
-### 3. One database, not a conveyor belt
+### 3. Storage belongs to the platform, not the module
 
-Modules do not hand data to each other. Everything lives in one SQLite
-database — [`internal/db/schema.sql`](internal/db/schema.sql) — and a pipeline
-edge carries a *reference*: a dataset id, a task id. Two modules looking at the
-same task look at the same rows rather than at two copies that can drift.
+A module never knows where its data lives. That is not a convention invented
+here: `legal-annotation-kit` ships `createBulkSource` *"for hosts with no
+backend to save to"* alongside `createLazySource` *"for hosts with an external
+backend"*. The package itself says the host decides.
 
-`legal-annotation-kit` and `vue-iaa-metrics` were already built the right way:
-each exposes a component plus a `Source` interface that the *host* implements,
-owning no persistence or networking itself. So this project did not need a
-plugin system — it needed to be a host, and here that means those contracts are
-SQL queries.
+So three questions are answered in three separate places:
 
-The `host` field in a manifest names the contract, and the runtime implements
-contracts rather than modules — a second annotation module declaring
-`"host": "AnnotationSource"` would work with no frontend change at all.
+| Question | Answered by | Example |
+|---|---|---|
+| *What* data flows here? | the port type | `corpus@1` |
+| *Where* does it live? | the pipeline's mode | ephemeral / persistent |
+| *How* does the module get it? | the host binding | `createBulkSource` vs SQL |
+
+A **persistent** platform keeps everything in one SQLite database
+([`internal/db/schema.sql`](internal/db/schema.sql)); edges carry references, so
+two modules looking at the same task look at the same rows. An **ephemeral**
+platform stores nothing at all — no database, no data folder — and work lives in
+the browser for the session, leaving through a download step.
+
+The same modules build both. `bindings.ts` holds one entry per contract per
+mode; a new module reusing an existing contract needs no frontend code at all.
+
+The `host` field in a manifest names the contract, and manifests declare only
+which modes they *can* work in — a pure view works in either, a download step
+only makes sense when nothing is stored.
 
 The schema follows Lawnotation's vocabulary, since that is the platform most
 users of this project are trying to rebuild. Where Lawnotation and the packages
@@ -179,6 +192,14 @@ Worth naming before anyone finds them in a demo.
 - **No migrations.** A schema change means deleting `data/platform.db` and
   starting over. Fine while the shape is still moving; it needs solving before
   anyone has work they care about.
+- **A persistent platform is still one task.** Labels, level and annotator
+  count are set in the composer and baked into `pipeline.json`, so an exported
+  platform runs the task it was composed with rather than letting its users
+  create their own. Those settings are marked in the manifest as the composer's
+  business *only until there is a runtime screen for creating tasks* — building
+  that screen, and moving those fields to session-only, is the next real piece
+  of work. It is what turns a persistent export from an appliance into a
+  platform.
 - **One pipeline holds one of each module.** Nothing is scoped to a pipeline
   step, so two annotate steps would silently share one task rather than failing.
 - **Cross-platform exports need a build step first.** Run
