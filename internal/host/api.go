@@ -26,9 +26,16 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/pipeline", s.handlePipeline)
 	s.dataRoutes(mux)
 
+	// Outside APIs a module depends on. Registered in both modes: the
+	// forwarding table is empty until a pipeline names one, and a request to
+	// an unknown service says so rather than 404-ing into the SPA fallback.
+	mux.HandleFunc("/api/proxy/", s.handleProxy)
+
 	if s.cfg.Mode == ModeCompose {
 		mux.HandleFunc("/api/validate", s.handleValidate)
 		mux.HandleFunc("/api/export", s.handleExport)
+		mux.HandleFunc("/api/credentials", s.handleCredentials)
+		mux.HandleFunc("/api/preview", s.handlePreview)
 	}
 
 	mux.Handle("/", s.staticHandler())
@@ -136,6 +143,31 @@ func (s *server) handleValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"valid": true})
+}
+
+// handlePreview readies the composer's server for a draft: it takes the
+// pipeline being previewed, splits the credentials out of it, and points the
+// proxies at whatever outside services it names.
+//
+// This is how a token typed into the composer reaches the proxy without being
+// written anywhere. It is held in memory for as long as the composer runs and
+// is never read back.
+func (s *server) handlePreview(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "use POST")
+		return
+	}
+	p, err := pipeline.Parse(http.MaxBytesReader(w, r.Body, maxBodyBytes), s.cfg.Registry)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "%v", err)
+		return
+	}
+	_, secrets := p.SplitSecrets(s.cfg.Registry)
+	if err := s.setProxies(p.ProxyTargets(s.cfg.Registry, secrets)); err != nil {
+		writeError(w, http.StatusBadRequest, "%v", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // handleExport builds the runnable platform zip.

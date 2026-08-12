@@ -21,6 +21,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -62,6 +63,12 @@ type server struct {
 	cfg      Config
 	db       *db.DB
 	pipeline *pipeline.Pipeline
+
+	// Guards state that changes while serving: the composer rebuilds these
+	// every time it previews a draft.
+	mu      sync.RWMutex
+	secrets pipeline.Secrets
+	proxies map[string]http.Handler
 }
 
 // Run starts the server and blocks until interrupted.
@@ -86,6 +93,19 @@ func Run(cfg Config) error {
 			return err
 		}
 		log.Printf("pipeline %q: %d steps, %s", p.Name, len(p.Nodes), p.StorageMode())
+
+		secrets, err := loadCredentials(cfg.Dir)
+		if err != nil {
+			return err
+		}
+		s.secrets = secrets
+		targets := p.ProxyTargets(cfg.Registry, secrets)
+		if err := s.setProxies(targets); err != nil {
+			return err
+		}
+		if len(targets) > 0 {
+			log.Printf("outside services: %s", describeTargets(targets))
+		}
 	} else {
 		// The composer previews any pipeline the user builds, so every
 		// service in the build has to be reachable.

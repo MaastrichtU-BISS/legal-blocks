@@ -118,12 +118,34 @@ func hasOS(ts []target, goos string) bool {
 func Write(w io.Writer, opts Options) error {
 	zw := zip.NewWriter(w)
 
-	pipelineJSON, err := json.MarshalIndent(opts.Pipeline, "", "  ")
+	// Credentials never go into pipeline.json. That file describes what the
+	// platform is, is served to every browser that opens it, and should be
+	// safe to read, copy and commit; a token in it would reach all of those
+	// places. They go into their own file instead, which is the one thing in
+	// an export that has to be handled carefully — and saying that is much
+	// easier when it is a single named file.
+	clean, secrets := opts.Pipeline.SplitSecrets(opts.Registry)
+
+	pipelineJSON, err := json.MarshalIndent(clean, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encoding pipeline: %w", err)
 	}
 	if err := addFile(zw, "pipeline.json", pipelineJSON, 0o644); err != nil {
 		return err
+	}
+
+	if len(secrets) > 0 {
+		credentialsJSON, err := json.MarshalIndent(secrets, "", "  ")
+		if err != nil {
+			return fmt.Errorf("encoding credentials: %w", err)
+		}
+		// 0600 so that on a shared machine the file is at least not readable
+		// by other accounts. Anyone holding the zip still holds the token —
+		// that is unavoidable when the credential has to travel with the
+		// platform, and README.txt says so plainly.
+		if err := addFile(zw, "credentials.json", credentialsJSON, 0o600); err != nil {
+			return err
+		}
 	}
 
 	// The platform binaries. Copying them is what makes the result
@@ -163,7 +185,7 @@ func Write(w io.Writer, opts Options) error {
 		}
 	}
 
-	if err := addFile(zw, "README.txt", []byte(readme(opts, ts)), 0o644); err != nil {
+	if err := addFile(zw, "README.txt", []byte(readme(opts, ts, len(secrets) > 0)), 0o644); err != nil {
 		return err
 	}
 
@@ -405,7 +427,33 @@ func startInstructions(ts []target) string {
 	return b.String()
 }
 
-func readme(opts Options, ts []target) string {
+// credentialsSection warns the recipient about the one file in the export that
+// is not safe to pass on. Only included when there is such a file.
+func credentialsSection() string {
+	return `THE FILE CALLED "credentials.json"
+
+  This platform searches a document service on your behalf, and that service
+  needs an access key. The key is in "credentials.json".
+
+  Treat that file the way you would treat a password:
+
+    - Anyone who has this folder can use the key.
+    - Do not put the folder on a shared drive or send it on to other people.
+    - If you need to pass the platform to someone else, delete
+      "credentials.json" first and ask whoever gave you this for their own copy.
+
+  The key is never shown in your browser and never leaves this machine except
+  in requests to the document service itself.
+
+`
+}
+
+func readme(opts Options, ts []target, hasCredentials bool) string {
+	credentials := ""
+	if hasCredentials {
+		credentials = credentialsSection()
+	}
+
 	var steps strings.Builder
 	for i, id := range opts.Pipeline.Order() {
 		for _, n := range opts.Pipeline.Nodes {
@@ -476,6 +524,6 @@ YOUR DOCUMENTS
 
   Put .txt files in the "corpus" folder. Reload the page to pick up changes.
 
-%s`, opts.Pipeline.Name, strings.Repeat("=", len(opts.Pipeline.Name)), steps.String(),
-		startInstructions(ts), storageSection(opts.Pipeline.StorageMode()))
+%s%s`, opts.Pipeline.Name, strings.Repeat("=", len(opts.Pipeline.Name)), steps.String(),
+		startInstructions(ts), storageSection(opts.Pipeline.StorageMode()), credentials)
 }
