@@ -244,6 +244,13 @@ const contracts: Record<string, ModeBindings> = {
   },
 };
 
+/**
+ * Where the query builder sends its requests: a path on this platform, which
+ * the host forwards to the real service with the credential attached. The
+ * browser holds no token at any point.
+ */
+const PROXY_PATH = "/api/proxy/legal-docs";
+
 /** Search results held for the session, when nothing is being stored. */
 const sessionResults = new Map<string, { name: string; full_text: string }[]>();
 
@@ -256,8 +263,13 @@ async function searchProps(
   ctx: BindingContext,
   keep: (documents: { name: string; full_text: string }[]) => Promise<void>,
 ): Promise<Record<string, unknown>> {
+  // Blocks inside the form do their own lookups as the user types, so they
+  // need the same route: same-origin, no credential, host attaches the token.
+  const clientConfig = { baseURL: PROXY_PATH };
+
   return {
     title: ctx.config.title ?? "Find documents",
+    clientConfig,
     onSubmit: async (query: unknown) => {
       const { createLegalDocsClient } = await import("vue-legal-query-builder");
       const client = createLegalDocsClient({ baseURL: String(ctx.config.api_base_url ?? "") });
