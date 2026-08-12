@@ -126,3 +126,76 @@ func TestValidateRejectsCycles(t *testing.T) {
 		t.Fatalf("expected a cycle error, got %v", err)
 	}
 }
+
+// A case-law explorer: search and view, nothing stored. The shape
+// caselaw-explorer-demo has today as a hand-written app.
+const explorer = `{
+  "version": 1,
+  "name": "Case-law explorer",
+  "mode": "ephemeral",
+  "nodes": [
+    {"id": "search", "module": "vue-legal-query-builder", "label": "Search"},
+    {"id": "explore", "module": "vue-legal-docs-visualizer", "label": "Explore"}
+  ],
+  "edges": [
+    {"from": {"node": "search", "port": "documents"}, "to": {"node": "explore", "port": "documents"}}
+  ]
+}`
+
+func TestEphemeralPipelineIsValid(t *testing.T) {
+	reg := loadRegistry(t)
+	p, err := Parse(strings.NewReader(explorer), reg)
+	if err != nil {
+		t.Fatalf("valid ephemeral pipeline rejected: %v", err)
+	}
+	if p.StorageMode() != manifest.ModeEphemeral {
+		t.Errorf("StorageMode() = %q, want ephemeral", p.StorageMode())
+	}
+	// Nothing here needs a Go service, so an explorer ships none.
+	if got := p.ServiceIDs(reg); len(got) != 0 {
+		t.Errorf("ServiceIDs() = %v, want none", got)
+	}
+}
+
+// A pipeline written before modes existed must keep behaving as it did.
+func TestModeDefaultsToPersistent(t *testing.T) {
+	reg := loadRegistry(t)
+	p, err := Parse(strings.NewReader(flagship), reg)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if p.StorageMode() != manifest.ModePersistent {
+		t.Errorf("StorageMode() = %q, want persistent by default", p.StorageMode())
+	}
+}
+
+// A module that cannot work in the chosen mode must be refused at validation,
+// so an export never promises a screen that will not function.
+func TestValidateRejectsModuleInWrongMode(t *testing.T) {
+	reg := loadRegistry(t)
+
+	// results-download only makes sense when nothing is stored.
+	persistentDownload := `{
+		"mode": "persistent",
+		"nodes": [
+			{"id": "docs", "module": "corpus-source"},
+			{"id": "annotate", "module": "legal-annotation-kit"},
+			{"id": "save", "module": "results-download"}],
+		"edges": [
+			{"from": {"node": "docs", "port": "corpus"}, "to": {"node": "annotate", "port": "corpus"}},
+			{"from": {"node": "annotate", "port": "task"}, "to": {"node": "save", "port": "task"}}]}`
+
+	_, err := Parse(strings.NewReader(persistentDownload), reg)
+	if err == nil || !strings.Contains(err.Error(), "does not work in persistent mode") {
+		t.Fatalf("expected a mode error, got %v", err)
+	}
+}
+
+func TestValidateRejectsUnknownMode(t *testing.T) {
+	reg := loadRegistry(t)
+	_, err := Parse(strings.NewReader(
+		`{"mode":"sometimes","nodes":[{"id":"d","module":"corpus-source"}]}`), reg)
+	if err == nil || !strings.Contains(err.Error(), "unknown storage mode") {
+		t.Fatalf("expected an unknown-mode error, got %v", err)
+	}
+}

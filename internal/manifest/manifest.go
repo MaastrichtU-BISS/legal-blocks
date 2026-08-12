@@ -29,6 +29,28 @@ const (
 	KindService Kind = "service"
 )
 
+// Mode says where a platform's data lives.
+//
+// This is a property of a pipeline, never of a module: legal-annotation-kit
+// ships both createBulkSource ("for hosts with no backend to save to") and
+// createLazySource ("for hosts with an external backend"), which is the
+// packages themselves saying that the same component works either way and the
+// host decides. A module declares only which modes it can work in.
+type Mode string
+
+const (
+	// ModeEphemeral keeps everything in the browser for the session. No
+	// database, no server-side state — caselaw-explorer-demo is exactly this:
+	// a query builder and a visualiser, three dependencies, no backend.
+	ModeEphemeral Mode = "ephemeral"
+	// ModePersistent stores everything in the platform's database, so work
+	// survives, several people share it, and resources are created at runtime.
+	ModePersistent Mode = "persistent"
+)
+
+// Modes lists both, in the order the composer offers them.
+var Modes = []Mode{ModeEphemeral, ModePersistent}
+
 // Runtime says how a module is executed, and is the seam that keeps packaging
 // swappable. "web" modules are Vue components in the frontend bundle;
 // "go-inproc" modules are Go packages compiled into this binary; "container"
@@ -54,6 +76,11 @@ type Port struct {
 
 // ConfigField describes one setting the composer renders as a form control and
 // writes into the node's config in pipeline.json.
+//
+// Modes limits a field to the storage modes it makes sense in. A setting that
+// describes one task — its labels, its annotation level — belongs to the
+// composer only when there is no runtime place to create tasks. Leave Modes
+// empty for a field that applies in every mode, such as a deployment URL.
 type ConfigField struct {
 	Key     string   `json:"key"`
 	Label   string   `json:"label"`
@@ -61,6 +88,24 @@ type ConfigField struct {
 	Default any      `json:"default,omitempty"`
 	Options []string `json:"options,omitempty"`
 	Help    string   `json:"help,omitempty"`
+	Modes   []Mode   `json:"modes,omitempty"`
+}
+
+// AppliesIn reports whether a config field is offered in the given mode.
+func (f ConfigField) AppliesIn(mode Mode) bool { return modeAllowed(f.Modes, mode) }
+
+// modeAllowed treats an empty list as "every mode", so a manifest only has to
+// say something when a module or field is genuinely restricted.
+func modeAllowed(modes []Mode, mode Mode) bool {
+	if len(modes) == 0 {
+		return true
+	}
+	for _, m := range modes {
+		if m == mode {
+			return true
+		}
+	}
+	return false
 }
 
 // Entry tells the runtime frontend which component to mount for a web module.
@@ -82,6 +127,11 @@ type Manifest struct {
 
 	Entry *Entry `json:"entry,omitempty"`
 
+	// Modes limits the module to the storage modes it can work in. A pure
+	// view works in both; a module that manages stored resources only makes
+	// sense with a database. Empty means every mode.
+	Modes []Mode `json:"modes,omitempty"`
+
 	Inputs  []Port `json:"inputs,omitempty"`
 	Outputs []Port `json:"outputs,omitempty"`
 
@@ -102,6 +152,9 @@ type Manifest struct {
 	// already exists in every manifest, rather than changing the format.
 	RequiredRole string `json:"requiredRole,omitempty"`
 }
+
+// SupportsMode reports whether the module can work in the given mode.
+func (m Manifest) SupportsMode(mode Mode) bool { return modeAllowed(m.Modes, mode) }
 
 // Adapter is a declared conversion between two port types. The Go side uses
 // these only to decide whether a connection is legal; the conversion itself

@@ -41,8 +41,24 @@ type Edge struct {
 type Pipeline struct {
 	Version int    `json:"version"`
 	Name    string `json:"name"`
-	Nodes   []Node `json:"nodes"`
-	Edges   []Edge `json:"edges"`
+	// Mode says where this platform's data lives. It is a property of the
+	// platform rather than of any module: the same annotation component is a
+	// step in a durable multi-annotator task or a one-off pass over search
+	// results, depending only on which source the host builds for it.
+	//
+	// Empty means persistent, so a pipeline written before modes existed keeps
+	// the behaviour it had.
+	Mode  manifest.Mode `json:"mode,omitempty"`
+	Nodes []Node        `json:"nodes"`
+	Edges []Edge        `json:"edges"`
+}
+
+// StorageMode returns the pipeline's mode, defaulting to persistent.
+func (p *Pipeline) StorageMode() manifest.Mode {
+	if p.Mode == "" {
+		return manifest.ModePersistent
+	}
+	return p.Mode
 }
 
 var idPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
@@ -69,6 +85,11 @@ func (p *Pipeline) Validate(reg *manifest.Registry) error {
 		return fmt.Errorf("pipeline has no nodes")
 	}
 
+	mode := p.StorageMode()
+	if mode != manifest.ModeEphemeral && mode != manifest.ModePersistent {
+		return fmt.Errorf("unknown storage mode %q", mode)
+	}
+
 	byID := map[string]Node{}
 	for _, n := range p.Nodes {
 		if !idPattern.MatchString(n.ID) {
@@ -77,8 +98,15 @@ func (p *Pipeline) Validate(reg *manifest.Registry) error {
 		if _, dup := byID[n.ID]; dup {
 			return fmt.Errorf("duplicate node id %q", n.ID)
 		}
-		if _, ok := reg.Modules[n.Module]; !ok {
+		m, ok := reg.Modules[n.Module]
+		if !ok {
 			return fmt.Errorf("node %q references unknown module %q", n.ID, n.Module)
+		}
+		// A module that cannot work without stored resources has no meaning in
+		// a platform that stores nothing, and vice versa. Catching it here
+		// means an export cannot promise a screen that will not function.
+		if !m.SupportsMode(mode) {
+			return fmt.Errorf("module %q does not work in %s mode", n.Module, mode)
 		}
 		byID[n.ID] = n
 	}
