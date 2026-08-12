@@ -82,14 +82,28 @@ type Port struct {
 // composer only when there is no runtime place to create tasks. Leave Modes
 // empty for a field that applies in every mode, such as a deployment URL.
 type ConfigField struct {
-	Key     string   `json:"key"`
-	Label   string   `json:"label"`
-	Type    string   `json:"type"` // "text" | "number" | "select" | "labelset"
+	Key   string `json:"key"`
+	Label string `json:"label"`
+	// "text" | "number" | "select" | "labelset" | "secret"
+	//
+	// A "secret" is a credential. It is never written into pipeline.json and
+	// never sent to a browser: the export puts it in its own file and the host
+	// keeps it server-side, so a platform can call an API on its users' behalf
+	// without handing them the key.
+	Type    string   `json:"type"`
 	Default any      `json:"default,omitempty"`
 	Options []string `json:"options,omitempty"`
 	Help    string   `json:"help,omitempty"`
 	Modes   []Mode   `json:"modes,omitempty"`
+	// Link points at wherever the value is obtained — an account page for a
+	// token, say. The composer renders it next to the field, because a
+	// setting nobody knows how to fill in may as well not exist.
+	Link     string `json:"link,omitempty"`
+	LinkText string `json:"linkText,omitempty"`
 }
+
+// IsSecret reports whether a field holds a credential.
+func (f ConfigField) IsSecret() bool { return f.Type == "secret" }
 
 // AppliesIn reports whether a config field is offered in the given mode.
 func (f ConfigField) AppliesIn(mode Mode) bool { return modeAllowed(f.Modes, mode) }
@@ -145,6 +159,14 @@ type Manifest struct {
 	// mounts only the services a pipeline actually references.
 	Services []string `json:"services,omitempty"`
 
+	// Proxy declares that this module calls an API outside the platform. The
+	// host forwards /api/proxy/<id>/ to it and attaches the credential, so the
+	// module talks to a same-origin path and the token never reaches a
+	// browser. Without this the only way to authenticate from the frontend is
+	// to ship the token to it, which is how the package's own documentation
+	// suggests doing it and is exactly what should be avoided.
+	Proxy *Proxy `json:"proxy,omitempty"`
+
 	Config []ConfigField `json:"config,omitempty"`
 
 	// RequiredRole is the authorisation seam. Nothing reads it yet — it is
@@ -155,6 +177,19 @@ type Manifest struct {
 
 // SupportsMode reports whether the module can work in the given mode.
 func (m Manifest) SupportsMode(mode Mode) bool { return modeAllowed(m.Modes, mode) }
+
+// Proxy describes an outside API a module depends on.
+type Proxy struct {
+	// ID is the path segment: /api/proxy/<id>/.
+	ID string `json:"id"`
+	// BaseURLKey names the config field holding the API's address.
+	BaseURLKey string `json:"baseUrlKey"`
+	// TokenKey names the secret config field holding the credential.
+	TokenKey string `json:"tokenKey,omitempty"`
+	// EnvVar lets a deployment supply the credential at run time instead of
+	// shipping it, and takes precedence over anything in the export.
+	EnvVar string `json:"envVar,omitempty"`
+}
 
 // Adapter is a declared conversion between two port types. The Go side uses
 // these only to decide whether a connection is legal; the conversion itself
