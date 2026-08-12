@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "legal-annotation-kit": "^1.0.0",
-    "legal-docs-client": "file:../../legal-docs-client",
     "vue": "^3.4.0",
     "vue-iaa-metrics": "^1.0.2",
     "vue-legal-docs-visualizer": "^1.1.0",

@@ -225,6 +225,24 @@ export async function callService(
   return res;
 }
 
+// --- document search --------------------------------------------------------
+//
+// Case law search happens on this platform's server, in the legal-docs service.
+// That is where the access token is, and it is also why these are two named
+// operations rather than a client: the page asks for a search, not for a URL,
+// so nothing here can point the platform's credential at another endpoint.
+
+/** Runs one query against one dataset. */
+export async function searchDocuments(query: unknown): Promise<{ nodes?: unknown[] }> {
+  return post("/api/services/legal-docs/search", query, "searching for documents");
+}
+
+/** Searches legislation, for the query builder's law selector. */
+export async function searchLaws(query: string): Promise<unknown[]> {
+  const path = `/api/services/legal-docs/laws?q=${encodeURIComponent(query)}`;
+  return json(await fetch(path), "searching legislation");
+}
+
 // --- composer ---------------------------------------------------------------
 
 export async function validatePipeline(p: Pipeline): Promise<{ valid: boolean; error?: string }> {
@@ -233,7 +251,7 @@ export async function validatePipeline(p: Pipeline): Promise<{ valid: boolean; e
 
 /**
  * Hands the draft to the composer's own server before previewing it, so any
- * access token it carries reaches the proxy.
+ * access token it carries reaches the service that needs it.
  *
  * The token goes from the composer's form to the server and stops there: it is
  * held in memory, never written, and never read back. Preview then behaves

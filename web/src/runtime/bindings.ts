@@ -22,6 +22,8 @@ import {
   ensureUsers,
   getCorpus,
   getDatasetDocuments,
+  searchDocuments,
+  searchLaws,
   syncDataset,
   syncTask,
 } from "../api";
@@ -244,13 +246,6 @@ const contracts: Record<string, ModeBindings> = {
   },
 };
 
-/**
- * Where the query builder sends its requests: a path on this platform, which
- * the host forwards to the real service with the credential attached. The
- * browser holds no token at any point.
- */
-const PROXY_PATH = "/api/proxy/legal-docs";
-
 /** Search results held for the session, when nothing is being stored. */
 const sessionResults = new Map<string, { name: string; full_text: string }[]>();
 
@@ -258,31 +253,31 @@ function searchDatasetName(ctx: BindingContext): string {
   return `search:${ctx.nodeId}`;
 }
 
-/** The query builder's props, differing only in what happens to the results. */
+/**
+ * The query builder's props, differing only in what happens to the results.
+ *
+ * The form builds queries and never sends one — both of these hand the work to
+ * this platform's own legal-docs service, which holds the access token and
+ * calls the API itself. Nothing on this page has a credential, and nothing on
+ * it can choose an endpoint: it asks for a search, not for a URL.
+ */
 async function searchProps(
   ctx: BindingContext,
   keep: (documents: { name: string; full_text: string }[]) => Promise<void>,
 ): Promise<Record<string, unknown>> {
-  // Blocks inside the form do their own lookups as the user types, so they
-  // need the same route: same-origin, no credential, host attaches the token.
-  const clientConfig = { baseURL: PROXY_PATH };
-
   return {
     title: ctx.config.title ?? "Find documents",
-    clientConfig,
-    onSubmit: async (query: unknown) => {
-      const { createLegalDocsClient } = await import("vue-legal-query-builder");
-      const client = createLegalDocsClient({ baseURL: String(ctx.config.api_base_url ?? "") });
-      const q = query as { dataset: string; params: Record<string, unknown> };
-      const result =
-        q.dataset === "ECHR"
-          ? await client.fetchEchr(q.params as never)
-          : await client.fetchRechtspraak(q.params as never);
 
+    onSubmit: async (query: unknown) => {
+      const result = await searchDocuments(query);
       await keep(toDocuments(result.nodes ?? []));
       ctx.refresh();
       return result;
     },
+
+    // The law selector looks legislation up as the user types. Without this
+    // callback the block says so, rather than appearing to find nothing.
+    onSearchLaws: searchLaws,
   };
 }
 
