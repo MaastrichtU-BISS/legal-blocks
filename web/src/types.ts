@@ -3,6 +3,14 @@
 // would be more machinery than the proof of concept needs.
 
 export type Kind = "source" | "ui" | "service";
+
+/**
+ * Where a platform's data lives. A property of the pipeline, never of a
+ * module — the packages ship a source for each, so the host decides.
+ */
+export type Mode = "ephemeral" | "persistent";
+
+export const MODES: Mode[] = ["ephemeral", "persistent"];
 export type Runtime = "web" | "go-inproc" | "container";
 
 export interface Port {
@@ -18,6 +26,8 @@ export interface ConfigField {
   default?: unknown;
   options?: string[];
   help?: string;
+  /** Modes this setting applies in. Absent means all of them. */
+  modes?: Mode[];
 }
 
 export interface Entry {
@@ -34,6 +44,8 @@ export interface Manifest {
   kind: Kind;
   runtime: Runtime;
   entry?: Entry;
+  /** Modes this module can work in. Absent means all of them. */
+  modes?: Mode[];
   inputs?: Port[];
   outputs?: Port[];
   host?: string;
@@ -73,8 +85,24 @@ export interface Edge {
 export interface Pipeline {
   version: number;
   name: string;
+  /** Absent means persistent, matching pipelines written before modes existed. */
+  mode?: Mode;
   nodes: Node[];
   edges: Edge[];
+}
+
+export function storageMode(p: Pipeline): Mode {
+  return p.mode ?? "persistent";
+}
+
+/** Whether a module can be used in the given mode. */
+export function supportsMode(m: Manifest, mode: Mode): boolean {
+  return !m.modes || m.modes.length === 0 || m.modes.includes(mode);
+}
+
+/** Whether a setting is offered in the given mode. */
+export function fieldAppliesIn(f: ConfigField, mode: Mode): boolean {
+  return !f.modes || f.modes.length === 0 || f.modes.includes(mode);
 }
 
 /** One input document, the payload of the corpus@1 port type. */
@@ -98,9 +126,14 @@ export function inputPort(m: Manifest, name: string): Port | undefined {
 }
 
 /** Config with manifest defaults filled in for anything the node omits. */
-export function configWithDefaults(m: Manifest, node: Node): Record<string, unknown> {
+export function configWithDefaults(
+  m: Manifest,
+  node: Node,
+  mode: Mode = "persistent",
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const field of m.config ?? []) {
+    if (!fieldAppliesIn(field, mode)) continue;
     out[field.key] = node.config?.[field.key] ?? field.default;
   }
   return out;

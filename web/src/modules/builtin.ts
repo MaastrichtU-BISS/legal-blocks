@@ -3,3 +3,4 @@
 // a special case anywhere except this file.
 
 export { default as CorpusSource } from "./CorpusSource.vue";
+export { default as ResultsDownload } from "./ResultsDownload.vue";
