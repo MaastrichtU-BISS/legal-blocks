@@ -60,7 +60,8 @@ settings forms are all driven by these files.
   "host": "MetricsSource",
   "services": ["lawnotation-iaa"],
   "inputs":  [{ "name": "task", "type": "annotated-task@1", "required": true }],
-  "outputs": [{ "name": "report", "type": "iaa-report@1" }]
+  "modes":   ["ephemeral", "persistent"],
+  "outputs": [{ "name": "task", "type": "annotated-task@1" }]
 }
 ```
 
@@ -136,7 +137,7 @@ my-platform/
   start.sh                     Linux
   pipeline.json                the only file that differs between exports
   corpus/*.txt                 the input documents
-  data/                        created on first run — this is the persistence
+  data/                        created on first run, when the platform stores things
   README.txt                   written for someone who has never used a terminal
 ```
 
