@@ -1,7 +1,7 @@
 // Package host is the server both halves of the product run on.
 //
 // In run mode it serves an exported platform: the frontend bundle, the
-// pipeline definition, the corpus, persistent storage, and whichever Go
+// pipeline definition, persistent storage, and whichever Go
 // services the pipeline's modules declare. In compose mode it additionally
 // serves the composer UI and the export endpoint. One server, one binary, and
 // the composer's preview is therefore the same code path the exported
@@ -44,8 +44,8 @@ const (
 // Config describes one server instance.
 type Config struct {
 	Mode Mode
-	// Dir is the working directory: pipeline.json, corpus/ and data/ are
-	// resolved relative to it.
+	// Dir is the working directory: pipeline.json and data/ are resolved
+	// relative to it.
 	Dir string
 	// Port to listen on. 0 picks a free one.
 	Port int

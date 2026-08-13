@@ -55,7 +55,7 @@ func main() {
 		defaultPort = 7788
 	}
 	port := fs.Int("port", defaultPort, "port to listen on (0 picks a free one)")
-	dir := fs.String("dir", ".", "working directory holding pipeline.json, corpus/ and data/")
+	dir := fs.String("dir", ".", "working directory holding pipeline.json and data/")
 	noOpen := fs.Bool("no-open", false, "do not open a browser on startup")
 	_ = fs.Parse(os.Args[2:])
 
@@ -90,7 +90,7 @@ Usage:
 
 Flags:
   -port N     port to listen on (compose: 7788, run: 7777; 0 picks a free one)
-  -dir PATH   working directory holding pipeline.json, corpus/ and data/
+  -dir PATH   working directory holding pipeline.json and data/
   -no-open    do not open a browser on startup
 `)
 }

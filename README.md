@@ -7,9 +7,9 @@ one file, and has a working platform — no Node, no npm, no Docker, nothing to
 install.
 
 ```
-Document folder  →  Annotate  →  Agreement metrics      saved in a database
-Search           →  Explore                             nothing stored
-Search  →  Annotate  →  Agreement  →  Download          nothing stored
+Import documents →  Annotate  →  Agreement metrics     a workspace, stored
+Search           →  Explore                            a pipeline, kept nowhere
+Search  →  Annotate  →  Agreement  →  Download         a pipeline, kept nowhere
 ```
 
 ---
@@ -20,7 +20,7 @@ Search  →  Annotate  →  Agreement  →  Download          nothing stored
 go run ./cmd/legal-blocks compose
 ```
 
-The composer opens in your browser. Add **Document folder**, **Annotate**,
+The composer opens in your browser. Add **Import documents**, **Annotate**,
 **Agreement metrics**, press **Preview** to use it, or **Export platform** to
 get the zip.
 
@@ -137,7 +137,6 @@ my-platform/
   start.sh                     Linux
   pipeline.json                the only file that differs between exports
   credentials.json             access tokens, when the platform needs any
-  corpus/*.txt                 the input documents
   data/                        created on first run, when the platform stores things
   README.txt                   written for someone who has never used a terminal
 ```
@@ -314,7 +313,6 @@ web/src/runtime/      renders a pipeline — what an exported platform runs
 web/src/composer/     the composer UI
 web/src/sources/      host implementations of each package's Source contract
 web/src/adapters.ts   conversions between port types
-corpus/*.txt          sample input documents
 binaries/             cross-compiled platform binaries (build-platforms.sh)
 script/               build helpers
 ```

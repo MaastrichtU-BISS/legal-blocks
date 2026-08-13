@@ -126,7 +126,7 @@ const tailType = computed(() => {
  * dataset and labelset it uses, and the annotate step is opened against a task
  * somebody chose — nothing travels along an edge. So the pipeline is a list of
  * what this platform can do, and the only question is whether a module works
- * with storage at all. Asking for a corpus source before an annotate step
+ * with storage at all. Asking for a document source before an annotate step
  * would be asking somebody to draw a connection that does not exist.
  */
 function canAppend(m: Manifest): boolean {
