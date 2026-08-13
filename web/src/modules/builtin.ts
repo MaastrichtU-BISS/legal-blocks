@@ -2,5 +2,4 @@
 // through the same manifest + loader path as any other module, so they are not
 // a special case anywhere except this file.
 
-export { default as CorpusSource } from "./CorpusSource.vue";
 export { default as ResultsDownload } from "./ResultsDownload.vue";

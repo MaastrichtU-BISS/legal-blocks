@@ -20,13 +20,11 @@
 
 import {
   createDataset,
-  getCorpus,
   importFormats,
   parseDocument,
   getDatasetDocuments,
   searchDocuments,
   searchLaws,
-  syncDataset,
 } from "../api";
 import { createAnnotationSource } from "../sources/annotation";
 import { createMetricsSource, loadMetricsTask } from "../sources/metrics";
@@ -119,9 +117,9 @@ async function documentsOf(value: CorpusValue): Promise<{ name: string; full_tex
 /**
  * Resolves a port to case-law documents, for a module that renders them.
  *
- * Only search produces these. Anything else — the corpus folder, a stored
- * dataset — is text with a filename, so it is presented as a document with
- * nothing else known about it rather than being dropped.
+ * Only search produces these. Anything else — an upload, a stored dataset —
+ * is text with a filename, so it is presented as a document with nothing else
+ * known about it rather than being dropped.
  */
 async function resultsOf(value: CorpusValue): Promise<ResultNode[]> {
   if (value.kind === "results") return value.nodes;
@@ -130,33 +128,6 @@ async function resultsOf(value: CorpusValue): Promise<ResultNode[]> {
 }
 
 const contracts: Record<string, KindBindings> = {
-  // The input folder. Persistently it becomes a dataset whose documents keep
-  // their ids, so adding a file never disturbs existing annotations. In a
-  // session it is simply the files, read fresh.
-  Corpus: {
-    workspace: {
-      async props() {
-        return { documents: await getCorpus() };
-      },
-      async output(ctx): Promise<CorpusValue> {
-        const documents = await getCorpus();
-        const datasetId = await syncDataset(
-          String(ctx.config.dataset_name ?? "corpus"),
-          documents,
-        );
-        return { kind: "dataset", datasetId };
-      },
-    },
-    pipeline: {
-      async props() {
-        return { documents: await getCorpus() };
-      },
-      async output(): Promise<CorpusValue> {
-        return { kind: "documents", documents: await getCorpus() };
-      },
-    },
-  },
-
   // legal-annotation-kit. The same component both ways; only the source differs.
   AnnotationSource: {
     workspace: {
