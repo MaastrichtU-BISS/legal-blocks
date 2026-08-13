@@ -1,35 +1,35 @@
 <script setup lang="ts">
 // This platform's workspace.
 //
-// vue-legal-workspace owns the screens; this owns what they are wired to. The
-// source is four reads and two writes against the platform's own API, and the
-// two slots are where the pipeline reappears: whatever this platform brings
-// documents in with, and whatever it can do with a task once one is open.
+// vue-legal-workspace draws tabs and tables and knows nothing else. This says
+// what the tabs are, what goes in each modal, and what opening a row means —
+// which is where everything annotation-shaped lives, and where the pipeline
+// reappears.
+//
+// The tabs are computed rather than fixed, so a workspace offers exactly what
+// it was composed to do. No module that brings documents in, no button to add
+// them. No module that works on a task, no Tasks tab and no Labels tab either,
+// because a labelset with nothing to apply it to is furniture.
 //
 // The composer decides which modules exist. The people using the platform
-// decide which tasks. Neither knows about the other, and this file is the
-// twenty lines where they meet.
+// decide which tasks. Neither knows about the other, and this file is where
+// they meet.
 
 import { computed, ref } from "vue";
 import { LegalWorkspace } from "vue-legal-workspace";
-import type { Task, WorkspaceSource } from "vue-legal-workspace";
+import type { Row, WorkspaceTab } from "vue-legal-workspace";
 import "vue-legal-workspace/style.css";
 
 import ModuleHost from "../runtime/ModuleHost.vue";
 import type { ResolveEnv } from "../runtime/resolve";
 import type { Manifest, Pipeline, Registry } from "../types";
-import { createLabelset, createTask, getDatasets, getLabelsets, getTasks } from "../api";
+import type { DatasetSummary, LabelsetSummary, TaskSummary } from "../api";
+import { getDatasets, getLabelsets, getTasks } from "../api";
+import NewLabelsetForm from "./NewLabelsetForm.vue";
+import NewTaskForm from "./NewTaskForm.vue";
 
 const props = defineProps<{ env: ResolveEnv; pipeline: Pipeline; registry: Registry }>();
 const emit = defineEmits<{ changed: [] }>();
-
-const source: WorkspaceSource = {
-  listTasks: getTasks,
-  createTask,
-  listDatasets: getDatasets,
-  listLabelsets: getLabelsets,
-  createLabelset,
-};
 
 /** The modules that bring documents in: import, search, whatever comes next. */
 const sources = computed(() =>
@@ -55,6 +55,91 @@ const taskSteps = computed(() =>
     }),
 );
 
+// Kept here as well as fetched by their tabs, because the Tasks tab has to
+// know whether there is anything to make a task from before either of the
+// other two has ever been opened.
+const datasets = ref<DatasetSummary[]>([]);
+const labelsets = ref<LabelsetSummary[]>([]);
+
+async function listDatasets(): Promise<DatasetSummary[]> {
+  datasets.value = await getDatasets();
+  return datasets.value;
+}
+
+async function listLabelsets(): Promise<LabelsetSummary[]> {
+  labelsets.value = await getLabelsets();
+  return labelsets.value;
+}
+
+void listDatasets();
+void listLabelsets();
+
+/** Why a task cannot be made yet, named precisely enough to act on. */
+const taskBlocked = computed(() => {
+  const missing: string[] = [];
+  if (!datasets.value.length) missing.push("documents");
+  if (!labelsets.value.length) missing.push("labels");
+  if (!missing.length) return undefined;
+  return `A task needs documents and labels — add ${missing.join(" and ")} first.`;
+});
+
+const tabs = computed<WorkspaceTab[]>(() => {
+  const out: WorkspaceTab[] = [
+    {
+      id: "datasets",
+      label: "Documents",
+      columns: [
+        { key: "name", label: "Name" },
+        { key: "documents", label: "Documents", align: "end" },
+        { key: "task_count", label: "Tasks", align: "end" },
+      ],
+      list: listDatasets,
+      // No module brings documents in, so there is nothing to press.
+      createLabel: sources.value.length ? "Add documents" : undefined,
+      createTitle: "Add documents",
+      empty: "No documents yet. Everything else here is made from these.",
+    },
+  ];
+
+  if (!taskSteps.value.length) return out;
+
+  out.push(
+    {
+      id: "labelsets",
+      label: "Labels",
+      columns: [
+        { key: "name", label: "Name" },
+        { key: "labels", label: "Labels" },
+        { key: "task_count", label: "Tasks", align: "end" },
+      ],
+      list: listLabelsets,
+      createLabel: "New labelset",
+      createTitle: "New labelset",
+      empty: "No labelsets yet. A labelset is what annotators can apply.",
+    },
+    {
+      id: "tasks",
+      label: "Tasks",
+      columns: [
+        { key: "name", label: "Name" },
+        { key: "dataset_name", label: "Documents" },
+        { key: "labelset_name", label: "Labels" },
+        { key: "annotation_level", label: "By" },
+        { key: "annotators", label: "Annotators", align: "end" },
+        { key: "progress", label: "Progress", align: "end" },
+      ],
+      list: getTasks,
+      createLabel: "New task",
+      createTitle: "New task",
+      createBlocked: taskBlocked.value,
+      openable: true,
+      empty: "No tasks yet. Make one and give it to somebody.",
+    },
+  );
+
+  return out;
+});
+
 const step = ref(0);
 const revision = ref(0);
 
@@ -74,17 +159,31 @@ function sourceEnv(): ResolveEnv {
   return { ...props.env, datasetName: datasetName.value.trim() || defaultName() };
 }
 
-/** The environment those steps run in, told which task is open. */
-function taskEnv(task: Task): ResolveEnv {
-  return { ...props.env, taskId: task.id, refresh: () => revision.value++ };
+/** The environment a task's steps run in, told which task is open. */
+function taskEnv(taskId: number): ResolveEnv {
+  return { ...props.env, taskId, refresh: () => revision.value++ };
+}
+
+function progress(row: Row): string {
+  const t = row as TaskSummary;
+  if (t.total === 0) return "no documents";
+  if (t.done === t.total) return "complete";
+  return `${t.done} of ${t.total}`;
+}
+
+function created() {
+  datasetName.value = "";
+  void listDatasets();
+  void listLabelsets();
+  emit("changed");
 }
 </script>
 
 <template>
-  <LegalWorkspace :source="source" :can-create-datasets="sources.length > 0" @task-created="emit('changed')">
+  <LegalWorkspace :tabs="tabs" tab="tasks" @created="created">
     <!-- However this platform gets documents. Usually one module; a platform
          built with both upload and search shows both. -->
-    <template #new-dataset>
+    <template #create-datasets="{ done }">
       <label class="name">
         Call these documents
         <input v-model="datasetName" :placeholder="defaultName()" />
@@ -100,28 +199,67 @@ function taskEnv(task: Task): ResolveEnv {
           @mounted="void 0"
         />
       </div>
+
+      <!-- A source module saves as it goes and has no way to say it finished,
+           so this is the only thing that can. -->
+      <div class="lw-actions">
+        <button class="lw-primary" @click="done">Done</button>
+      </div>
+    </template>
+
+    <template #create-labelsets="{ done, close }">
+      <NewLabelsetForm @created="done" @cancel="close" />
+    </template>
+
+    <template #create-tasks="{ done, close }">
+      <NewTaskForm
+        :datasets="datasets"
+        :labelsets="labelsets"
+        @created="done"
+        @cancel="close"
+      />
+    </template>
+
+    <!-- Labels read better as themselves than as a list of names. -->
+    <template #cell-labelsets-labels="{ item }">
+      <span class="lw-chips">
+        <span
+          v-for="label in (item as LabelsetSummary).labels"
+          :key="label.name"
+          class="lw-chip"
+          :style="label.color ? { background: label.color, color: '#fff' } : undefined"
+        >
+          {{ label.name }}
+        </span>
+      </span>
+    </template>
+
+    <template #cell-tasks-annotators="{ item }">
+      {{ (item as TaskSummary).annotators.length }}
+    </template>
+
+    <template #cell-tasks-progress="{ item }">
+      {{ progress(item) }}
     </template>
 
     <!-- A task, open. The pipeline's own steps, scoped to it. -->
-    <template #task="{ task }">
+    <template #open-tasks="{ item }">
       <nav v-if="taskSteps.length > 1" class="steps">
         <button
           v-for="(s, i) in taskSteps"
           :key="s.node.id"
           :class="{ 'lw-primary': i === step }"
-          @click="step = i; revision++"
+          @click="
+            step = i;
+            revision++;
+          "
         >
           {{ s.node.label || s.manifest?.name }}
         </button>
       </nav>
 
-      <p v-if="!taskSteps.length" class="lw-muted">
-        This platform has no step that works on a task. Add an annotation step
-        to the pipeline and export it again.
-      </p>
       <ModuleHost
-        v-else
-        :env="taskEnv(task)"
+        :env="taskEnv(Number(item.id))"
         :node="taskSteps[step].node"
         :manifest="taskSteps[step].manifest as Manifest"
         :revision="revision"
