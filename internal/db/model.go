@@ -6,9 +6,10 @@ package db
 
 // User is one person working in the platform.
 type User struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-	Role string `json:"role"`
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
 }
 
 // Label is one entry of a labelset.
@@ -36,8 +37,11 @@ type Task struct {
 
 // Document is one text under annotation.
 type Document struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	// Where it came from — a filename, an ECLI, a URL. Defaults to the name
+	// when whoever imported it had nothing better to say.
+	Source   string `json:"source,omitempty"`
 	FullText string `json:"full_text"`
 }
 

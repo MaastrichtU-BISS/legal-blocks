@@ -7,10 +7,14 @@
 --   users
 --     ├── labelsets
 --     ├── datasets ──── documents
---     ├── tasks
+--     ├── tasks         (-> one dataset, one labelset)
 --     └── assignments ──┬── span_annotations ──── span_relations
 --                       ├── document_annotations
 --                       └── document_relations (assignment ─> assignment)
+--
+-- Datasets and labelsets stand on their own: they are made once and reused, so
+-- the same documents can carry two tasks with different labels, and one
+-- labelset can serve every task in the platform.
 --
 -- Span-level and document-level work are separate tables rather than one table
 -- with a level column. They genuinely differ: a span has an extent and text, a
@@ -38,15 +42,23 @@
 -- picks one; external_id is where a real identity attaches when there is a
 -- login, without the rest of the schema moving. role is recorded but nothing
 -- enforces it yet.
+--
+-- email is the identity, because that is how annotators arrive: whoever sets
+-- up a task types the addresses of the people who should do it, and those
+-- people may not exist here yet. A row is created for an unknown address so
+-- the assignment has something to point at, and whoever signs in with that
+-- address later becomes that row rather than a second one. Sending them an
+-- invitation is what is missing, not knowing who they are.
+--
+-- So name is no longer unique — two people can be called Anna — and email is.
 CREATE TABLE users (
     id          INTEGER PRIMARY KEY,
     name        TEXT NOT NULL,
-    email       TEXT,
+    email       TEXT UNIQUE,
     role        TEXT NOT NULL DEFAULT 'annotator'
         CHECK (role IN ('annotator', 'editor', 'admin')),
     external_id TEXT UNIQUE,
-    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (name)
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- ---------------------------------------------------------------------------
@@ -98,9 +110,20 @@ CREATE TABLE documents (
 -- tasks and assignments
 -- ---------------------------------------------------------------------------
 
+-- A task is what someone creates in the running platform: pick a dataset, pick
+-- a labelset, say who should annotate. Everything about it is chosen at that
+-- moment rather than when the platform was assembled, which is what makes an
+-- export a platform instead of an appliance that runs one fixed task.
+--
+-- dataset_id is stored for the same reason labelset_id is: the task was made
+-- from that dataset and the screen listing tasks has to say so. It could be
+-- inferred by joining through assignments to documents, but that answer is
+-- ambiguous the moment a task draws on more than one dataset, and expensive
+-- either way. Assignments still decide which documents are actually in scope.
 CREATE TABLE tasks (
     id               INTEGER PRIMARY KEY,
     user_id          INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    dataset_id       INTEGER REFERENCES datasets (id) ON DELETE SET NULL,
     labelset_id      INTEGER REFERENCES labelsets (id) ON DELETE SET NULL,
     name             TEXT NOT NULL DEFAULT '',
     "desc"           TEXT NOT NULL DEFAULT '',

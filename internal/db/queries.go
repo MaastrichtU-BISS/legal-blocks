@@ -17,25 +17,48 @@ var ErrNotFound = errors.New("not found")
 // users
 // ---------------------------------------------------------------------------
 
-// EnsureUsers makes sure there are at least n users named "Annotator 1..n" and
-// returns all of them in id order.
+// UsersByEmail resolves each address to a user, creating one for any it has
+// not seen, and returns them in the order given.
 //
-// This is the login seam standing in for real accounts: the runtime's "Working
-// as" selector picks one of these. When there is a login, this is replaced by
-// looking up the authenticated user, and nothing downstream changes because
-// everything already takes a user id.
-func (d *DB) EnsureUsers(ctx context.Context, n int) ([]User, error) {
-	if n < 1 {
-		n = 1
+// This is how annotators join a platform. Whoever sets up a task types the
+// addresses of the people who should do it, and those people have almost
+// certainly never opened it — so a row is created for them and the assignment
+// has something to point at. Nobody is notified, which is the honest gap:
+// somebody has to tell them the platform exists. When they do arrive and sign
+// in with that address they become this row rather than a second one, which is
+// the whole reason the address is what identifies them.
+//
+// Addresses are matched case-insensitively and stored lowercased. Anna typing
+// her own address in one case and her colleague typing it in another must not
+// produce two annotators with half the work each.
+func (d *DB) UsersByEmail(ctx context.Context, emails []string) ([]User, error) {
+	cleaned := make([]string, 0, len(emails))
+	seen := map[string]bool{}
+	for _, e := range emails {
+		e = strings.ToLower(strings.TrimSpace(e))
+		if e == "" || seen[e] {
+			continue
+		}
+		seen[e] = true
+		cleaned = append(cleaned, e)
 	}
+	if len(cleaned) == 0 {
+		return []User{}, nil
+	}
+
 	err := d.tx(ctx, func(tx *sql.Tx) error {
-		for i := 1; i <= n; i++ {
-			_, err := tx.ExecContext(ctx,
-				`INSERT INTO users (name, role) VALUES (?, 'annotator')
-				 ON CONFLICT (name) DO NOTHING`,
-				fmt.Sprintf("Annotator %d", i))
-			if err != nil {
-				return fmt.Errorf("creating users: %w", err)
+		for _, email := range cleaned {
+			// The name is a placeholder until they introduce themselves. The
+			// local part is a better guess than "Annotator 3" and is what a
+			// reviewer will recognise in a metrics report.
+			name := email
+			if at := strings.IndexByte(email, '@'); at > 0 {
+				name = email[:at]
+			}
+			if _, err := tx.ExecContext(ctx,
+				`INSERT INTO users (name, email, role) VALUES (?, ?, 'annotator')
+				 ON CONFLICT (email) DO NOTHING`, name, email); err != nil {
+				return fmt.Errorf("adding %s: %w", email, err)
 			}
 		}
 		return nil
@@ -43,12 +66,29 @@ func (d *DB) EnsureUsers(ctx context.Context, n int) ([]User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return d.Users(ctx)
+
+	byEmail := map[string]User{}
+	all, err := d.Users(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range all {
+		byEmail[u.Email] = u
+	}
+
+	out := make([]User, 0, len(cleaned))
+	for _, email := range cleaned {
+		if u, ok := byEmail[email]; ok {
+			out = append(out, u)
+		}
+	}
+	return out, nil
 }
 
 // Users lists everyone, in id order.
 func (d *DB) Users(ctx context.Context) ([]User, error) {
-	rows, err := d.sql.QueryContext(ctx, `SELECT id, name, role FROM users ORDER BY id`)
+	rows, err := d.sql.QueryContext(ctx,
+		`SELECT id, name, COALESCE(email, ''), role FROM users ORDER BY id`)
 	if err != nil {
 		return nil, fmt.Errorf("listing users: %w", err)
 	}
@@ -57,7 +97,7 @@ func (d *DB) Users(ctx context.Context) ([]User, error) {
 	users := []User{}
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Name, &u.Role); err != nil {
+		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.Role); err != nil {
 			return nil, fmt.Errorf("reading user: %w", err)
 		}
 		users = append(users, u)

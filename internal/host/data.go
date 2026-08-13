@@ -3,6 +3,7 @@ package host
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -61,7 +62,11 @@ func (s *server) handleUsers(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "invalid body: %v", err)
 			return
 		}
-		users, err := s.db.EnsureUsers(r.Context(), body.Count)
+		// Annotators arrive by email now, when a task is created. Counting
+		// them into existence produced people with no way to be identified,
+		// which is exactly what stopped anyone being invited to a task.
+		_ = body
+		users, err := s.db.Users(r.Context())
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "%v", err)
 			return
@@ -127,10 +132,6 @@ func (s *server) handleSyncTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := s.db.EnsureUsers(r.Context(), body.Config.Annotators); err != nil {
-		writeError(w, http.StatusInternalServerError, "%v", err)
-		return
-	}
 	owner, err := s.owner(r)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "%v", err)
@@ -329,14 +330,23 @@ func (s *server) handleAssignmentScoped(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// ownerEmail is the address the platform's own account is created under until
+// there is a login. It is deliberately in a domain that can never receive
+// mail: nothing should send to it, and if a real person's address ended up
+// here they would silently own everything.
+const ownerEmail = "owner@platform.invalid"
+
 // owner returns the user rows are created under.
 //
-// Everything is owned by the first user for now. This is the one place that
+// Everything is owned by one account for now. This is the one place that
 // assumption lives, so a login replaces it here rather than in every query.
 func (s *server) owner(r *http.Request) (int64, error) {
-	users, err := s.db.EnsureUsers(r.Context(), 1)
+	users, err := s.db.UsersByEmail(r.Context(), []string{ownerEmail})
 	if err != nil {
 		return 0, err
+	}
+	if len(users) == 0 {
+		return 0, fmt.Errorf("could not create the platform's own account")
 	}
 	return users[0].ID, nil
 }

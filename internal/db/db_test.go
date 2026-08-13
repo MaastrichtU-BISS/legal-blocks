@@ -22,9 +22,9 @@ func seed(t *testing.T, d *DB) (taskID int64, users []User) {
 	t.Helper()
 	ctx := context.Background()
 
-	users, err := d.EnsureUsers(ctx, 2)
+	users, err := d.UsersByEmail(ctx, []string{"anna@example.org", "bram@example.org"})
 	if err != nil {
-		t.Fatalf("EnsureUsers: %v", err)
+		t.Fatalf("UsersByEmail: %v", err)
 	}
 	if len(users) != 2 {
 		t.Fatalf("got %d users, want 2", len(users))
@@ -58,8 +58,8 @@ func TestSchemaAppliesAndIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first open: %v", err)
 	}
-	if _, err := d.EnsureUsers(context.Background(), 1); err != nil {
-		t.Fatalf("EnsureUsers: %v", err)
+	if _, err := d.UsersByEmail(context.Background(), []string{"anna@example.org"}); err != nil {
+		t.Fatalf("UsersByEmail: %v", err)
 	}
 	d.Close()
 
@@ -357,7 +357,7 @@ func TestSyncPreservesExistingWork(t *testing.T) {
 func TestDocumentLevelTaskFeedsIaa(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	users, _ := d.EnsureUsers(ctx, 2)
+	users, _ := d.UsersByEmail(ctx, []string{"anna@example.org", "bram@example.org"})
 	datasetID, _ := d.SyncDataset(ctx, users[0].ID, "corpus", []Document{
 		{Name: "doc-a", FullText: "text"},
 	})
