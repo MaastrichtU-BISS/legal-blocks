@@ -27,11 +27,33 @@ func TestRegistryLoads(t *testing.T) {
 	if !reg.CanConnect("corpus@1", "corpus@1") {
 		t.Error("identical types should connect")
 	}
-	if !reg.CanConnect("document-set@1", "corpus@1") {
-		t.Error("declared adapter should allow connection")
-	}
 	if reg.CanConnect("corpus@1", "annotated-task@1") {
 		t.Error("unrelated types must not connect")
+	}
+	// Search results are cases; a corpus is documents to work on. Bridging them
+	// means fetching each judgment, which is a step of its own — so this must
+	// stay refused until the preprocessing module exists to do it.
+	if reg.CanConnect("document-set@1", "corpus@1") {
+		t.Error("search must not feed an annotation step directly")
+	}
+}
+
+// Refusing is only half of it: someone wiring search into annotation has a
+// reasonable idea and is missing a piece, and the message has to say which.
+func TestRefusingSearchToCorpusSaysWhatIsMissing(t *testing.T) {
+	reg := loadRegistry(t)
+	_, err := Parse(strings.NewReader(`{
+		"mode":"ephemeral",
+		"nodes":[
+			{"id":"search","module":"vue-legal-query-builder"},
+			{"id":"annotate","module":"legal-annotation-kit"}],
+		"edges":[{"from":{"node":"search","port":"documents"},"to":{"node":"annotate","port":"corpus"}}]
+	}`), reg)
+	if err == nil {
+		t.Fatal("search fed an annotation step directly")
+	}
+	if !strings.Contains(err.Error(), "preprocessing") {
+		t.Errorf("error = %q, want it to name the missing step", err)
 	}
 }
 

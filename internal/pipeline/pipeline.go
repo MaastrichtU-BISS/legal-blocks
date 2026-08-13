@@ -131,8 +131,8 @@ func (p *Pipeline) Validate(reg *manifest.Registry) error {
 			return fmt.Errorf("module %q has no input port %q", toNode.Module, e.To.Port)
 		}
 		if !reg.CanConnect(out.Type, in.Type) {
-			return fmt.Errorf("cannot connect %s (%s) to %s (%s): no adapter declared",
-				e.From, out.Type, e.To, in.Type)
+			return fmt.Errorf("cannot connect %s (%s) to %s (%s): %s",
+				e.From, out.Type, e.To, in.Type, whyNot(out.Type, in.Type))
 		}
 		if connected[e.To.String()] {
 			return fmt.Errorf("input %s is connected more than once", e.To)
@@ -229,6 +229,19 @@ func (p *Pipeline) ServiceIDs(reg *manifest.Registry) []string {
 		}
 	}
 	return out
+}
+
+// whyNot explains a refused connection. The generic answer is true but
+// unhelpful — someone wiring a search into an annotation step has a reasonable
+// idea and is missing a piece, and saying which piece is the difference
+// between a dead end and a next step.
+func whyNot(from, to string) string {
+	if from == "document-set@1" && to == "corpus@1" {
+		return "search results are cases, not documents to work on. Getting their text " +
+			"means fetching each judgment, which is a preprocessing step rather than " +
+			"something that can happen on this connection"
+	}
+	return "no adapter declared"
 }
 
 func findPort(ports []manifest.Port, name string) (manifest.Port, bool) {
