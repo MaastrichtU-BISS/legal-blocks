@@ -2,7 +2,7 @@ module github.com/MaastrichtU-BISS/legal-blocks
 
 go 1.25.0
 
-require github.com/MaastrichtU-BISS/lawnotation-iaa v0.0.0
+require github.com/MaastrichtU-BISS/lawnotation-iaa v0.1.0
 
 require (
 	github.com/MaastrichtU-BISS/go-legal-docs-client v0.0.0
@@ -17,10 +17,6 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.56.0
 )
-
-// Local checkout while the library refactor is unreleased. Replace with a
-// tagged version once lawnotation-iaa's iaa package is pushed.
-replace github.com/MaastrichtU-BISS/lawnotation-iaa => ../lawnotation-iaa
 
 // Local checkout while the client is unpublished. Replace with a tagged
 // version once go-legal-docs-client is pushed.
