@@ -29,7 +29,7 @@ func build(t *testing.T, binariesBuiltAt time.Time) string {
 	}
 
 	long := binariesBuiltAt.Add(-time.Hour)
-	write("registry/corpus-source.module.json", long)
+	write("registry/vue-legal-docs-import.module.json", long)
 	write("web/dist/index.html", long)
 	write("internal/host.go", long)
 	write("binaries/platform-linux-amd64", binariesBuiltAt)

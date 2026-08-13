@@ -19,7 +19,7 @@ func loadRegistry(t *testing.T) *manifest.Registry {
 
 func TestRegistryLoads(t *testing.T) {
 	reg := loadRegistry(t)
-	for _, want := range []string{"corpus-source", "legal-annotation-kit", "vue-iaa-metrics"} {
+	for _, want := range []string{"vue-legal-docs-import", "legal-annotation-kit", "vue-iaa-metrics"} {
 		if _, ok := reg.Modules[want]; !ok {
 			t.Errorf("registry missing module %q", want)
 		}
@@ -79,7 +79,7 @@ const flagship = `{
   "version": 1,
   "name": "Annotate and measure",
   "nodes": [
-    {"id": "docs", "module": "corpus-source", "label": "Documents"},
+    {"id": "docs", "module": "vue-legal-docs-import", "label": "Documents"},
     {"id": "annotate", "module": "legal-annotation-kit", "label": "Annotate",
      "config": {"labels": "Actor, Act", "annotators": 2, "annotation_level": "word"}},
     {"id": "metrics", "module": "vue-iaa-metrics", "label": "Metrics"}
@@ -99,8 +99,8 @@ func TestFlagshipPipelineIsValid(t *testing.T) {
 	if got, want := strings.Join(p.Order(), ","), "docs,annotate,metrics"; got != want {
 		t.Errorf("Order() = %q, want %q", got, want)
 	}
-	if got := p.ServiceIDs(reg); len(got) != 1 || got[0] != "lawnotation-iaa" {
-		t.Errorf("ServiceIDs() = %v, want [lawnotation-iaa]", got)
+	if got, want := strings.Join(p.ServiceIDs(reg), ","), "docs-import,lawnotation-iaa"; got != want {
+		t.Errorf("ServiceIDs() = %q, want %q", got, want)
 	}
 }
 
@@ -110,7 +110,7 @@ func TestValidateRejectsBadPipelines(t *testing.T) {
 	cases := map[string]struct{ json, wantErr string }{
 		"metrics before annotate": {
 			json: `{"nodes":[
-				{"id":"docs","module":"corpus-source"},
+				{"id":"docs","module":"vue-legal-docs-import"},
 				{"id":"metrics","module":"vue-iaa-metrics"}],
 			 "edges":[{"from":{"node":"docs","port":"corpus"},"to":{"node":"metrics","port":"task"}}]}`,
 			wantErr: "no adapter declared",
@@ -127,15 +127,15 @@ func TestValidateRejectsBadPipelines(t *testing.T) {
 		},
 		"unknown port": {
 			json: `{"nodes":[
-				{"id":"docs","module":"corpus-source"},
+				{"id":"docs","module":"vue-legal-docs-import"},
 				{"id":"annotate","module":"legal-annotation-kit"}],
 			 "edges":[{"from":{"node":"docs","port":"nope"},"to":{"node":"annotate","port":"corpus"}}]}`,
 			wantErr: "no output port",
 		},
 		"duplicate node id": {
 			json: `{"nodes":[
-				{"id":"docs","module":"corpus-source"},
-				{"id":"docs","module":"corpus-source"}]}`,
+				{"id":"docs","module":"vue-legal-docs-import"},
+				{"id":"docs","module":"vue-legal-docs-import"}]}`,
 			wantErr: "duplicate node id",
 		},
 	}
@@ -222,7 +222,7 @@ func TestValidateRejectsModuleInWrongKind(t *testing.T) {
 	downloadInWorkspace := `{
 		"kind": "workspace",
 		"nodes": [
-			{"id": "docs", "module": "corpus-source"},
+			{"id": "docs", "module": "vue-legal-docs-import"},
 			{"id": "annotate", "module": "legal-annotation-kit"},
 			{"id": "save", "module": "results-download"}],
 		"edges": [
@@ -238,7 +238,7 @@ func TestValidateRejectsModuleInWrongKind(t *testing.T) {
 func TestValidateRejectsUnknownKind(t *testing.T) {
 	reg := loadRegistry(t)
 	_, err := Parse(strings.NewReader(
-		`{"kind":"sometimes","nodes":[{"id":"d","module":"corpus-source"}]}`), reg)
+		`{"kind":"sometimes","nodes":[{"id":"d","module":"vue-legal-docs-import"}]}`), reg)
 	if err == nil || !strings.Contains(err.Error(), "expected pipeline or workspace") {
 		t.Fatalf("expected an unknown-kind error, got %v", err)
 	}

@@ -34,8 +34,6 @@ import (
 type Options struct {
 	Pipeline *pipeline.Pipeline
 	Registry *manifest.Registry
-	// CorpusDir holds the input documents to ship.
-	CorpusDir string
 	// BinariesDir holds cross-compiled platform binaries, one per operating
 	// system, produced by script/build-platforms.sh. Whatever is found there
 	// is shipped, so an export made on one machine runs on a colleague's
@@ -161,10 +159,6 @@ func Write(w io.Writer, opts Options) error {
 		}
 	}
 
-	if err := addCorpus(zw, opts.CorpusDir); err != nil {
-		return err
-	}
-
 	// A start script only ships when there is a binary it can actually launch.
 	// Shipping Start.bat next to a macOS binary is worse than shipping nothing
 	// — it looks like Windows is supported and fails with "not recognized as
@@ -218,33 +212,6 @@ func addBinary(zw *zip.Writer, t target) error {
 	}
 	if _, err := io.Copy(out, f); err != nil {
 		return fmt.Errorf("copying %s: %w", t.name, err)
-	}
-	return nil
-}
-
-// addCorpus copies the input documents. A missing or empty folder is not an
-// error: the zip still contains corpus/_readme.txt telling the recipient where
-// to put their own files. The leading underscore keeps that file from being
-// read as a document itself.
-func addCorpus(zw *zip.Writer, dir string) error {
-	if err := addFile(zw, "corpus/_readme.txt", []byte(corpusReadme), 0o644); err != nil {
-		return err
-	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
-	}
-	for _, e := range entries {
-		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".txt") {
-			continue
-		}
-		raw, err := os.ReadFile(filepath.Join(dir, e.Name()))
-		if err != nil {
-			return fmt.Errorf("reading %s: %w", e.Name(), err)
-		}
-		if err := addFile(zw, "corpus/"+e.Name(), raw, 0o644); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -348,15 +315,6 @@ fi
 
 chmod +x "$BIN" 2>/dev/null
 "$BIN" run
-`
-
-const corpusReadme = `Put the documents you want to work on in this folder, as .txt files.
-
-The file name (without .txt) becomes the document name in the platform.
-Add or remove files and reload the page in your browser to see the change.
-
-Files whose name starts with an underscore are ignored, so you can set a
-document aside without deleting it. That is why this file is called _readme.
 `
 
 // storageSection tells the recipient where their work lives, which differs
@@ -519,10 +477,6 @@ FIRST TIME ON macOS
   "Open Anyway", then double-click "Start.command" again.
 
   Either way, you only do this once.
-
-YOUR DOCUMENTS
-
-  Put .txt files in the "corpus" folder. Reload the page to pick up changes.
 
 %s%s`, opts.Pipeline.Name, strings.Repeat("=", len(opts.Pipeline.Name)), steps.String(),
 		startInstructions(ts), storageSection(opts.Pipeline.ExportKind()), credentials)
