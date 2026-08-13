@@ -665,18 +665,39 @@ type AnnotationFilters struct {
 	Annotators []string
 }
 
-// Annotations returns a task's spans, filtered, flattened with the context the
-// metrics module displays. This is the query the old implementation could only
-// do by loading the entire task into the browser and filtering it there.
+// Annotations returns a task's annotations, filtered, flattened with the
+// context the metrics module displays. This is the query the old
+// implementation could only do by loading the entire task into the browser and
+// filtering it there.
+//
+// Whole-document labels live in their own table and have no offsets, so they
+// join the list as zero-extent rows — the same encoding IaaInput uses, and the
+// one the metrics card already expects: it hides the text and its expander
+// when the task is document-level. Both kinds are read unconditionally rather
+// than picking a table from the task's level, because SyncTask can change that
+// level under work that already exists, and annotations somebody made should
+// not disappear from the list when it does.
 func (d *DB) Annotations(ctx context.Context, taskID int64, f AnnotationFilters) ([]RichAnnotation, error) {
 	query := strings.Builder{}
 	query.WriteString(
-		`SELECT s.id, s."start", s."end", s.text, s.label, s.confidence, s.metadata,
-		        a.user_id, d.name
-		 FROM span_annotations s
-		 JOIN assignments a ON a.id = s.assignment_id
-		 JOIN documents d ON d.id = a.document_id
-		 WHERE a.task_id = ?`)
+		`SELECT ann_id, "start", "end", text, label, confidence, metadata,
+		        user_id, doc_name
+		 FROM (
+		   SELECT s.id AS ann_id, s."start" AS "start", s."end" AS "end",
+		          s.text AS text, s.label AS label, s.confidence AS confidence,
+		          s.metadata AS metadata, a.task_id AS task_id,
+		          a.user_id AS user_id, d.name AS doc_name
+		   FROM span_annotations s
+		   JOIN assignments a ON a.id = s.assignment_id
+		   JOIN documents d ON d.id = a.document_id
+		   UNION ALL
+		   SELECT t.id, 0, 0, '', t.label, t.confidence, NULL, a.task_id,
+		          a.user_id, d.name
+		   FROM document_annotations t
+		   JOIN assignments a ON a.id = t.assignment_id
+		   JOIN documents d ON d.id = a.document_id
+		 )
+		 WHERE task_id = ?`)
 	args := []any{taskID}
 
 	appendIn := func(column string, values []string) {
@@ -693,10 +714,10 @@ func (d *DB) Annotations(ctx context.Context, taskID int64, f AnnotationFilters)
 		}
 		query.WriteString(")")
 	}
-	appendIn("s.label", f.Labels)
-	appendIn("d.name", f.Documents)
-	appendIn("CAST(a.user_id AS TEXT)", f.Annotators)
-	query.WriteString(` ORDER BY d.name, s."start", s.id`)
+	appendIn("label", f.Labels)
+	appendIn("doc_name", f.Documents)
+	appendIn("CAST(user_id AS TEXT)", f.Annotators)
+	query.WriteString(` ORDER BY doc_name, "start", ann_id`)
 
 	rows, err := d.sql.QueryContext(ctx, query.String(), args...)
 	if err != nil {

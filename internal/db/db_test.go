@@ -307,6 +307,64 @@ func TestAnnotationsFilterAndIaaInput(t *testing.T) {
 	}
 }
 
+// A whole-document label is an annotation like any other and has to appear in
+// the browsable list. It has no offsets, so it arrives with none.
+func TestAnnotationsIncludeDocumentLabels(t *testing.T) {
+	ctx := context.Background()
+	d := open(t)
+	datasetID := func() int64 { _, id, _ := seed(t, d); return id }()
+
+	users, _ := d.UsersByEmail(ctx, []string{"anna@example.org", "bram@example.org"})
+	taskID, err := d.SyncTask(ctx, users[0].ID, datasetID, TaskConfig{
+		Name:            "Topic",
+		AnnotationLevel: "document",
+		Labels:          []string{"Obligation", "Right"},
+		Annotators:      2,
+	})
+	if err != nil {
+		t.Fatalf("SyncTask: %v", err)
+	}
+
+	for _, u := range users {
+		q, _ := d.Queue(ctx, taskID, u.ID)
+		b, _ := d.Bundle(ctx, q[0].AssignmentID)
+		b.Assignment.DocumentAnnotations = []DocumentAnnotation{
+			{ID: -1, Label: "Obligation", Confidence: 4},
+		}
+		if err := d.SaveAssignment(ctx, q[0].AssignmentID, b.Assignment); err != nil {
+			t.Fatalf("SaveAssignment: %v", err)
+		}
+	}
+
+	all, err := d.Annotations(ctx, taskID, AnnotationFilters{})
+	if err != nil {
+		t.Fatalf("Annotations: %v", err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("got %d annotations, want the 2 document labels", len(all))
+	}
+	got := all[0]
+	if got.Label != "Obligation" || got.DocName != "doc-a" || got.Confidence != 4 {
+		t.Errorf("annotation = %+v", got)
+	}
+	if got.Start != 0 || got.End != 0 || got.Text != "" {
+		t.Errorf("document label came back with an extent: %+v", got)
+	}
+
+	// The same filters have to reach them.
+	filtered, err := d.Annotations(ctx, taskID, AnnotationFilters{
+		Labels:     []string{"Obligation"},
+		Documents:  []string{"doc-a"},
+		Annotators: []string{got.Annotator},
+	})
+	if err != nil {
+		t.Fatalf("filtered Annotations: %v", err)
+	}
+	if len(filtered) != 1 {
+		t.Errorf("filtered to %d annotations, want 1", len(filtered))
+	}
+}
+
 // Adding a document to a dataset must not disturb annotations already made.
 func TestAddingDocumentsPreservesExistingWork(t *testing.T) {
 	ctx := context.Background()
