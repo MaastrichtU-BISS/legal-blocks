@@ -16,6 +16,7 @@ import (
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/host"
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/manifest"
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/service"
+	docsimportsvc "github.com/MaastrichtU-BISS/legal-blocks/internal/services/docsimport"
 	iaasvc "github.com/MaastrichtU-BISS/legal-blocks/internal/services/iaa"
 	legaldocssvc "github.com/MaastrichtU-BISS/legal-blocks/internal/services/legaldocs"
 	"github.com/MaastrichtU-BISS/legal-blocks/registry"
@@ -28,6 +29,7 @@ import (
 func services() (*service.Registry, error) {
 	return service.NewRegistry(
 		iaasvc.New(),
+		docsimportsvc.New(),
 		legaldocssvc.New(),
 	)
 }

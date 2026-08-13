@@ -1,0 +1,39 @@
+{
+  "id": "vue-legal-docs-import",
+  "name": "Import documents",
+  "description": "Upload documents from your own machine — text, PDF, Word or HTML. The platform reads them and keeps the text.",
+  "version": "1.0.0",
+  "kind": "source",
+  "runtime": "web",
+  "entry": {
+    "package": "vue-legal-docs-import",
+    "component": "LegalDocsImport",
+    "style": "vue-legal-docs-import/style.css"
+  },
+  "host": "DocumentImport",
+  "services": [
+    "docs-import"
+  ],
+  "modes": [
+    "ephemeral",
+    "persistent"
+  ],
+  "outputs": [
+    {
+      "name": "corpus",
+      "type": "corpus@1"
+    }
+  ],
+  "config": [
+    {
+      "key": "dataset_name",
+      "label": "Name for the uploaded documents",
+      "type": "text",
+      "default": "Uploaded documents",
+      "modes": [
+        "ephemeral"
+      ],
+      "help": "What this collection is called. In a platform that stores its work, this is asked for each time documents are uploaded instead."
+    }
+  ]
+}
