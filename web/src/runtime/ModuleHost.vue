@@ -38,7 +38,7 @@ async function mount() {
     }
     const [comp, bound] = await Promise.all([
       loadComponent(props.manifest.entry),
-      bindingFor(props.manifest.host, props.env.mode).props(contextFor(props.env, props.node.id)),
+      bindingFor(props.manifest.host, props.env.kind).props(contextFor(props.env, props.node.id)),
     ]);
     component.value = comp;
     componentProps.value = bound;
@@ -53,7 +53,7 @@ async function mount() {
 // Remount when the step changes, when the annotator changes (their queue and
 // therefore their source is different), or when the parent bumps revision.
 watch(
-  () => [props.node.id, props.env.mode, props.env.annotator, props.revision],
+  () => [props.node.id, props.env.kind, props.env.annotator, props.revision],
   () => mount(),
   { immediate: true },
 );

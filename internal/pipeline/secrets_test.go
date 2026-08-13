@@ -6,7 +6,7 @@ import (
 )
 
 const withToken = `{
-  "mode": "ephemeral",
+  "kind": "pipeline",
   "name": "Explorer",
   "nodes": [
     {"id": "search", "module": "vue-legal-query-builder",
@@ -65,7 +65,7 @@ func TestUpstreamsResolveTokenAndAddress(t *testing.T) {
 func TestUpstreamFallsBackToManifestDefault(t *testing.T) {
 	reg := loadRegistry(t)
 	p, err := Parse(strings.NewReader(`{
-		"mode":"ephemeral",
+		"kind":"pipeline",
 		"nodes":[{"id":"search","module":"vue-legal-query-builder"}]}`), reg)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)

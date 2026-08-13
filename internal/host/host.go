@@ -91,7 +91,7 @@ func Run(cfg Config) error {
 		if err := cfg.Services.Mount(mux, p.ServiceIDs(cfg.Registry)); err != nil {
 			return err
 		}
-		log.Printf("pipeline %q: %d steps, %s", p.Name, len(p.Nodes), p.StorageMode())
+		log.Printf("%s %q: %d modules", p.ExportKind(), p.Name, len(p.Nodes))
 
 		secrets, err := loadCredentials(cfg.Dir)
 		if err != nil {
@@ -113,10 +113,10 @@ func Run(cfg Config) error {
 		}
 	}
 
-	// A platform that stores nothing opens no database and creates no data
-	// directory — there is nothing to put in one. That is not an optimisation:
-	// it is what makes an exported case-law explorer the same shape as the
-	// hand-written demo it replaces.
+	// A pipeline opens no database and creates no data directory — there is
+	// nothing to put in one. That is not an optimisation: it is what makes an
+	// exported case-law explorer the same shape as the hand-written demo it
+	// replaces.
 	//
 	// It may still run services. Searching needs the platform's access token,
 	// so it happens here rather than in the page — storing nothing and doing
@@ -179,7 +179,7 @@ func (s *server) needsDatabase() bool {
 	if s.cfg.Mode == ModeCompose {
 		return true
 	}
-	return s.pipeline.StorageMode() == manifest.ModePersistent
+	return s.pipeline.ExportKind() == manifest.KindWorkspace
 }
 
 func productName(m Mode) string {

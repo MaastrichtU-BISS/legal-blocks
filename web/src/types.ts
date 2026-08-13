@@ -2,15 +2,18 @@
 // rather than generated: the shapes are small and stable, and a generator
 // would be more machinery than the proof of concept needs.
 
-export type Kind = "source" | "ui" | "service";
+export type ModuleKind = "source" | "ui" | "service";
 
 /**
- * Where a platform's data lives. A property of the pipeline, never of a
- * module — the packages ship a source for each, so the host decides.
+ * What is being built. A property of the export, never of a module — the
+ * packages ship a source for each, so the host decides.
+ *
+ * A pipeline runs start to finish and keeps nothing. A workspace is somewhere
+ * people come back to, where they make their own documents, labels and tasks.
  */
-export type Mode = "ephemeral" | "persistent";
+export type Kind = "pipeline" | "workspace";
 
-export const MODES: Mode[] = ["ephemeral", "persistent"];
+export const KINDS: Kind[] = ["pipeline", "workspace"];
 export type Runtime = "web" | "go-inproc" | "container";
 
 export interface Port {
@@ -26,8 +29,8 @@ export interface ConfigField {
   default?: unknown;
   options?: string[];
   help?: string;
-  /** Modes this setting applies in. Absent means all of them. */
-  modes?: Mode[];
+  /** Kinds of export this setting applies in. Absent means both. */
+  worksIn?: Kind[];
   /** Where the value is obtained — an account page for a token, say. */
   link?: string;
   linkText?: string;
@@ -52,11 +55,11 @@ export interface Manifest {
   name: string;
   description: string;
   version: string;
-  kind: Kind;
+  kind: ModuleKind;
   runtime: Runtime;
   entry?: Entry;
-  /** Modes this module can work in. Absent means all of them. */
-  modes?: Mode[];
+  /** Kinds of export this module belongs in. Absent means both. */
+  worksIn?: Kind[];
   inputs?: Port[];
   outputs?: Port[];
   host?: string;
@@ -97,24 +100,24 @@ export interface Edge {
 export interface Pipeline {
   version: number;
   name: string;
-  /** Absent means persistent, matching pipelines written before modes existed. */
-  mode?: Mode;
+  /** Absent means workspace, matching files written before this field existed. */
+  kind?: Kind;
   nodes: Node[];
   edges: Edge[];
 }
 
-export function storageMode(p: Pipeline): Mode {
-  return p.mode ?? "persistent";
+export function exportKind(p: Pipeline): Kind {
+  return p.kind ?? "workspace";
 }
 
-/** Whether a module can be used in the given mode. */
-export function supportsMode(m: Manifest, mode: Mode): boolean {
-  return !m.modes || m.modes.length === 0 || m.modes.includes(mode);
+/** Whether a module belongs in the given kind of export. */
+export function supportsKind(m: Manifest, kind: Kind): boolean {
+  return !m.worksIn || m.worksIn.length === 0 || m.worksIn.includes(kind);
 }
 
-/** Whether a setting is offered in the given mode. */
-export function fieldAppliesIn(f: ConfigField, mode: Mode): boolean {
-  return !f.modes || f.modes.length === 0 || f.modes.includes(mode);
+/** Whether a setting is offered for the given kind. */
+export function fieldAppliesIn(f: ConfigField, kind: Kind): boolean {
+  return !f.worksIn || f.worksIn.length === 0 || f.worksIn.includes(kind);
 }
 
 /** One input document, the payload of the corpus@1 port type. */
@@ -141,11 +144,11 @@ export function inputPort(m: Manifest, name: string): Port | undefined {
 export function configWithDefaults(
   m: Manifest,
   node: Node,
-  mode: Mode = "persistent",
+  kind: Kind = "workspace",
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const field of m.config ?? []) {
-    if (!fieldAppliesIn(field, mode)) continue;
+    if (!fieldAppliesIn(field, kind)) continue;
     out[field.key] = node.config?.[field.key] ?? field.default;
   }
   return out;

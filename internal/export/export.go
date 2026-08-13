@@ -360,10 +360,10 @@ document aside without deleting it. That is why this file is called _readme.
 `
 
 // storageSection tells the recipient where their work lives, which differs
-// completely between the two kinds of platform and is the thing they most need
+// completely between the two kinds of export and is the thing they most need
 // to know before they start typing into one.
-func storageSection(mode manifest.Mode) string {
-	if mode == manifest.ModeEphemeral {
+func storageSection(kind manifest.Kind) string {
+	if kind == manifest.KindPipeline {
 		return `YOUR WORK
 
   This platform does not save anything on your computer beyond your browser.
@@ -525,5 +525,5 @@ YOUR DOCUMENTS
   Put .txt files in the "corpus" folder. Reload the page to pick up changes.
 
 %s%s`, opts.Pipeline.Name, strings.Repeat("=", len(opts.Pipeline.Name)), steps.String(),
-		startInstructions(ts), storageSection(opts.Pipeline.StorageMode()), credentials)
+		startInstructions(ts), storageSection(opts.Pipeline.ExportKind()), credentials)
 }

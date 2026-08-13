@@ -1,7 +1,7 @@
 {
   "id": "corpus-source",
   "name": "Document folder",
-  "description": "Reads the .txt files shipped in the platform's corpus/ folder and makes them available to the rest of the pipeline. Stands in for the import package that does not exist yet \u2014 when it does, it becomes another module producing the same corpus@1 type, and nothing downstream changes.",
+  "description": "Reads the .txt files shipped in the export's corpus/ folder. Superseded by Import documents, which reads more formats and does not need the files shipped alongside.",
   "version": "1.0.0",
   "kind": "source",
   "runtime": "web",
@@ -10,9 +10,9 @@
     "component": "CorpusSource"
   },
   "host": "Corpus",
-  "modes": [
-    "ephemeral",
-    "persistent"
+  "worksIn": [
+    "pipeline",
+    "workspace"
   ],
   "outputs": [
     {

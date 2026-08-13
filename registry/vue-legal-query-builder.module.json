@@ -14,9 +14,9 @@
   "services": [
     "legal-docs"
   ],
-  "modes": [
-    "ephemeral",
-    "persistent"
+  "worksIn": [
+    "pipeline",
+    "workspace"
   ],
   "outputs": [
     {

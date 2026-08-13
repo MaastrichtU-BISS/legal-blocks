@@ -11,9 +11,9 @@
     "style": "vue-legal-docs-visualizer/style.css"
   },
   "host": "DocumentPassthrough",
-  "modes": [
-    "ephemeral",
-    "persistent"
+  "worksIn": [
+    "pipeline",
+    "workspace"
   ],
   "inputs": [
     {

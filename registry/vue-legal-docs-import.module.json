@@ -1,7 +1,7 @@
 {
   "id": "vue-legal-docs-import",
   "name": "Import documents",
-  "description": "Upload documents from your own machine — text, PDF, Word or HTML. The platform reads them and keeps the text.",
+  "description": "Upload documents from your own machine \u2014 text, PDF, Word or HTML. The export reads them and keeps the text.",
   "version": "1.0.0",
   "kind": "source",
   "runtime": "web",
@@ -14,9 +14,9 @@
   "services": [
     "docs-import"
   ],
-  "modes": [
-    "ephemeral",
-    "persistent"
+  "worksIn": [
+    "pipeline",
+    "workspace"
   ],
   "outputs": [
     {
@@ -30,10 +30,10 @@
       "label": "Name for the uploaded documents",
       "type": "text",
       "default": "Uploaded documents",
-      "modes": [
-        "ephemeral"
+      "worksIn": [
+        "pipeline"
       ],
-      "help": "What this collection is called. In a platform that stores its work, this is asked for each time documents are uploaded instead."
+      "help": "What this collection is called. A workspace asks for it each time documents are uploaded instead."
     }
   ]
 }

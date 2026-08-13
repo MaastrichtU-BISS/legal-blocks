@@ -41,24 +41,25 @@ type Edge struct {
 type Pipeline struct {
 	Version int    `json:"version"`
 	Name    string `json:"name"`
-	// Mode says where this platform's data lives. It is a property of the
-	// platform rather than of any module: the same annotation component is a
-	// step in a durable multi-annotator task or a one-off pass over search
-	// results, depending only on which source the host builds for it.
+	// Kind says what this is: a pipeline that runs start to finish and keeps
+	// nothing, or a workspace people come back to. It is a property of the
+	// export rather than of any module — the same annotation component is a
+	// step in a one-off pass over search results or a durable multi-annotator
+	// task, depending only on which source the host builds for it.
 	//
-	// Empty means persistent, so a pipeline written before modes existed keeps
+	// Empty means workspace, so a file written before this field existed keeps
 	// the behaviour it had.
-	Mode  manifest.Mode `json:"mode,omitempty"`
+	Kind  manifest.Kind `json:"kind,omitempty"`
 	Nodes []Node        `json:"nodes"`
 	Edges []Edge        `json:"edges"`
 }
 
-// StorageMode returns the pipeline's mode, defaulting to persistent.
-func (p *Pipeline) StorageMode() manifest.Mode {
-	if p.Mode == "" {
-		return manifest.ModePersistent
+// ExportKind returns what this is, defaulting to a workspace.
+func (p *Pipeline) ExportKind() manifest.Kind {
+	if p.Kind == "" {
+		return manifest.KindWorkspace
 	}
-	return p.Mode
+	return p.Kind
 }
 
 var idPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
@@ -85,9 +86,9 @@ func (p *Pipeline) Validate(reg *manifest.Registry) error {
 		return fmt.Errorf("pipeline has no nodes")
 	}
 
-	mode := p.StorageMode()
-	if mode != manifest.ModeEphemeral && mode != manifest.ModePersistent {
-		return fmt.Errorf("unknown storage mode %q", mode)
+	kind := p.ExportKind()
+	if kind != manifest.KindPipeline && kind != manifest.KindWorkspace {
+		return fmt.Errorf("unknown kind %q — expected pipeline or workspace", kind)
 	}
 
 	byID := map[string]Node{}
@@ -102,11 +103,11 @@ func (p *Pipeline) Validate(reg *manifest.Registry) error {
 		if !ok {
 			return fmt.Errorf("node %q references unknown module %q", n.ID, n.Module)
 		}
-		// A module that cannot work without stored resources has no meaning in
-		// a platform that stores nothing, and vice versa. Catching it here
-		// means an export cannot promise a screen that will not function.
-		if !m.SupportsMode(mode) {
-			return fmt.Errorf("module %q does not work in %s mode", n.Module, mode)
+		// A module that needs stored resources has no meaning in a pipeline,
+		// and vice versa. Catching it here means an export cannot promise a
+		// screen that will not function.
+		if !m.SupportsKind(kind) {
+			return fmt.Errorf("module %q does not belong in a %s", n.Module, kind)
 		}
 		byID[n.ID] = n
 	}
@@ -140,20 +141,20 @@ func (p *Pipeline) Validate(reg *manifest.Registry) error {
 		connected[e.To.String()] = true
 	}
 
-	// Required inputs are only required in a session platform.
+	// Required inputs are only required in a pipeline.
 	//
 	// That is where an edge is how data reaches a step: a search feeds a
 	// viewer, an upload feeds an annotator, and a step with nothing connected
-	// has nothing to work on. With storage none of that is true. Documents
+	// has nothing to work on. In a workspace none of that is true. Documents
 	// become datasets, a task names the dataset and labelset it uses, and the
-	// annotate step is opened against a task somebody chose — so the corpus
+	// annotate tool is opened against a task somebody chose — so the corpus
 	// arrives from the workspace, not from whatever happens to be upstream.
 	//
 	// Insisting on an edge there would mean drawing one that lies: connecting
 	// upload to annotate would say "these documents" when the real answer is
 	// "whichever dataset the task names". Edges that are present are still
 	// type-checked above; they just stop being compulsory.
-	if p.StorageMode() == manifest.ModeEphemeral {
+	if kind == manifest.KindPipeline {
 		for _, n := range p.Nodes {
 			for _, in := range reg.Modules[n.Module].Inputs {
 				if in.Required && !connected[n.ID+"."+in.Name] {

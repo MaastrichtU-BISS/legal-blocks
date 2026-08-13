@@ -10,12 +10,12 @@ import ModuleHost from "./ModuleHost.vue";
 import PlatformWorkspace from "../workspace/PlatformWorkspace.vue";
 import type { ResolveEnv } from "./resolve";
 import type { Pipeline, Registry } from "../types";
-import { storageMode } from "../types";
+import { exportKind } from "../types";
 import { getUsers, type User } from "../api";
 
 const props = defineProps<{ pipeline: Pipeline; registry: Registry }>();
 
-const mode = computed(() => storageMode(props.pipeline));
+const kind = computed(() => exportKind(props.pipeline));
 
 /**
  * Who is using the platform.
@@ -33,7 +33,7 @@ watch(annotator, (value) => localStorage.setItem(ANNOTATOR_KEY, String(value)));
 // asking for user 0's queue returns nothing, which looks exactly like a task
 // with no documents. A stored platform mounts the workspace regardless — its
 // first visitor has no identity yet because nobody has made a task.
-const identified = computed(() => mode.value === "persistent" || annotator.value > 0);
+const identified = computed(() => kind.value === "workspace" || annotator.value > 0);
 
 /**
  * Who can work here.
@@ -47,7 +47,7 @@ const identified = computed(() => mode.value === "persistent" || annotator.value
  * simply the positions the platform was composed for.
  */
 async function loadUsers() {
-  users.value = mode.value === "ephemeral" ? sessionAnnotators() : await getUsers();
+  users.value = kind.value === "pipeline" ? sessionAnnotators() : await getUsers();
   if (!users.value.some((u) => u.id === annotator.value)) {
     annotator.value = users.value[0]?.id ?? 0;
   }
@@ -109,7 +109,7 @@ const revision = ref(0);
 const env = computed<ResolveEnv>(() => ({
   pipeline: props.pipeline,
   registry: props.registry,
-  mode: mode.value,
+  kind: kind.value,
   annotator: annotator.value,
   refresh: () => revision.value++,
 }));
@@ -129,7 +129,7 @@ function goTo(index: number) {
     <header class="lb-ui">
       <strong>{{ pipeline.name }}</strong>
 
-      <nav v-if="mode === 'ephemeral'">
+      <nav v-if="kind === 'pipeline'">
         <button
           v-for="(step, i) in steps"
           :key="step.node.id"
@@ -152,7 +152,7 @@ function goTo(index: number) {
 
     <p v-if="!identified" class="pad muted">Starting…</p>
     <PlatformWorkspace
-      v-else-if="mode === 'persistent'"
+      v-else-if="kind === 'workspace'"
       :env="env"
       :pipeline="pipeline"
       :registry="registry"

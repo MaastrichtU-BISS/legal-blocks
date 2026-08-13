@@ -38,13 +38,13 @@ func TestRegistryLoads(t *testing.T) {
 	}
 }
 
-// With storage, the annotate step's documents come from the task somebody
+// In a workspace the annotate tool's documents come from the task somebody
 // opened, not from whatever is upstream. Insisting on an edge would mean
 // drawing one that lies about where the documents come from.
-func TestStoredPlatformNeedsNoEdges(t *testing.T) {
+func TestWorkspaceNeedsNoEdges(t *testing.T) {
 	reg := loadRegistry(t)
 	_, err := Parse(strings.NewReader(`{
-		"mode":"persistent",
+		"kind":"workspace",
 		"nodes":[
 			{"id":"upload","module":"vue-legal-docs-import"},
 			{"id":"annotate","module":"legal-annotation-kit"},
@@ -52,7 +52,7 @@ func TestStoredPlatformNeedsNoEdges(t *testing.T) {
 		"edges":[]
 	}`), reg)
 	if err != nil {
-		t.Fatalf("a stored platform with no edges was rejected: %v", err)
+		t.Fatalf("a workspace with no edges was rejected: %v", err)
 	}
 }
 
@@ -61,7 +61,7 @@ func TestStoredPlatformNeedsNoEdges(t *testing.T) {
 func TestRefusingSearchToCorpusSaysWhatIsMissing(t *testing.T) {
 	reg := loadRegistry(t)
 	_, err := Parse(strings.NewReader(`{
-		"mode":"ephemeral",
+		"kind":"pipeline",
 		"nodes":[
 			{"id":"search","module":"vue-legal-query-builder"},
 			{"id":"annotate","module":"legal-annotation-kit"}],
@@ -115,10 +115,10 @@ func TestValidateRejectsBadPipelines(t *testing.T) {
 			 "edges":[{"from":{"node":"docs","port":"corpus"},"to":{"node":"metrics","port":"task"}}]}`,
 			wantErr: "no adapter declared",
 		},
-		// Only in a session platform. With storage, the task a step is opened
-		// against supplies what it needs, so an unconnected input is normal.
+		// Only in a pipeline. In a workspace the task a tool is opened against
+		// supplies what it needs, so an unconnected input is normal.
 		"required input unconnected": {
-			json:    `{"mode":"ephemeral","nodes":[{"id":"metrics","module":"vue-iaa-metrics"}]}`,
+			json:    `{"kind":"pipeline","nodes":[{"id":"metrics","module":"vue-iaa-metrics"}]}`,
 			wantErr: "required input",
 		},
 		"unknown module": {
@@ -174,7 +174,7 @@ func TestValidateRejectsCycles(t *testing.T) {
 const explorer = `{
   "version": 1,
   "name": "Case-law explorer",
-  "mode": "ephemeral",
+  "kind": "pipeline",
   "nodes": [
     {"id": "search", "module": "vue-legal-query-builder", "label": "Search"},
     {"id": "explore", "module": "vue-legal-docs-visualizer", "label": "Explore"}
@@ -184,14 +184,14 @@ const explorer = `{
   ]
 }`
 
-func TestEphemeralPipelineIsValid(t *testing.T) {
+func TestPipelineKindIsValid(t *testing.T) {
 	reg := loadRegistry(t)
 	p, err := Parse(strings.NewReader(explorer), reg)
 	if err != nil {
-		t.Fatalf("valid ephemeral pipeline rejected: %v", err)
+		t.Fatalf("valid pipeline rejected: %v", err)
 	}
-	if p.StorageMode() != manifest.ModeEphemeral {
-		t.Errorf("StorageMode() = %q, want ephemeral", p.StorageMode())
+	if p.ExportKind() != manifest.KindPipeline {
+		t.Errorf("ExportKind() = %q, want pipeline", p.ExportKind())
 	}
 	// Storing nothing does not mean running nothing: searching happens on the
 	// server, because that is where the access token lives. An explorer has no
@@ -201,26 +201,26 @@ func TestEphemeralPipelineIsValid(t *testing.T) {
 	}
 }
 
-// A pipeline written before modes existed must keep behaving as it did.
-func TestModeDefaultsToPersistent(t *testing.T) {
+// A file written before this field existed must keep behaving as it did.
+func TestKindDefaultsToWorkspace(t *testing.T) {
 	reg := loadRegistry(t)
 	p, err := Parse(strings.NewReader(flagship), reg)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if p.StorageMode() != manifest.ModePersistent {
-		t.Errorf("StorageMode() = %q, want persistent by default", p.StorageMode())
+	if p.ExportKind() != manifest.KindWorkspace {
+		t.Errorf("ExportKind() = %q, want workspace by default", p.ExportKind())
 	}
 }
 
 // A module that cannot work in the chosen mode must be refused at validation,
 // so an export never promises a screen that will not function.
-func TestValidateRejectsModuleInWrongMode(t *testing.T) {
+func TestValidateRejectsModuleInWrongKind(t *testing.T) {
 	reg := loadRegistry(t)
 
 	// results-download only makes sense when nothing is stored.
-	persistentDownload := `{
-		"mode": "persistent",
+	downloadInWorkspace := `{
+		"kind": "workspace",
 		"nodes": [
 			{"id": "docs", "module": "corpus-source"},
 			{"id": "annotate", "module": "legal-annotation-kit"},
@@ -229,17 +229,17 @@ func TestValidateRejectsModuleInWrongMode(t *testing.T) {
 			{"from": {"node": "docs", "port": "corpus"}, "to": {"node": "annotate", "port": "corpus"}},
 			{"from": {"node": "annotate", "port": "task"}, "to": {"node": "save", "port": "task"}}]}`
 
-	_, err := Parse(strings.NewReader(persistentDownload), reg)
-	if err == nil || !strings.Contains(err.Error(), "does not work in persistent mode") {
-		t.Fatalf("expected a mode error, got %v", err)
+	_, err := Parse(strings.NewReader(downloadInWorkspace), reg)
+	if err == nil || !strings.Contains(err.Error(), "does not belong in a workspace") {
+		t.Fatalf("expected a kind error, got %v", err)
 	}
 }
 
-func TestValidateRejectsUnknownMode(t *testing.T) {
+func TestValidateRejectsUnknownKind(t *testing.T) {
 	reg := loadRegistry(t)
 	_, err := Parse(strings.NewReader(
-		`{"mode":"sometimes","nodes":[{"id":"d","module":"corpus-source"}]}`), reg)
-	if err == nil || !strings.Contains(err.Error(), "unknown storage mode") {
-		t.Fatalf("expected an unknown-mode error, got %v", err)
+		`{"kind":"sometimes","nodes":[{"id":"d","module":"corpus-source"}]}`), reg)
+	if err == nil || !strings.Contains(err.Error(), "expected pipeline or workspace") {
+		t.Fatalf("expected an unknown-kind error, got %v", err)
 	}
 }

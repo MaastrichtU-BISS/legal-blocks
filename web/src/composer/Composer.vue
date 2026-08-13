@@ -20,8 +20,8 @@ import { computed, ref, watch } from "vue";
 import ConfigForm from "./ConfigForm.vue";
 import Runtime from "../runtime/Runtime.vue";
 import { exportPipeline, preparePreview, validatePipeline } from "../api";
-import type { Manifest, Mode, Node, Pipeline, Registry } from "../types";
-import { canConnect, configWithDefaults, fieldAppliesIn, storageMode, supportsMode } from "../types";
+import type { Manifest, Kind, Node, Pipeline, Registry } from "../types";
+import { canConnect, configWithDefaults, fieldAppliesIn, exportKind, supportsKind } from "../types";
 
 const props = defineProps<{ registry: Registry }>();
 
@@ -33,34 +33,45 @@ const DRAFT_KEY = "legal-blocks:composer-draft";
 
 const pipeline = ref<Pipeline>({
   version: 1,
-  name: "My platform",
-  mode: "persistent",
+  name: "",
   nodes: [],
   edges: [],
 });
 
-const mode = computed<Mode>(() => storageMode(pipeline.value));
-
 /**
- * Switching modes clears the chain.
+ * Nothing is chosen until somebody chooses it.
  *
- * The two are not variants of one platform: modules available in one may not
- * exist in the other, and settings that belong to the composer without storage
- * belong to a user with it. Silently keeping a chain that no longer validates
- * would be worse than making the change explicit.
+ * The two kinds are not settings on one thing; they are two different things
+ * to build, and almost every rule below follows from which. Asking up front —
+ * once, in the words of what is being made rather than where data lives —
+ * replaces a toggle that silently threw away your work when you touched it.
  */
-function setMode(next: Mode) {
-  if (next === mode.value) return;
-  if (
-    pipeline.value.nodes.length > 0 &&
-    !confirm("Changing where data lives starts the platform over. Continue?")
-  ) {
-    return;
-  }
-  pipeline.value = { ...pipeline.value, mode: next, nodes: [], edges: [] };
+const chosen = computed(() => pipeline.value.kind !== undefined);
+
+function start(next: Kind) {
+  pipeline.value = {
+    version: 1,
+    name: next === "pipeline" ? "My tool" : "My workspace",
+    kind: next,
+    nodes: [],
+    edges: [],
+  };
   selected.value = null;
   problem.value = "";
 }
+
+/** Back to the picker. Everything so far belonged to the other kind. */
+function startOver() {
+  if (pipeline.value.nodes.length > 0 && !confirm("Start over? This clears what you have built.")) {
+    return;
+  }
+  pipeline.value = { version: 1, name: "", nodes: [], edges: [] };
+  selected.value = null;
+  problem.value = "";
+}
+
+const kind = computed<Kind>(() => exportKind(pipeline.value));
+
 const selected = ref<string | null>(null);
 const previewing = ref(false);
 const status = ref("");
@@ -90,7 +101,7 @@ const palette = computed(() =>
 
 /** Settings the composer owns in this mode; the rest belong to runtime users. */
 function fieldsFor(m: Manifest) {
-  return (m.config ?? []).filter((f) => fieldAppliesIn(f, mode.value));
+  return (m.config ?? []).filter((f) => fieldAppliesIn(f, kind.value));
 }
 
 const chain = computed(() =>
@@ -119,9 +130,9 @@ const tailType = computed(() => {
  * would be asking somebody to draw a connection that does not exist.
  */
 function canAppend(m: Manifest): boolean {
-  if (!supportsMode(m, mode.value)) return false;
+  if (!supportsKind(m, kind.value)) return false;
   if (already(m)) return false;
-  if (mode.value === "persistent") return true;
+  if (kind.value === "workspace") return true;
 
   const required = m.inputs?.find((p) => p.required);
   if (!required) return tailType.value === null;
@@ -136,8 +147,8 @@ function already(m: Manifest): boolean {
 
 function whyNot(m: Manifest): string {
   if (already(m)) return "Already part of this platform.";
-  if (!supportsMode(m, mode.value)) {
-    return mode.value === "ephemeral"
+  if (!supportsKind(m, kind.value)) {
+    return kind.value === "pipeline"
       ? "Needs somewhere to store things — only available when work is saved."
       : "Only useful when nothing is stored; with storage the data is already kept.";
   }
@@ -159,7 +170,7 @@ function append(m: Manifest) {
     id: nextId(m.id),
     module: m.id,
     label: m.name,
-    config: configWithDefaults(m, { id: "", module: m.id, label: "" }, mode.value),
+    config: configWithDefaults(m, { id: "", module: m.id, label: "" }, kind.value),
   };
   const previous = chain.value.at(-1);
 
@@ -167,7 +178,7 @@ function append(m: Manifest) {
   // Edges only mean something without storage. With it, a task says which
   // dataset and labelset it uses, so an edge here would claim a connection
   // the platform does not actually make.
-  const required = mode.value === "ephemeral" ? m.inputs?.find((p) => p.required) : undefined;
+  const required = kind.value === "pipeline" ? m.inputs?.find((p) => p.required) : undefined;
   if (previous && required) {
     pipeline.value.edges.push({
       from: { node: previous.node.id, port: previous.manifest.outputs![0].name },
@@ -241,18 +252,38 @@ async function doExport() {
     <Runtime :pipeline="pipeline" :registry="registry" />
   </div>
 
+  <!-- Before anything else: what is being made. -->
+  <div v-else-if="!chosen" class="app lb-ui start">
+    <h1>What are you building?</h1>
+    <div class="choices">
+      <button class="choice" @click="start('pipeline')">
+        <strong>A pipeline</strong>
+        <span class="muted">
+          Runs start to finish. Documents go in one end and results come out the other, each
+          step reading what the one before produced. Nothing is kept afterwards, so work
+          leaves through a download.
+        </span>
+        <span class="muted small">Like a case-law explorer: search, then look at what came back.</span>
+      </button>
+
+      <button class="choice" @click="start('workspace')">
+        <strong>A workspace</strong>
+        <span class="muted">
+          Somewhere people come back to. Whoever uses it makes their own documents, labels and
+          tasks, and everything is stored — so several people can share it and work survives.
+        </span>
+        <span class="muted small">Like an annotation platform: upload, define a task, hand it out.</span>
+      </button>
+    </div>
+  </div>
+
   <div v-else class="app lb-ui">
     <header>
       <input v-model="pipeline.name" class="name" aria-label="Platform name" />
 
       <div class="row modes">
-        <span class="muted">Data</span>
-        <button :class="{ primary: mode === 'ephemeral' }" @click="setMode('ephemeral')">
-          Session only
-        </button>
-        <button :class="{ primary: mode === 'persistent' }" @click="setMode('persistent')">
-          Saved
-        </button>
+        <span class="muted">{{ kind === "pipeline" ? "Pipeline" : "Workspace" }}</span>
+        <button @click="startOver">Start over</button>
       </div>
 
       <div class="row">
@@ -268,7 +299,7 @@ async function doExport() {
 
     <div class="columns">
       <section class="palette">
-        <h2>Modules</h2>
+        <h2>{{ kind === "pipeline" ? "Steps" : "Tools" }} available</h2>
         <div v-for="m in palette" :key="m.id" class="module">
           <div class="row">
             <strong>{{ m.name }}</strong>
@@ -281,9 +312,9 @@ async function doExport() {
       </section>
 
       <section class="chain">
-        <h2>Platform</h2>
+        <h2>{{ kind === "pipeline" ? "Steps" : "Tools" }}</h2>
         <p class="muted mode-note">
-          <template v-if="mode === 'ephemeral'">
+          <template v-if="kind === 'pipeline'">
             Nothing is stored. Work stays in the browser for the session, and leaves through a
             download step.
           </template>
@@ -295,7 +326,11 @@ async function doExport() {
           </template>
         </p>
 
-        <p v-if="chain.length === 0" class="muted">
+        <p v-if="chain.length === 0 && kind === 'workspace'" class="muted">
+          Add the tools this workspace should have. They do not connect to each other — the
+          people using it decide what work exists.
+        </p>
+        <p v-else-if="chain.length === 0" class="muted">
           Add a starting step from the left. Steps can only be connected when the data one produces
           is data the next can read.
         </p>
@@ -313,11 +348,13 @@ async function doExport() {
             <!-- The wire is only real without storage. With it there are no
                  edges, so drawing one would claim a connection the platform
                  does not make. -->
-            <p v-if="mode === 'ephemeral' && i < chain.length - 1" class="wire muted small">
+            <p v-if="kind === 'pipeline' && i < chain.length - 1" class="wire muted small">
               ↓ {{ step.manifest.outputs?.[0]?.type }}
             </p>
           </div>
-          <button class="remove" @click="removeLast">Remove last step</button>
+          <button v-if="chain.length" class="remove" @click="removeLast">
+            Remove last {{ kind === "pipeline" ? "step" : "tool" }}
+          </button>
         </template>
       </section>
 
@@ -356,6 +393,47 @@ header {
   padding: 0.6rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-soft);
+}
+
+.start {
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 3rem 1rem;
+}
+
+.start h1 {
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.choices {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 48rem;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+  flex: 1 1 20rem;
+  padding: 1.25rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.choice:hover {
+  border-color: var(--accent);
+}
+
+.choice strong {
+  font-size: 1.05rem;
 }
 
 .name {

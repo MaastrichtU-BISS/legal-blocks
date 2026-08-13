@@ -18,38 +18,41 @@ import (
 	"strings"
 )
 
-// Kind separates modules that render something from modules that only expose
-// an HTTP API. A "source" is a UI module with no inputs — the start of a
-// pipeline.
-type Kind string
+// ModuleKind separates modules that render something from modules that only
+// expose an HTTP API. A "source" is a UI module with no inputs — where
+// documents come from.
+type ModuleKind string
 
 const (
-	KindSource  Kind = "source"
-	KindUI      Kind = "ui"
-	KindService Kind = "service"
+	KindSource  ModuleKind = "source"
+	KindUI      ModuleKind = "ui"
+	KindService ModuleKind = "service"
 )
 
-// Mode says where a platform's data lives.
+// Kind says what sort of thing is being built. There are two, and nearly every
+// difference between one export and another follows from which it is.
 //
-// This is a property of a pipeline, never of a module: legal-annotation-kit
+// This is a property of the export, never of a module: legal-annotation-kit
 // ships both createBulkSource ("for hosts with no backend to save to") and
 // createLazySource ("for hosts with an external backend"), which is the
 // packages themselves saying that the same component works either way and the
-// host decides. A module declares only which modes it can work in.
-type Mode string
+// host decides. A module declares only which kinds it can be part of.
+type Kind string
 
 const (
-	// ModeEphemeral keeps everything in the browser for the session. No
-	// database, no server-side state — caselaw-explorer-demo is exactly this:
-	// a query builder and a visualiser, three dependencies, no backend.
-	ModeEphemeral Mode = "ephemeral"
-	// ModePersistent stores everything in the platform's database, so work
-	// survives, several people share it, and resources are created at runtime.
-	ModePersistent Mode = "persistent"
+	// KindPipeline runs start to finish. Documents go in one end and results
+	// come out the other, each step reading what the one before produced, and
+	// nothing is kept afterwards. caselaw-explorer-demo is exactly this: a
+	// query builder and a visualiser, no backend.
+	KindPipeline Kind = "pipeline"
+	// KindWorkspace is somewhere people come back to. Whoever uses it creates
+	// their own documents, labels and tasks, everything is stored, and the
+	// modules are a set of tools around that store rather than a chain.
+	KindWorkspace Kind = "workspace"
 )
 
-// Modes lists both, in the order the composer offers them.
-var Modes = []Mode{ModeEphemeral, ModePersistent}
+// Kinds lists both, in the order the composer offers them.
+var Kinds = []Kind{KindPipeline, KindWorkspace}
 
 // Runtime says how a module is executed, and is the seam that keeps packaging
 // swappable. "web" modules are Vue components in the frontend bundle;
@@ -77,10 +80,11 @@ type Port struct {
 // ConfigField describes one setting the composer renders as a form control and
 // writes into the node's config in pipeline.json.
 //
-// Modes limits a field to the storage modes it makes sense in. A setting that
-// describes one task — its labels, its annotation level — belongs to the
-// composer only when there is no runtime place to create tasks. Leave Modes
-// empty for a field that applies in every mode, such as a deployment URL.
+// WorksIn limits a field to the kinds of export it makes sense in. A setting
+// describing one task — its labels, its annotation level — belongs to the
+// composer only in a pipeline, because a workspace has a screen for making
+// tasks. Leave WorksIn empty for a field that applies to both, such as a
+// deployment URL.
 type ConfigField struct {
 	Key   string `json:"key"`
 	Label string `json:"label"`
@@ -94,7 +98,7 @@ type ConfigField struct {
 	Default any      `json:"default,omitempty"`
 	Options []string `json:"options,omitempty"`
 	Help    string   `json:"help,omitempty"`
-	Modes   []Mode   `json:"modes,omitempty"`
+	WorksIn []Kind   `json:"worksIn,omitempty"`
 	// Link points at wherever the value is obtained — an account page for a
 	// token, say. The composer renders it next to the field, because a
 	// setting nobody knows how to fill in may as well not exist.
@@ -105,17 +109,17 @@ type ConfigField struct {
 // IsSecret reports whether a field holds a credential.
 func (f ConfigField) IsSecret() bool { return f.Type == "secret" }
 
-// AppliesIn reports whether a config field is offered in the given mode.
-func (f ConfigField) AppliesIn(mode Mode) bool { return modeAllowed(f.Modes, mode) }
+// AppliesIn reports whether a config field is offered for the given kind.
+func (f ConfigField) AppliesIn(kind Kind) bool { return worksIn(f.WorksIn, kind) }
 
-// modeAllowed treats an empty list as "every mode", so a manifest only has to
-// say something when a module or field is genuinely restricted.
-func modeAllowed(modes []Mode, mode Mode) bool {
-	if len(modes) == 0 {
+// worksIn treats an empty list as "both kinds", so a manifest only has to say
+// something when a module or field is genuinely restricted.
+func worksIn(kinds []Kind, kind Kind) bool {
+	if len(kinds) == 0 {
 		return true
 	}
-	for _, m := range modes {
-		if m == mode {
+	for _, k := range kinds {
+		if k == kind {
 			return true
 		}
 	}
@@ -132,19 +136,20 @@ type Entry struct {
 
 // Manifest is one module's complete declaration.
 type Manifest struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Version     string  `json:"version"`
-	Kind        Kind    `json:"kind"`
-	Runtime     Runtime `json:"runtime"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Version     string     `json:"version"`
+	Kind        ModuleKind `json:"kind"`
+	Runtime     Runtime    `json:"runtime"`
 
 	Entry *Entry `json:"entry,omitempty"`
 
-	// Modes limits the module to the storage modes it can work in. A pure
-	// view works in both; a module that manages stored resources only makes
-	// sense with a database. Empty means every mode.
-	Modes []Mode `json:"modes,omitempty"`
+	// WorksIn limits the module to the kinds of export it belongs in. A pure
+	// view works in both; a download step only makes sense in a pipeline,
+	// where nothing is stored and that is the only way work leaves. Empty
+	// means both.
+	WorksIn []Kind `json:"worksIn,omitempty"`
 
 	Inputs  []Port `json:"inputs,omitempty"`
 	Outputs []Port `json:"outputs,omitempty"`
@@ -175,8 +180,8 @@ type Manifest struct {
 	RequiredRole string `json:"requiredRole,omitempty"`
 }
 
-// SupportsMode reports whether the module can work in the given mode.
-func (m Manifest) SupportsMode(mode Mode) bool { return modeAllowed(m.Modes, mode) }
+// SupportsKind reports whether the module belongs in the given kind of export.
+func (m Manifest) SupportsKind(kind Kind) bool { return worksIn(m.WorksIn, kind) }
 
 // Upstream describes an outside API a module's service depends on.
 type Upstream struct {

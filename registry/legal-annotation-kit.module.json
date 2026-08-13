@@ -1,7 +1,7 @@
 {
   "id": "legal-annotation-kit",
   "name": "Annotate",
-  "description": "Span and document-level annotation. Works with or without storage: with it, annotators work through durable assigned queues; without it, one pass over whatever the previous step produced, kept in the browser.",
+  "description": "Span and document-level annotation. In a workspace, annotators work through durable queues on tasks somebody created. In a pipeline, one pass over whatever the previous step produced, kept in the browser.",
   "version": "1.0.0",
   "kind": "ui",
   "runtime": "web",
@@ -11,9 +11,9 @@
     "style": "legal-annotation-kit/style.css"
   },
   "host": "AnnotationSource",
-  "modes": [
-    "ephemeral",
-    "persistent"
+  "worksIn": [
+    "pipeline",
+    "workspace"
   ],
   "inputs": [
     {
@@ -35,8 +35,8 @@
       "type": "text",
       "default": "Annotation task",
       "help": "Only for a session platform, which has one task and no screen to make another. With storage, tasks are named when they are created.",
-      "modes": [
-        "ephemeral"
+      "worksIn": [
+        "pipeline"
       ]
     },
     {
@@ -45,8 +45,8 @@
       "type": "labelset",
       "default": "Actor, Act, Precondition, Postcondition",
       "help": "Only for a session platform. With storage, labels are a labelset, made once and reused by any number of tasks.",
-      "modes": [
-        "ephemeral"
+      "worksIn": [
+        "pipeline"
       ]
     },
     {
@@ -62,8 +62,8 @@
       ],
       "default": "word",
       "help": "Only for a session platform. With storage, each task chooses its own.",
-      "modes": [
-        "ephemeral"
+      "worksIn": [
+        "pipeline"
       ]
     },
     {
@@ -72,8 +72,8 @@
       "type": "number",
       "default": 2,
       "help": "Only for a session platform, where annotators are positions rather than people. With storage they are named by email when a task is created.",
-      "modes": [
-        "ephemeral"
+      "worksIn": [
+        "pipeline"
       ]
     },
     {
@@ -82,8 +82,8 @@
       "type": "text",
       "default": "",
       "help": "Only for a session platform. With storage, each task carries its own link.",
-      "modes": [
-        "ephemeral"
+      "worksIn": [
+        "pipeline"
       ]
     }
   ]

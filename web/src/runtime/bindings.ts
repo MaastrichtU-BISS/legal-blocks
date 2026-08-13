@@ -4,11 +4,11 @@
 // set of packages build very different platforms:
 //
 //   the port type says WHAT data flows        (corpus@1, annotated-task@1)
-//   the pipeline's mode says WHERE it lives   (ephemeral / persistent)
+//   the pipeline's kind says WHERE it lives   (ephemeral / persistent)
 //   the binding says HOW the module gets it   (a source built either way)
 //
 // A module declares only the first two of those — its ports and the contract
-// it wants — and never learns which mode it is running in. That is not a
+// it wants — and never learns which kind it is running in. That is not a
 // convention this project invented: legal-annotation-kit ships createBulkSource
 // "for hosts with no backend to save to" alongside createLazySource "for hosts
 // with an external backend". The packages already say the host decides.
@@ -37,7 +37,7 @@ import {
   createSessionMetricsSource,
 } from "../sources/memory";
 import type { TaskData } from "legal-annotation-kit";
-import type { Mode } from "../types";
+import type { Kind } from "../types";
 
 /** One document as the search API returns it: an id and its own attributes. */
 export interface ResultNode {
@@ -80,7 +80,7 @@ export interface BindingContext {
   nodeId: string;
   config: Record<string, unknown>;
   /** Where this platform's data lives. */
-  mode: Mode;
+  kind: Kind;
   /** The current user. A row id when persistent, a position when not. */
   annotator: number;
   /** The task being worked on, when the workspace has one open. */
@@ -93,15 +93,15 @@ export interface BindingContext {
   refresh(): void;
 }
 
-/** One contract, implemented once per mode. */
+/** One contract, implemented once per kind of export. */
 export interface Binding {
   props(ctx: BindingContext): Promise<Record<string, unknown>>;
   output(ctx: BindingContext, portName: string): Promise<unknown>;
 }
 
-type ModeBindings = Partial<Record<Mode, Binding>>;
+type KindBindings = Partial<Record<Kind, Binding>>;
 
-/** Resolves a corpus port to plain documents, whichever mode produced it. */
+/** Resolves a corpus port to plain documents, whichever kind produced it. */
 async function documentsOf(value: CorpusValue): Promise<{ name: string; full_text: string }[]> {
   if (value.kind === "documents") return value.documents;
   if (value.kind === "results") {
@@ -129,12 +129,12 @@ async function resultsOf(value: CorpusValue): Promise<ResultNode[]> {
   return documents.map((d) => ({ id: d.name, data: { ecli: d.name, summary: d.full_text } }));
 }
 
-const contracts: Record<string, ModeBindings> = {
+const contracts: Record<string, KindBindings> = {
   // The input folder. Persistently it becomes a dataset whose documents keep
   // their ids, so adding a file never disturbs existing annotations. In a
   // session it is simply the files, read fresh.
   Corpus: {
-    persistent: {
+    workspace: {
       async props() {
         return { documents: await getCorpus() };
       },
@@ -147,7 +147,7 @@ const contracts: Record<string, ModeBindings> = {
         return { kind: "dataset", datasetId };
       },
     },
-    ephemeral: {
+    pipeline: {
       async props() {
         return { documents: await getCorpus() };
       },
@@ -159,7 +159,7 @@ const contracts: Record<string, ModeBindings> = {
 
   // legal-annotation-kit. The same component both ways; only the source differs.
   AnnotationSource: {
-    persistent: {
+    workspace: {
       async props(ctx) {
         const taskId = requireTask(ctx);
         const [source, task] = await Promise.all([
@@ -177,7 +177,7 @@ const contracts: Record<string, ModeBindings> = {
         return { kind: "task", taskId: requireTask(ctx) };
       },
     },
-    ephemeral: {
+    pipeline: {
       async props(ctx) {
         const task = await sessionTask(ctx);
         return {
@@ -200,7 +200,7 @@ const contracts: Record<string, ModeBindings> = {
   // needs no storage either way — it is given a task and returns a report — so
   // this module works in both modes untouched.
   MetricsSource: {
-    persistent: {
+    workspace: {
       async props(ctx) {
         const taskId = requireTask(ctx);
         const task = await loadMetricsTask(taskId);
@@ -213,7 +213,7 @@ const contracts: Record<string, ModeBindings> = {
         return { kind: "task", taskId: requireTask(ctx) };
       },
     },
-    ephemeral: {
+    pipeline: {
       async props(ctx) {
         const task = await sessionTaskFrom(ctx);
         return {
@@ -230,7 +230,7 @@ const contracts: Record<string, ModeBindings> = {
   // The exit a platform with no storage needs: with a database the work is
   // already kept, without one it has to be taken out.
   ResultsDownload: {
-    ephemeral: {
+    pipeline: {
       async props(ctx) {
         return { task: await sessionTaskFrom(ctx) };
       },
@@ -243,7 +243,7 @@ const contracts: Record<string, ModeBindings> = {
   // vue-legal-docs-import. Files the user picks, read by this platform's own
   // parser and kept.
   DocumentImport: {
-    persistent: {
+    workspace: {
       async props(ctx) {
         return importProps(async (documents) => {
           await createDataset(ctx.datasetName ?? String(ctx.config.dataset_name ?? "Documents"), documents);
@@ -257,7 +257,7 @@ const contracts: Record<string, ModeBindings> = {
         return { kind: "documents", documents: [] };
       },
     },
-    ephemeral: {
+    pipeline: {
       async props(ctx) {
         return importProps(async (documents) => {
           sessionUploads.set(ctx.nodeId, documents);
@@ -275,7 +275,7 @@ const contracts: Record<string, ModeBindings> = {
   // reduce a case to its text: turning results into something annotatable
   // means fetching each judgment, which is the preprocessing module's job.
   DocumentSearch: {
-    persistent: {
+    workspace: {
       async props(ctx) {
         return searchProps(ctx, async (result) => {
           sessionResults.set(ctx.nodeId, result);
@@ -285,7 +285,7 @@ const contracts: Record<string, ModeBindings> = {
         return resultValue(ctx.nodeId);
       },
     },
-    ephemeral: {
+    pipeline: {
       async props(ctx) {
         return searchProps(ctx, async (result) => {
           sessionResults.set(ctx.nodeId, result);
@@ -300,7 +300,7 @@ const contracts: Record<string, ModeBindings> = {
   // vue-legal-docs-visualizer. A pure view: it renders what it is given and
   // passes the reference on unchanged, so it works identically either way.
   DocumentPassthrough: {
-    persistent: {
+    workspace: {
       async props(ctx) {
         return visualiserProps((await ctx.input("documents")) as CorpusValue);
       },
@@ -308,7 +308,7 @@ const contracts: Record<string, ModeBindings> = {
         return (await ctx.input("documents")) as CorpusValue;
       },
     },
-    ephemeral: {
+    pipeline: {
       async props(ctx) {
         return visualiserProps((await ctx.input("documents")) as CorpusValue);
       },
@@ -445,19 +445,19 @@ function requireTask(ctx: BindingContext): number {
   return ctx.taskId;
 }
 
-export function bindingFor(host: string | undefined, mode: Mode): Binding {
+export function bindingFor(host: string | undefined, kind: Kind): Binding {
   if (!host) {
     throw new Error("module manifest has no host contract");
   }
-  const byMode = contracts[host];
-  if (!byMode) {
+  const byKind = contracts[host];
+  if (!byKind) {
     throw new Error(
       `no host binding for contract "${host}" — add one in web/src/runtime/bindings.ts`,
     );
   }
-  const binding = byMode[mode];
+  const binding = byKind[kind];
   if (!binding) {
-    throw new Error(`the "${host}" contract has no implementation for ${mode} platforms`);
+    throw new Error(`the "${host}" contract has no implementation for a ${kind}`);
   }
   return binding;
 }
