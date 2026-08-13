@@ -35,7 +35,6 @@ func (s *server) dataRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("/api/users", s.handleUsers)
 	s.resourceRoutes(mux)
-	mux.HandleFunc("/api/datasets/sync", s.handleSyncDataset)
 	mux.HandleFunc("/api/datasets/", s.handleDatasetScoped)
 	mux.HandleFunc("/api/tasks/sync", s.handleSyncTask)
 	mux.HandleFunc("/api/tasks/", s.handleTaskScoped)
@@ -77,39 +76,6 @@ func (s *server) handleUsers(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "use GET or POST")
 	}
-}
-
-// handleSyncDataset stores a set of documents as a named dataset and returns
-// its id. Idempotent: documents already present keep their id so annotations
-// made against them survive.
-func (s *server) handleSyncDataset(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, "use POST")
-		return
-	}
-	var body struct {
-		Name      string        `json:"name"`
-		Documents []db.Document `json:"documents"`
-	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodyBytes)).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid body: %v", err)
-		return
-	}
-	if body.Name == "" {
-		body.Name = "corpus"
-	}
-
-	owner, err := s.owner(r)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "%v", err)
-		return
-	}
-	id, err := s.db.SyncDataset(r.Context(), owner, body.Name, body.Documents)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "%v", err)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]int64{"dataset_id": id})
 }
 
 // handleSyncTask brings the task for a dataset in line with the annotate

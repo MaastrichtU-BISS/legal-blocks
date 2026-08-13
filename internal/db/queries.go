@@ -109,48 +109,6 @@ func (d *DB) Users(ctx context.Context) ([]User, error) {
 // datasets
 // ---------------------------------------------------------------------------
 
-// SyncDataset creates or updates a dataset to hold exactly the given
-// documents, and returns its id.
-//
-// Documents already present keep their id, so annotations made against them
-// survive: a user adding a file to the corpus folder must not silently destroy
-// work on the files that were already there. Documents that disappeared from
-// the source are left alone for the same reason — they simply stop being
-// assigned.
-func (d *DB) SyncDataset(ctx context.Context, ownerID int64, name string, docs []Document) (int64, error) {
-	var datasetID int64
-
-	err := d.tx(ctx, func(tx *sql.Tx) error {
-		err := tx.QueryRowContext(ctx,
-			`SELECT id FROM datasets WHERE user_id = ? AND name = ?`, ownerID, name).Scan(&datasetID)
-		if errors.Is(err, sql.ErrNoRows) {
-			res, err := tx.ExecContext(ctx,
-				`INSERT INTO datasets (user_id, name) VALUES (?, ?)`, ownerID, name)
-			if err != nil {
-				return fmt.Errorf("creating dataset: %w", err)
-			}
-			if datasetID, err = res.LastInsertId(); err != nil {
-				return err
-			}
-		} else if err != nil {
-			return fmt.Errorf("finding dataset: %w", err)
-		}
-
-		for _, doc := range docs {
-			_, err := tx.ExecContext(ctx,
-				`INSERT INTO documents (dataset_id, name, source, full_text)
-				 VALUES (?, ?, ?, ?)
-				 ON CONFLICT (dataset_id, name) DO UPDATE SET full_text = excluded.full_text`,
-				datasetID, doc.Name, doc.Name, doc.FullText)
-			if err != nil {
-				return fmt.Errorf("storing document %q: %w", doc.Name, err)
-			}
-		}
-		return nil
-	})
-	return datasetID, err
-}
-
 // DatasetDocuments lists a dataset's documents in name order.
 func (d *DB) DatasetDocuments(ctx context.Context, datasetID int64) ([]Document, error) {
 	rows, err := d.sql.QueryContext(ctx,

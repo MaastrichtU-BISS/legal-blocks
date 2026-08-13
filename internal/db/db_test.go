@@ -18,7 +18,7 @@ func open(t *testing.T) *DB {
 
 // seed builds the flagship pipeline's state: a corpus, a task, two annotators
 // assigned every document.
-func seed(t *testing.T, d *DB) (taskID int64, users []User) {
+func seed(t *testing.T, d *DB) (taskID, datasetID int64, users []User) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -30,12 +30,12 @@ func seed(t *testing.T, d *DB) (taskID int64, users []User) {
 		t.Fatalf("got %d users, want 2", len(users))
 	}
 
-	datasetID, err := d.SyncDataset(ctx, users[0].ID, "corpus", []Document{
+	datasetID, err = d.CreateDataset(ctx, users[0].ID, "Rulings", "", []Document{
 		{Name: "doc-a", FullText: "The tenant shall pay rent"},
 		{Name: "doc-b", FullText: "The landlord may terminate"},
 	})
 	if err != nil {
-		t.Fatalf("SyncDataset: %v", err)
+		t.Fatalf("CreateDataset: %v", err)
 	}
 
 	taskID, err = d.SyncTask(ctx, users[0].ID, datasetID, TaskConfig{
@@ -47,7 +47,7 @@ func seed(t *testing.T, d *DB) (taskID int64, users []User) {
 	if err != nil {
 		t.Fatalf("SyncTask: %v", err)
 	}
-	return taskID, users
+	return taskID, datasetID, users
 }
 
 func TestSchemaAppliesAndIsIdempotent(t *testing.T) {
@@ -81,7 +81,7 @@ func TestSchemaAppliesAndIsIdempotent(t *testing.T) {
 func TestQueueAndSave(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	taskID, users := seed(t, d)
+	taskID, _, users := seed(t, d)
 
 	queue, err := d.Queue(ctx, taskID, users[0].ID)
 	if err != nil {
@@ -136,7 +136,7 @@ func TestQueueAndSave(t *testing.T) {
 func TestSaveIsolatesAnnotators(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	taskID, users := seed(t, d)
+	taskID, _, users := seed(t, d)
 
 	q1, _ := d.Queue(ctx, taskID, users[0].ID)
 	q2, _ := d.Queue(ctx, taskID, users[1].ID)
@@ -176,7 +176,7 @@ func TestSaveIsolatesAnnotators(t *testing.T) {
 func TestRelationsRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	taskID, users := seed(t, d)
+	taskID, _, users := seed(t, d)
 	queue, _ := d.Queue(ctx, taskID, users[0].ID)
 
 	b, _ := d.Bundle(ctx, queue[0].AssignmentID)
@@ -241,7 +241,7 @@ func TestRelationsRoundTrip(t *testing.T) {
 func TestAnnotationsFilterAndIaaInput(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	taskID, users := seed(t, d)
+	taskID, _, users := seed(t, d)
 
 	// Both annotators mark the same span on doc-a.
 	for _, u := range users {
@@ -307,11 +307,11 @@ func TestAnnotationsFilterAndIaaInput(t *testing.T) {
 	}
 }
 
-// Adding a document to the corpus must not disturb annotations already made.
-func TestSyncPreservesExistingWork(t *testing.T) {
+// Adding a document to a dataset must not disturb annotations already made.
+func TestAddingDocumentsPreservesExistingWork(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
-	taskID, users := seed(t, d)
+	taskID, datasetID, users := seed(t, d)
 
 	q, _ := d.Queue(ctx, taskID, users[0].ID)
 	b, _ := d.Bundle(ctx, q[0].AssignmentID)
@@ -322,13 +322,12 @@ func TestSyncPreservesExistingWork(t *testing.T) {
 		t.Fatalf("SaveAssignment: %v", err)
 	}
 
-	datasetID, err := d.SyncDataset(ctx, users[0].ID, "corpus", []Document{
+	if err := d.AddDocuments(ctx, datasetID, []Document{
 		{Name: "doc-a", FullText: "The tenant shall pay rent"},
 		{Name: "doc-b", FullText: "The landlord may terminate"},
 		{Name: "doc-c", FullText: "A newly added document"},
-	})
-	if err != nil {
-		t.Fatalf("SyncDataset: %v", err)
+	}); err != nil {
+		t.Fatalf("AddDocuments: %v", err)
 	}
 	if _, err := d.SyncTask(ctx, users[0].ID, datasetID, TaskConfig{
 		Name: "Obligations", AnnotationLevel: "word",
@@ -358,7 +357,7 @@ func TestDocumentLevelTaskFeedsIaa(t *testing.T) {
 	ctx := context.Background()
 	d := open(t)
 	users, _ := d.UsersByEmail(ctx, []string{"anna@example.org", "bram@example.org"})
-	datasetID, _ := d.SyncDataset(ctx, users[0].ID, "corpus", []Document{
+	datasetID, _ := d.CreateDataset(ctx, users[0].ID, "Rulings", "", []Document{
 		{Name: "doc-a", FullText: "text"},
 	})
 	taskID, err := d.SyncTask(ctx, users[0].ID, datasetID, TaskConfig{
