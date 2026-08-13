@@ -140,10 +140,25 @@ func (p *Pipeline) Validate(reg *manifest.Registry) error {
 		connected[e.To.String()] = true
 	}
 
-	for _, n := range p.Nodes {
-		for _, in := range reg.Modules[n.Module].Inputs {
-			if in.Required && !connected[n.ID+"."+in.Name] {
-				return fmt.Errorf("node %q has no connection for required input %q", n.ID, in.Name)
+	// Required inputs are only required in a session platform.
+	//
+	// That is where an edge is how data reaches a step: a search feeds a
+	// viewer, an upload feeds an annotator, and a step with nothing connected
+	// has nothing to work on. With storage none of that is true. Documents
+	// become datasets, a task names the dataset and labelset it uses, and the
+	// annotate step is opened against a task somebody chose — so the corpus
+	// arrives from the workspace, not from whatever happens to be upstream.
+	//
+	// Insisting on an edge there would mean drawing one that lies: connecting
+	// upload to annotate would say "these documents" when the real answer is
+	// "whichever dataset the task names". Edges that are present are still
+	// type-checked above; they just stop being compulsory.
+	if p.StorageMode() == manifest.ModeEphemeral {
+		for _, n := range p.Nodes {
+			for _, in := range reg.Modules[n.Module].Inputs {
+				if in.Required && !connected[n.ID+"."+in.Name] {
+					return fmt.Errorf("node %q has no connection for required input %q", n.ID, in.Name)
+				}
 			}
 		}
 	}

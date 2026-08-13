@@ -20,7 +20,6 @@
 
 import {
   createDataset,
-  ensureUsers,
   getCorpus,
   importFormats,
   parseDocument,
@@ -28,7 +27,6 @@ import {
   searchDocuments,
   searchLaws,
   syncDataset,
-  syncTask,
 } from "../api";
 import { createAnnotationSource } from "../sources/annotation";
 import { createMetricsSource, loadMetricsTask } from "../sources/metrics";
@@ -85,6 +83,10 @@ export interface BindingContext {
   mode: Mode;
   /** The current user. A row id when persistent, a position when not. */
   annotator: number;
+  /** The task being worked on, when the workspace has one open. */
+  taskId?: number;
+  /** What a dataset being created should be called. */
+  datasetName?: string;
   /** Resolves the value arriving on one of this node's input ports. */
   input(portName: string): Promise<unknown>;
   /** Re-runs the current step, after something changes its inputs. */
@@ -159,7 +161,7 @@ const contracts: Record<string, ModeBindings> = {
   AnnotationSource: {
     persistent: {
       async props(ctx) {
-        const taskId = await ensureTask(ctx);
+        const taskId = requireTask(ctx);
         const [source, task] = await Promise.all([
           createAnnotationSource(taskId, ctx.annotator),
           loadMetricsTask(taskId),
@@ -172,7 +174,7 @@ const contracts: Record<string, ModeBindings> = {
         };
       },
       async output(ctx): Promise<TaskValue> {
-        return { kind: "task", taskId: await ensureTask(ctx) };
+        return { kind: "task", taskId: requireTask(ctx) };
       },
     },
     ephemeral: {
@@ -200,16 +202,15 @@ const contracts: Record<string, ModeBindings> = {
   MetricsSource: {
     persistent: {
       async props(ctx) {
-        const value = (await ctx.input("task")) as TaskValue;
-        if (value.kind !== "task") throw new Error("expected a stored task");
-        const task = await loadMetricsTask(value.taskId);
+        const taskId = requireTask(ctx);
+        const task = await loadMetricsTask(taskId);
         return {
-          source: createMetricsSource(value.taskId, task),
+          source: createMetricsSource(taskId, task),
           reportFilename: `${task.name || "iaa"}-report.zip`,
         };
       },
       async output(ctx): Promise<TaskValue> {
-        return (await ctx.input("task")) as TaskValue;
+        return { kind: "task", taskId: requireTask(ctx) };
       },
     },
     ephemeral: {
@@ -245,7 +246,7 @@ const contracts: Record<string, ModeBindings> = {
     persistent: {
       async props(ctx) {
         return importProps(async (documents) => {
-          await createDataset(String(ctx.config.dataset_name ?? "Uploaded documents"), documents);
+          await createDataset(ctx.datasetName ?? String(ctx.config.dataset_name ?? "Documents"), documents);
           ctx.refresh();
         });
       },
@@ -430,25 +431,18 @@ async function sessionTaskFrom(ctx: BindingContext): Promise<TaskData> {
 }
 
 /**
- * Brings the stored task in line with the annotate step's settings.
- * Idempotent, so it runs on every visit and picks up a changed labelset or
- * annotator count without discarding anything already annotated.
+ * The task these steps are working on.
+ *
+ * In a stored platform every task is made by somebody in the Tasks tab, so
+ * there is always one open by the time a step mounts. Reaching here without
+ * one means a step was mounted outside the workspace, which is a wiring
+ * mistake rather than something to paper over by inventing a task.
  */
-async function ensureTask(ctx: BindingContext): Promise<number> {
-  const value = (await ctx.input("corpus")) as CorpusValue;
-  if (value.kind !== "dataset") throw new Error("expected a stored dataset");
-  const annotators = Math.max(1, Number(ctx.config.annotators ?? 2) || 1);
-  await ensureUsers(annotators);
-  return syncTask(value.datasetId, {
-    name: String(ctx.config.task_name ?? "Annotation task"),
-    guidelines: String(ctx.config.guidelines_url ?? ""),
-    annotation_level: String(ctx.config.annotation_level ?? "word"),
-    labels: String(ctx.config.labels ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean),
-    annotators,
-  });
+function requireTask(ctx: BindingContext): number {
+  if (!ctx.taskId) {
+    throw new Error("no task is open — open one from the Tasks tab");
+  }
+  return ctx.taskId;
 }
 
 export function bindingFor(host: string | undefined, mode: Mode): Binding {

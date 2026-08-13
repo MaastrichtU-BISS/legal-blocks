@@ -7,10 +7,11 @@
 
 import { computed, ref, watch } from "vue";
 import ModuleHost from "./ModuleHost.vue";
+import PlatformWorkspace from "../workspace/PlatformWorkspace.vue";
 import type { ResolveEnv } from "./resolve";
 import type { Pipeline, Registry } from "../types";
 import { storageMode } from "../types";
-import { ensureUsers, getUsers, type User } from "../api";
+import { getUsers, type User } from "../api";
 
 const props = defineProps<{ pipeline: Pipeline; registry: Registry }>();
 
@@ -30,24 +31,23 @@ watch(annotator, (value) => localStorage.setItem(ANNOTATOR_KEY, String(value)));
 
 // Steps must not mount before we know who is working: a queue is per-user, and
 // asking for user 0's queue returns nothing, which looks exactly like a task
-// with no documents.
-const identified = computed(() => annotator.value > 0);
+// with no documents. A stored platform mounts the workspace regardless — its
+// first visitor has no identity yet because nobody has made a task.
+const identified = computed(() => mode.value === "persistent" || annotator.value > 0);
 
 /**
  * Who can work here.
  *
- * With storage these are rows in the users table, and the first call creates
- * one if the database is empty — otherwise nothing would mount, and the step
- * that creates the users would never get the chance. Without storage there is
- * no users table and nobody to be: the annotators are simply the positions the
- * platform was composed for.
+ * With storage these are rows in the users table, put there when somebody was
+ * named as an annotator on a task. A platform with no tasks yet has nobody in
+ * it, which is why the workspace does not wait for an identity the way the
+ * step runner does — the Tasks tab is exactly where the first people arrive.
+ *
+ * Without storage there is no users table and nobody to be: the annotators are
+ * simply the positions the platform was composed for.
  */
-async function loadUsers(create = false) {
-  if (mode.value === "ephemeral") {
-    users.value = sessionAnnotators();
-  } else {
-    users.value = create ? await ensureUsers(1) : await getUsers();
-  }
+async function loadUsers() {
+  users.value = mode.value === "ephemeral" ? sessionAnnotators() : await getUsers();
   if (!users.value.some((u) => u.id === annotator.value)) {
     annotator.value = users.value[0]?.id ?? 0;
   }
@@ -63,11 +63,12 @@ function sessionAnnotators(): User[] {
   return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
     name: `Annotator ${i + 1}`,
+    email: "",
     role: "annotator",
   }));
 }
 
-void loadUsers(true);
+void loadUsers();
 
 const steps = computed(() => {
   const byId = new Map(props.pipeline.nodes.map((n) => [n.id, n]));
@@ -128,7 +129,7 @@ function goTo(index: number) {
     <header class="lb-ui">
       <strong>{{ pipeline.name }}</strong>
 
-      <nav>
+      <nav v-if="mode === 'ephemeral'">
         <button
           v-for="(step, i) in steps"
           :key="step.node.id"
@@ -142,12 +143,21 @@ function goTo(index: number) {
       <label v-if="users.length > 1" class="who">
         Working as
         <select v-model.number="annotator">
-          <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
+          <option v-for="u in users" :key="u.id" :value="u.id">
+            {{ u.email || u.name }}
+          </option>
         </select>
       </label>
     </header>
 
     <p v-if="!identified" class="pad muted">Starting…</p>
+    <PlatformWorkspace
+      v-else-if="mode === 'persistent'"
+      :env="env"
+      :pipeline="pipeline"
+      :registry="registry"
+      @changed="loadUsers()"
+    />
     <ModuleHost
       v-else-if="steps[current]"
       :env="env"

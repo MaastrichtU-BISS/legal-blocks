@@ -16,6 +16,22 @@ export interface ResolveEnv {
   /** Where this platform's data lives. */
   mode: Mode;
   annotator: number;
+  /**
+   * The task these steps are working on, when one is open.
+   *
+   * Set by the workspace, which is where a stored platform's tasks are chosen.
+   * A session platform has no task list and no id: its task is built from the
+   * pipeline's own settings, which is the whole difference between the two.
+   */
+  taskId?: number;
+  /**
+   * What a dataset about to be created should be called.
+   *
+   * Set by the workspace when somebody is uploading, for the same reason
+   * taskId is: the module producing the documents has no idea it is making a
+   * dataset, let alone what to name it.
+   */
+  datasetName?: string;
   refresh(): void;
 }
 
@@ -68,6 +84,8 @@ export function contextFor(env: ResolveEnv, nodeId: string): BindingContext {
     config: configWithDefaults(manifest, node, env.mode),
     mode: env.mode,
     annotator: env.annotator,
+    taskId: env.taskId,
+    datasetName: env.datasetName,
     input: (portName) => resolveInput(env, nodeId, portName),
     refresh: env.refresh,
   };

@@ -38,6 +38,24 @@ func TestRegistryLoads(t *testing.T) {
 	}
 }
 
+// With storage, the annotate step's documents come from the task somebody
+// opened, not from whatever is upstream. Insisting on an edge would mean
+// drawing one that lies about where the documents come from.
+func TestStoredPlatformNeedsNoEdges(t *testing.T) {
+	reg := loadRegistry(t)
+	_, err := Parse(strings.NewReader(`{
+		"mode":"persistent",
+		"nodes":[
+			{"id":"upload","module":"vue-legal-docs-import"},
+			{"id":"annotate","module":"legal-annotation-kit"},
+			{"id":"metrics","module":"vue-iaa-metrics"}],
+		"edges":[]
+	}`), reg)
+	if err != nil {
+		t.Fatalf("a stored platform with no edges was rejected: %v", err)
+	}
+}
+
 // Refusing is only half of it: someone wiring search into annotation has a
 // reasonable idea and is missing a piece, and the message has to say which.
 func TestRefusingSearchToCorpusSaysWhatIsMissing(t *testing.T) {
@@ -97,8 +115,10 @@ func TestValidateRejectsBadPipelines(t *testing.T) {
 			 "edges":[{"from":{"node":"docs","port":"corpus"},"to":{"node":"metrics","port":"task"}}]}`,
 			wantErr: "no adapter declared",
 		},
+		// Only in a session platform. With storage, the task a step is opened
+		// against supplies what it needs, so an unconnected input is normal.
 		"required input unconnected": {
-			json:    `{"nodes":[{"id":"metrics","module":"vue-iaa-metrics"}]}`,
+			json:    `{"mode":"ephemeral","nodes":[{"id":"metrics","module":"vue-iaa-metrics"}]}`,
 			wantErr: "required input",
 		},
 		"unknown module": {
