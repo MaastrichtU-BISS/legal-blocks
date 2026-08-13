@@ -6,7 +6,7 @@
 // new web module has to be mentioned in frontend code — everything else about
 // it comes from its manifest.
 
-import type { Component } from "vue";
+import type { App, Component, Plugin } from "vue";
 import type { Entry } from "../types";
 
 type Loader = () => Promise<Record<string, unknown>>;
@@ -31,8 +31,32 @@ const styles: Record<string, () => Promise<unknown>> = {
 };
 
 const loaded = new Set<string>();
+const installed = new Set<string>();
 
-/** Resolves a manifest entry to a mountable component. */
+/**
+ * The app these modules mount into, so their plugins can be installed on it.
+ *
+ * A Vue plugin can only be applied to an application, and modules are loaded
+ * long after this one is created — so the app has to be reachable from here.
+ */
+let host: App | null = null;
+
+/** Called once at startup. */
+export function setHostApp(app: App): void {
+  host = app;
+}
+
+/**
+ * Resolves a manifest entry to a mountable component, installing the package's
+ * plugin if it ships one.
+ *
+ * That last part is not optional politeness. These packages put real setup in
+ * their plugin's install(): vue-legal-docs-visualizer configures PrimeVue with
+ * its theme and registers the tooltip directive there. Import the component on
+ * its own and it renders with an unstyled component library underneath and a
+ * missing directive — which looks like broken CSS and is actually a plugin
+ * that was never applied.
+ */
 export async function loadComponent(entry: Entry): Promise<Component> {
   const load = packages[entry.package];
   if (!load) {
@@ -50,6 +74,16 @@ export async function loadComponent(entry: Entry): Promise<Component> {
   }
 
   const mod = await load();
+
+  // Installing twice would re-run setup and warn, so each package gets one go.
+  if (host && !installed.has(entry.package)) {
+    installed.add(entry.package);
+    const plugin = mod.default as Plugin | undefined;
+    if (plugin && typeof (plugin as { install?: unknown }).install === "function") {
+      host.use(plugin);
+    }
+  }
+
   const component = mod[entry.component];
   if (!component) {
     throw new Error(`"${entry.package}" has no export named "${entry.component}"`);
