@@ -34,14 +34,20 @@
       "label": "Task name",
       "type": "text",
       "default": "Annotation task",
-      "help": "Describes one task. Belongs to the composer only until there is a runtime screen for creating tasks; then it becomes a session-only setting."
+      "help": "Only for a session platform, which has one task and no screen to make another. With storage, tasks are named when they are created.",
+      "modes": [
+        "ephemeral"
+      ]
     },
     {
       "key": "labels",
       "label": "Labels",
       "type": "labelset",
       "default": "Actor, Act, Precondition, Postcondition",
-      "help": "Comma-separated. Colours are assigned automatically. Belongs to the composer only until there is a runtime screen for creating labelsets."
+      "help": "Only for a session platform. With storage, labels are a labelset, made once and reused by any number of tasks.",
+      "modes": [
+        "ephemeral"
+      ]
     },
     {
       "key": "annotation_level",
@@ -55,21 +61,30 @@
         "document"
       ],
       "default": "word",
-      "help": "Span granularity. 'document' tags whole documents instead of spans."
+      "help": "Only for a session platform. With storage, each task chooses its own.",
+      "modes": [
+        "ephemeral"
+      ]
     },
     {
       "key": "annotators",
       "label": "Number of annotators",
       "type": "number",
       "default": 2,
-      "help": "Every annotator is assigned every document. Agreement metrics need at least two."
+      "help": "Only for a session platform, where annotators are positions rather than people. With storage they are named by email when a task is created.",
+      "modes": [
+        "ephemeral"
+      ]
     },
     {
       "key": "guidelines_url",
       "label": "Guidelines URL",
       "type": "text",
       "default": "",
-      "help": "Optional link shown to annotators."
+      "help": "Only for a session platform. With storage, each task carries its own link.",
+      "modes": [
+        "ephemeral"
+      ]
     }
   ]
 }

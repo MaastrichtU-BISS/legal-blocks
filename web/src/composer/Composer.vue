@@ -1,11 +1,20 @@
 <script setup lang="ts">
-// The composer: pick modules, chain them, configure them, export.
+// The composer: pick modules, configure them, export.
 //
-// The chain is linear. Every example the design started from is a chain
-// (search -> annotate -> metrics), and a linear list needs a fraction of the
-// code a free-form canvas does. The underlying model is still a graph — nodes
-// and edges, exactly as pipeline.json stores it — so branching later is a UI
-// change, not a data change.
+// What a platform is depends on where its data lives, and this is where that
+// shows most.
+//
+// Without storage it is a chain: search -> annotate -> metrics, each step
+// reading what the one before produced. The list is linear because every
+// example the design started from is, and a linear list needs a fraction of
+// the code a free-form canvas does. The model underneath is still a graph —
+// nodes and edges, exactly as pipeline.json stores it — so branching later is
+// a UI change rather than a data change.
+//
+// With storage it is not a chain at all. It is a list of what the platform can
+// do; the people using it make datasets, labelsets and tasks, and a task says
+// which of each it uses. Nothing flows along an edge, so nothing needs
+// connecting here.
 
 import { computed, ref, watch } from "vue";
 import ConfigForm from "./ConfigForm.vue";
@@ -95,19 +104,38 @@ const tailType = computed(() => {
 });
 
 /**
- * Whether a module can be appended. This is the same rule the Go side
- * enforces when a pipeline is exported; the UI applies it up front so an
- * impossible platform cannot be built in the first place.
+ * Whether a module can be added to the platform as it stands.
+ *
+ * Two different questions, because a platform is two different things.
+ *
+ * Without storage it is a chain: data flows from each step to the next, so a
+ * step can only be added where the one before it produces what this one reads.
+ *
+ * With storage there is no chain. Documents become datasets, a task names the
+ * dataset and labelset it uses, and the annotate step is opened against a task
+ * somebody chose — nothing travels along an edge. So the pipeline is a list of
+ * what this platform can do, and the only question is whether a module works
+ * with storage at all. Asking for a corpus source before an annotate step
+ * would be asking somebody to draw a connection that does not exist.
  */
 function canAppend(m: Manifest): boolean {
   if (!supportsMode(m, mode.value)) return false;
+  if (already(m)) return false;
+  if (mode.value === "persistent") return true;
+
   const required = m.inputs?.find((p) => p.required);
   if (!required) return tailType.value === null;
   if (tailType.value === null) return false;
   return canConnect(props.registry, tailType.value, required.type);
 }
 
+/** One of each module per platform — nothing is scoped to a step. */
+function already(m: Manifest): boolean {
+  return pipeline.value.nodes.some((n) => n.module === m.id);
+}
+
 function whyNot(m: Manifest): string {
+  if (already(m)) return "Already part of this platform.";
   if (!supportsMode(m, mode.value)) {
     return mode.value === "ephemeral"
       ? "Needs somewhere to store things — only available when work is saved."
@@ -136,7 +164,10 @@ function append(m: Manifest) {
   const previous = chain.value.at(-1);
 
   pipeline.value.nodes.push(node);
-  const required = m.inputs?.find((p) => p.required);
+  // Edges only mean something without storage. With it, a task says which
+  // dataset and labelset it uses, so an edge here would claim a connection
+  // the platform does not actually make.
+  const required = mode.value === "ephemeral" ? m.inputs?.find((p) => p.required) : undefined;
   if (previous && required) {
     pipeline.value.edges.push({
       from: { node: previous.node.id, port: previous.manifest.outputs![0].name },
@@ -258,7 +289,9 @@ async function doExport() {
           </template>
           <template v-else>
             Everything is saved in the platform's own database, so work survives and several
-            people can share it.
+            people can share it. These are the things the platform can do — the people using
+            it make their own datasets, labelsets and tasks, so there is nothing to connect
+            here and nothing to configure now.
           </template>
         </p>
 
@@ -277,7 +310,10 @@ async function doExport() {
               <strong>{{ i + 1 }}. {{ step.node.label }}</strong>
               <span class="muted small">{{ step.manifest.id }}</span>
             </div>
-            <p v-if="i < chain.length - 1" class="wire muted small">
+            <!-- The wire is only real without storage. With it there are no
+                 edges, so drawing one would claim a connection the platform
+                 does not make. -->
+            <p v-if="mode === 'ephemeral' && i < chain.length - 1" class="wire muted small">
               ↓ {{ step.manifest.outputs?.[0]?.type }}
             </p>
           </div>
