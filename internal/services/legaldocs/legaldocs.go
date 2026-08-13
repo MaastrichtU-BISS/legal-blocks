@@ -99,6 +99,7 @@ func (s *Service) handleSearch(w http.ResponseWriter, r *http.Request) {
 		if !decodeParams(w, req.Params, &query) {
 			return
 		}
+		query.AttributesToFetch = withContent(query.AttributesToFetch)
 		result, err := client.FetchRechtspraak(r.Context(), query)
 		respond(w, result, err)
 	case "ECHR":
@@ -106,6 +107,7 @@ func (s *Service) handleSearch(w http.ResponseWriter, r *http.Request) {
 		if !decodeParams(w, req.Params, &query) {
 			return
 		}
+		query.AttributesToFetch = withContent(query.AttributesToFetch)
 		result, err := client.FetchEchr(r.Context(), query)
 		respond(w, result, err)
 	default:
@@ -149,6 +151,23 @@ func (s *Service) ready(w http.ResponseWriter) (*legaldocs.Client, bool) {
 		return nil, false
 	}
 	return client, true
+}
+
+// withContent makes the API return documents rather than bare identifiers.
+//
+// Left unset, the search answers with an id and a decision date per node and
+// nothing else — enough to draw a citation graph, and not enough for any step
+// of a platform that has to show or annotate a document. A search that finds
+// 110 results and passes on nothing looks exactly like a search that found
+// none, which is the failure this avoids.
+//
+// A query that asks for something specific keeps it: this is a default, not a
+// policy.
+func withContent(requested legaldocs.AttributesToFetch) legaldocs.AttributesToFetch {
+	if requested != "" {
+		return requested
+	}
+	return legaldocs.AttributesAll
 }
 
 // decodeParams reads the dataset's own query parameters.

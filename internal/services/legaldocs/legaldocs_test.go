@@ -98,6 +98,29 @@ func TestSearchSendsTheCredentialUpstreamAndNotBack(t *testing.T) {
 	}
 }
 
+// Without this the API answers with ids and dates, every downstream step sees
+// a document with no content, and a search that matched 110 cases is
+// indistinguishable from one that matched none.
+func TestSearchAsksForDocumentsNotJustIdentifiers(t *testing.T) {
+	u := newUpstream(t)
+	call(u.service(t), http.MethodPost, "/search", `{"dataset":"RS","params":{"degreesSource":1,"degreesTarget":1}}`)
+
+	if !strings.Contains(u.body, `"attributesToFetch":"ALL"`) {
+		t.Errorf("upstream body = %s, want the search to ask for document content", u.body)
+	}
+}
+
+// A caller that asked for something specific keeps it — this is a default.
+func TestSearchKeepsAnExplicitAttributeChoice(t *testing.T) {
+	u := newUpstream(t)
+	call(u.service(t), http.MethodPost, "/search",
+		`{"dataset":"RS","params":{"degreesSource":0,"degreesTarget":0,"attributesToFetch":"MINIMAL"}}`)
+
+	if !strings.Contains(u.body, `"attributesToFetch":"MINIMAL"`) {
+		t.Errorf("upstream body = %s, want the caller's own choice", u.body)
+	}
+}
+
 func TestSearchRoutesEchrToItsOwnEndpoint(t *testing.T) {
 	u := newUpstream(t)
 	rec := call(u.service(t), http.MethodPost, "/search",
