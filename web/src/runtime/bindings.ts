@@ -37,13 +37,30 @@ import {
 } from "../sources/memory";
 import type { TaskData } from "legal-annotation-kit";
 import type { Mode } from "../types";
+import { toDocuments } from "../adapters";
 
-/** What a corpus@1 or document-set@1 port carries. */
+/** One document as the search API returns it: an id and its own attributes. */
+export interface ResultNode {
+  id: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * What a corpus@1 or document-set@1 port carries.
+ *
+ * "results" is the difference between the two types, and it is why they are
+ * two types. A corpus is text to work on; a document set is case law, with
+ * dates, instances, domains and citations that a viewer renders and a
+ * annotation step has no use for. Collapsing them into {name, full_text}
+ * threw all of that away before the visualiser ever saw it.
+ */
 export type CorpusValue =
   /** persistent: rows in the database */
   | { kind: "dataset"; datasetId: number }
   /** ephemeral: the documents themselves, held for the session */
-  | { kind: "documents"; documents: { name: string; full_text: string }[] };
+  | { kind: "documents"; documents: { name: string; full_text: string }[] }
+  /** search output, unflattened */
+  | { kind: "results"; nodes: ResultNode[]; edges: unknown[] };
 
 /** What an annotated-task@1 port carries. */
 export type TaskValue =
@@ -82,7 +99,22 @@ type ModeBindings = Partial<Record<Mode, Binding>>;
 
 /** Resolves a corpus port to plain documents, whichever mode produced it. */
 async function documentsOf(value: CorpusValue): Promise<{ name: string; full_text: string }[]> {
-  return value.kind === "documents" ? value.documents : getDatasetDocuments(value.datasetId);
+  if (value.kind === "documents") return value.documents;
+  if (value.kind === "results") return toDocuments(value.nodes);
+  return getDatasetDocuments(value.datasetId);
+}
+
+/**
+ * Resolves a port to case-law documents, for a module that renders them.
+ *
+ * Only search produces these. Anything else — the corpus folder, a stored
+ * dataset — is text with a filename, so it is presented as a document with
+ * nothing else known about it rather than being dropped.
+ */
+async function resultsOf(value: CorpusValue): Promise<ResultNode[]> {
+  if (value.kind === "results") return value.nodes;
+  const documents = await documentsOf(value);
+  return documents.map((d) => ({ id: d.name, data: { ecli: d.name, summary: d.full_text } }));
 }
 
 const contracts: Record<string, ModeBindings> = {
@@ -202,8 +234,12 @@ const contracts: Record<string, ModeBindings> = {
   DocumentSearch: {
     persistent: {
       async props(ctx) {
-        return searchProps(ctx, async (documents) => {
-          await syncDataset(searchDatasetName(ctx), documents);
+        return searchProps(ctx, async (result) => {
+          // The database holds text, so what is stored is the projection. The
+          // results stay in memory too, so the viewer in this same session
+          // still gets dates and citations rather than the flattened copy.
+          sessionResults.set(ctx.nodeId, result);
+          await syncDataset(searchDatasetName(ctx), toDocuments(result.nodes));
         });
       },
       async output(ctx): Promise<CorpusValue> {
@@ -214,12 +250,13 @@ const contracts: Record<string, ModeBindings> = {
     },
     ephemeral: {
       async props(ctx) {
-        return searchProps(ctx, async (documents) => {
-          sessionResults.set(ctx.nodeId, documents);
+        return searchProps(ctx, async (result) => {
+          sessionResults.set(ctx.nodeId, result);
         });
       },
       async output(ctx): Promise<CorpusValue> {
-        return { kind: "documents", documents: sessionResults.get(ctx.nodeId) ?? [] };
+        const result = sessionResults.get(ctx.nodeId);
+        return { kind: "results", nodes: result?.nodes ?? [], edges: result?.edges ?? [] };
       },
     },
   },
@@ -229,7 +266,7 @@ const contracts: Record<string, ModeBindings> = {
   DocumentPassthrough: {
     persistent: {
       async props(ctx) {
-        return { docs: await documentsOf((await ctx.input("documents")) as CorpusValue) };
+        return visualiserProps((await ctx.input("documents")) as CorpusValue);
       },
       async output(ctx): Promise<CorpusValue> {
         return (await ctx.input("documents")) as CorpusValue;
@@ -237,7 +274,7 @@ const contracts: Record<string, ModeBindings> = {
     },
     ephemeral: {
       async props(ctx) {
-        return { docs: await documentsOf((await ctx.input("documents")) as CorpusValue) };
+        return visualiserProps((await ctx.input("documents")) as CorpusValue);
       },
       async output(ctx): Promise<CorpusValue> {
         return (await ctx.input("documents")) as CorpusValue;
@@ -246,8 +283,16 @@ const contracts: Record<string, ModeBindings> = {
   },
 };
 
+/** The documents and citations the viewer draws. */
+async function visualiserProps(value: CorpusValue): Promise<Record<string, unknown>> {
+  return {
+    docs: await resultsOf(value),
+    edges: value.kind === "results" ? value.edges : [],
+  };
+}
+
 /** Search results held for the session, when nothing is being stored. */
-const sessionResults = new Map<string, { name: string; full_text: string }[]>();
+const sessionResults = new Map<string, { nodes: ResultNode[]; edges: unknown[] }>();
 
 function searchDatasetName(ctx: BindingContext): string {
   return `search:${ctx.nodeId}`;
@@ -263,14 +308,17 @@ function searchDatasetName(ctx: BindingContext): string {
  */
 async function searchProps(
   ctx: BindingContext,
-  keep: (documents: { name: string; full_text: string }[]) => Promise<void>,
+  keep: (result: { nodes: ResultNode[]; edges: unknown[] }) => Promise<void>,
 ): Promise<Record<string, unknown>> {
   return {
     title: ctx.config.title ?? "Find documents",
 
     onSubmit: async (query: unknown) => {
       const result = await searchDocuments(query);
-      await keep(toDocuments(result.nodes ?? []));
+      await keep({
+        nodes: (result.nodes ?? []) as ResultNode[],
+        edges: (result.edges ?? []) as unknown[],
+      });
       ctx.refresh();
       return result;
     },
@@ -281,26 +329,6 @@ async function searchProps(
   };
 }
 
-/** Maps search results to documents with usable text. */
-function toDocuments(nodes: unknown[]): { name: string; full_text: string }[] {
-  const out: { name: string; full_text: string }[] = [];
-  nodes.forEach((node, i) => {
-    const doc = node as { id?: string; data?: Record<string, unknown> };
-    const data = (doc.data ?? doc) as Record<string, unknown>;
-    const textField = ["full_text", "fullText", "text", "summary"].find(
-      (k) => typeof data[k] === "string" && (data[k] as string).trim() !== "",
-    );
-    if (!textField) return;
-    const nameField = ["ecli", "title", "docname", "name", "id"].find(
-      (k) => typeof data[k] === "string" && (data[k] as string).trim() !== "",
-    );
-    out.push({
-      name: String(nameField ? data[nameField] : (doc.id ?? `document-${i + 1}`)),
-      full_text: data[textField] as string,
-    });
-  });
-  return out;
-}
 
 /** The session task this annotate step works on, with saved work merged in. */
 async function sessionTask(ctx: BindingContext): Promise<TaskData> {

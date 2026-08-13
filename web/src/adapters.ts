@@ -13,13 +13,48 @@
 type Adapt = (value: unknown) => unknown;
 
 const adapters: Record<string, Adapt> = {
-  // Search results and a corpus are both datasets of documents. The query
-  // builder stores what it finds with the text extracted, so an annotation
-  // step downstream reads them exactly as it reads the corpus folder. Nothing
-  // to convert — the claim is that those documents have usable text, and the
-  // storing side is what makes it true.
-  "document-set@1->corpus@1": (value) => value,
+  // Search results and a corpus are both documents, and that is where the
+  // resemblance stops: a result is a case with dates, a court, domains and
+  // citations, while a corpus is text with a name on it.
+  //
+  // This is the one adapter that does real work, and it loses information on
+  // purpose — an annotation step has no use for a citation graph. Doing it
+  // here rather than in the search step is what lets the viewer, which is not
+  // downstream of this conversion, still see the whole case.
+  "document-set@1->corpus@1": (value) => {
+    const v = value as { kind?: string; nodes?: { id: string; data: Record<string, unknown> }[] };
+    if (v.kind !== "results") return value;
+    return { kind: "documents", documents: toDocuments(v.nodes ?? []) };
+  },
 };
+
+/** Maps search results to documents with usable text. */
+export function toDocuments(
+  nodes: { id: string; data: Record<string, unknown> }[],
+): { name: string; full_text: string }[] {
+  // A search returns what matched alongside the cases those cite, so that a
+  // graph can be drawn. Only the matches are documents somebody meant to work
+  // on; annotating a case that merely got cited is not what was asked for.
+  const matched = nodes.filter((n) => n.data?.isResult === "True");
+  const wanted = matched.length > 0 ? matched : nodes;
+
+  const out: { name: string; full_text: string }[] = [];
+  for (const node of wanted) {
+    const data = (node.data ?? {}) as Record<string, unknown>;
+    const textField = ["full_text", "fullText", "text", "summary"].find(
+      (k) => typeof data[k] === "string" && (data[k] as string).trim() !== "",
+    );
+    if (!textField) continue;
+    const nameField = ["ecli", "title", "docname", "name"].find(
+      (k) => typeof data[k] === "string" && (data[k] as string).trim() !== "",
+    );
+    out.push({
+      name: String(nameField ? data[nameField] : node.id),
+      full_text: data[textField] as string,
+    });
+  }
+  return out;
+}
 
 /**
  * Converts a value produced by a `from` port into one a `to` port accepts.

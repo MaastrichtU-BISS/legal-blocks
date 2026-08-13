@@ -233,7 +233,9 @@ export async function callService(
 // so nothing here can point the platform's credential at another endpoint.
 
 /** Runs one query against one dataset. */
-export async function searchDocuments(query: unknown): Promise<{ nodes?: unknown[] }> {
+export async function searchDocuments(
+  query: unknown,
+): Promise<{ nodes?: unknown[]; edges?: unknown[] }> {
   return post("/api/services/legal-docs/search", query, "searching for documents");
 }
 
