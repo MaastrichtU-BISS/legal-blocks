@@ -19,8 +19,11 @@
 // cost of a new kind of module.
 
 import {
+  createDataset,
   ensureUsers,
   getCorpus,
+  importFormats,
+  parseDocument,
   getDatasetDocuments,
   searchDocuments,
   searchLaws,
@@ -236,6 +239,36 @@ const contracts: Record<string, ModeBindings> = {
     },
   },
 
+  // vue-legal-docs-import. Files the user picks, read by this platform's own
+  // parser and kept.
+  DocumentImport: {
+    persistent: {
+      async props(ctx) {
+        return importProps(async (documents) => {
+          await createDataset(String(ctx.config.dataset_name ?? "Uploaded documents"), documents);
+          ctx.refresh();
+        });
+      },
+      async output(): Promise<CorpusValue> {
+        // In a platform that stores its work, uploading makes a dataset that
+        // tasks are created against — the documents do not travel down an
+        // edge to one fixed next step.
+        return { kind: "documents", documents: [] };
+      },
+    },
+    ephemeral: {
+      async props(ctx) {
+        return importProps(async (documents) => {
+          sessionUploads.set(ctx.nodeId, documents);
+          ctx.refresh();
+        });
+      },
+      async output(ctx): Promise<CorpusValue> {
+        return { kind: "documents", documents: sessionUploads.get(ctx.nodeId) ?? [] };
+      },
+    },
+  },
+
   // vue-legal-query-builder. Search answers with a citation network and stops
   // there, in both modes. It does not write documents anywhere and does not
   // reduce a case to its text: turning results into something annotatable
@@ -291,6 +324,51 @@ async function visualiserProps(value: CorpusValue): Promise<Record<string, unkno
     docs: await resultsOf(value),
     edges: value.kind === "results" ? value.edges : [],
   };
+}
+
+/** Uploaded documents held for the session, when nothing is being stored. */
+const sessionUploads = new Map<string, { name: string; full_text: string }[]>();
+
+/**
+ * The import component's props: one reader that sends every file to this
+ * platform's parser.
+ *
+ * Including plain text, which the component could read by itself. Two reasons
+ * it should not here. The parser normalises what it reads — LF line endings, no
+ * byte order mark — and annotation offsets are character positions, so a .txt
+ * read in the page would land differently from the same content inside a .docx
+ * read on the server. And a file that cannot be read comes back with a reason
+ * written in one place rather than two.
+ */
+async function importProps(
+  keep: (documents: { name: string; source: string; full_text: string }[]) => Promise<void>,
+): Promise<Record<string, unknown>> {
+  const extensions = await importFormats();
+  return {
+    readers: [
+      {
+        extensions,
+        label: describeFormats(extensions),
+        read: (file: File) => parseDocument(file),
+      },
+    ],
+    onImport: keep,
+  };
+}
+
+/** Names a set of extensions for the drop zone: "Text, PDF, Word or HTML". */
+function describeFormats(extensions: string[]): string {
+  const names = new Set<string>();
+  for (const ext of extensions) {
+    if ([".txt", ".text", ".md"].includes(ext)) names.add("Text");
+    else if (ext === ".pdf") names.add("PDF");
+    else if (ext === ".docx") names.add("Word");
+    else if ([".html", ".htm", ".xhtml"].includes(ext)) names.add("HTML");
+    else names.add(ext.replace(".", "").toUpperCase());
+  }
+  const list = [...names];
+  if (list.length < 2) return list[0] ?? "No formats available";
+  return `${list.slice(0, -1).join(", ")} or ${list[list.length - 1]}`;
 }
 
 /** Search results held for the session, when nothing is being stored. */

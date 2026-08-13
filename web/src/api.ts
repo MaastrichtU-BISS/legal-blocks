@@ -245,6 +245,53 @@ export async function searchLaws(query: string): Promise<unknown[]> {
   return json(await fetch(path), "searching legislation");
 }
 
+// --- document import -------------------------------------------------------
+//
+// The page reads plain text itself; everything else goes to the platform's own
+// parser, which has real libraries for PDF, Word and HTML behind it. Shipping
+// those to every visitor would be a lot of JavaScript to solve a problem the
+// server solves once.
+
+/** What this build can parse, for the file picker's accept list. */
+export async function importFormats(): Promise<string[]> {
+  const res = await fetch("/api/services/docs-import/formats");
+  const body = (await json(res, "asking what can be imported")) as { extensions?: string[] };
+  return body.extensions ?? [];
+}
+
+/** One file's text, parsed on the server. */
+export async function parseDocument(
+  file: File,
+): Promise<{ text: string; metadata?: Record<string, unknown> }> {
+  const body = new FormData();
+  body.append("files", file);
+  const res = await fetch("/api/services/docs-import/import", { method: "POST", body });
+  const result = (await json(res, `reading ${file.name}`)) as {
+    documents?: { full_text: string; metadata?: Record<string, unknown> }[];
+    skipped?: { reason: string }[];
+  };
+  const doc = result.documents?.[0];
+  if (!doc) {
+    // The importer answers with a reason per file; passing it straight through
+    // is what lets the component tell somebody why their file was skipped.
+    throw new Error(result.skipped?.[0]?.reason ?? "this file could not be read");
+  }
+  return { text: doc.full_text, metadata: doc.metadata };
+}
+
+/** Stores uploaded documents as a new dataset. */
+export async function createDataset(
+  name: string,
+  documents: { name: string; source: string; full_text: string }[],
+): Promise<number> {
+  const body = await post<{ id: number }>(
+    "/api/datasets",
+    { name, documents },
+    "saving these documents",
+  );
+  return body.id;
+}
+
 // --- composer ---------------------------------------------------------------
 
 export async function validatePipeline(p: Pipeline): Promise<{ valid: boolean; error?: string }> {
