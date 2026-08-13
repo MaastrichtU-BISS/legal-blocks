@@ -1,3 +1,5 @@
+github.com/MaastrichtU-BISS/go-legal-docs-client v0.1.0 h1:1Dz4GjRTdfJYkslyJpr9E6W1pCnoAXAeMjdMECc+POw=
+github.com/MaastrichtU-BISS/go-legal-docs-client v0.1.0/go.mod h1:8e/80bjpOaGSH4NKv4AILV+kvtBvtYAOUrKoP5Jkqqc=
 github.com/MaastrichtU-BISS/lawnotation-iaa v0.1.0 h1:KRclPEIJgO3JOH4sZoyVh8+AEhUSZxnXlNWAFFg6lNo=
 github.com/MaastrichtU-BISS/lawnotation-iaa v0.1.0/go.mod h1:cHWqF+mFPWXAFk1r7UYU5cUD8y+gem2vlyOOcO/ADyc=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=

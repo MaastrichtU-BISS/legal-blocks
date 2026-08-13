@@ -5,7 +5,7 @@ go 1.25.0
 require github.com/MaastrichtU-BISS/lawnotation-iaa v0.1.0
 
 require (
-	github.com/MaastrichtU-BISS/go-legal-docs-client v0.0.0
+	github.com/MaastrichtU-BISS/go-legal-docs-client v0.1.0
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
@@ -17,7 +17,3 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.56.0
 )
-
-// Local checkout while the client is unpublished. Replace with a tagged
-// version once go-legal-docs-client is pushed.
-replace github.com/MaastrichtU-BISS/go-legal-docs-client => ../go-legal-docs-client
