@@ -1,7 +1,1 @@
-[
-  {
-    "from": "document-set@1",
-    "to": "corpus@1",
-    "description": "Turns search results into annotatable documents by taking each result's full text. This is what lets 'search -> annotate -> metrics' connect even though the query builder and the annotation kit were written without knowing about each other."
-  }
-]
+[]

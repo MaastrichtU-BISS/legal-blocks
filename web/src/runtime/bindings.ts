@@ -37,7 +37,6 @@ import {
 } from "../sources/memory";
 import type { TaskData } from "legal-annotation-kit";
 import type { Mode } from "../types";
-import { toDocuments } from "../adapters";
 
 /** One document as the search API returns it: an id and its own attributes. */
 export interface ResultNode {
@@ -100,7 +99,15 @@ type ModeBindings = Partial<Record<Mode, Binding>>;
 /** Resolves a corpus port to plain documents, whichever mode produced it. */
 async function documentsOf(value: CorpusValue): Promise<{ name: string; full_text: string }[]> {
   if (value.kind === "documents") return value.documents;
-  if (value.kind === "results") return toDocuments(value.nodes);
+  if (value.kind === "results") {
+    // Unreachable through a pipeline: no adapter turns a document set into a
+    // corpus, so the composer will not let one be connected here. If it ever
+    // arrives, something built this value by hand, and quietly treating a
+    // case's summary as its text is the mistake worth failing over.
+    throw new Error(
+      "search results are not annotatable documents — a preprocessing step has to fetch the full text first",
+    );
+  }
   return getDatasetDocuments(value.datasetId);
 }
 
@@ -229,23 +236,19 @@ const contracts: Record<string, ModeBindings> = {
     },
   },
 
-  // vue-legal-query-builder. Persistently, results become a dataset so they
-  // outlive the session; otherwise they are held for as long as the tab is.
+  // vue-legal-query-builder. Search answers with a citation network and stops
+  // there, in both modes. It does not write documents anywhere and does not
+  // reduce a case to its text: turning results into something annotatable
+  // means fetching each judgment, which is the preprocessing module's job.
   DocumentSearch: {
     persistent: {
       async props(ctx) {
         return searchProps(ctx, async (result) => {
-          // The database holds text, so what is stored is the projection. The
-          // results stay in memory too, so the viewer in this same session
-          // still gets dates and citations rather than the flattened copy.
           sessionResults.set(ctx.nodeId, result);
-          await syncDataset(searchDatasetName(ctx), toDocuments(result.nodes));
         });
       },
       async output(ctx): Promise<CorpusValue> {
-        // Creating it empty means a downstream step sees no documents rather
-        // than an error before the first search has run.
-        return { kind: "dataset", datasetId: await syncDataset(searchDatasetName(ctx), []) };
+        return resultValue(ctx.nodeId);
       },
     },
     ephemeral: {
@@ -255,8 +258,7 @@ const contracts: Record<string, ModeBindings> = {
         });
       },
       async output(ctx): Promise<CorpusValue> {
-        const result = sessionResults.get(ctx.nodeId);
-        return { kind: "results", nodes: result?.nodes ?? [], edges: result?.edges ?? [] };
+        return resultValue(ctx.nodeId);
       },
     },
   },
@@ -294,8 +296,10 @@ async function visualiserProps(value: CorpusValue): Promise<Record<string, unkno
 /** Search results held for the session, when nothing is being stored. */
 const sessionResults = new Map<string, { nodes: ResultNode[]; edges: unknown[] }>();
 
-function searchDatasetName(ctx: BindingContext): string {
-  return `search:${ctx.nodeId}`;
+/** What this search step has found so far, empty before the first search. */
+function resultValue(nodeId: string): CorpusValue {
+  const result = sessionResults.get(nodeId);
+  return { kind: "results", nodes: result?.nodes ?? [], edges: result?.edges ?? [] };
 }
 
 /**
