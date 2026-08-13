@@ -34,6 +34,7 @@ func (s *server) dataRoutes(mux *http.ServeMux) {
 	}
 
 	mux.HandleFunc("/api/users", s.handleUsers)
+	s.resourceRoutes(mux)
 	mux.HandleFunc("/api/datasets/sync", s.handleSyncDataset)
 	mux.HandleFunc("/api/datasets/", s.handleDatasetScoped)
 	mux.HandleFunc("/api/tasks/sync", s.handleSyncTask)
