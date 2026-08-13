@@ -2,14 +2,12 @@ package host
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/export"
@@ -22,7 +20,6 @@ const maxBodyBytes = 64 << 20 // 64 MB
 
 func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/registry", s.handleRegistry)
-	mux.HandleFunc("/api/corpus", s.handleCorpus)
 	mux.HandleFunc("/api/pipeline", s.handlePipeline)
 	s.dataRoutes(mux)
 
@@ -69,59 +66,6 @@ func (s *server) handlePipeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, s.pipeline)
-}
-
-// CorpusDocument is one input document.
-type CorpusDocument struct {
-	Name string `json:"name"`
-	Text string `json:"full_text"`
-}
-
-// handleCorpus reads corpus/*.txt from the working directory.
-//
-// This stands in for the import package that does not exist yet. Reading the
-// folder on each request rather than caching it means a user can drop a file
-// into corpus/ and reload the page, which is the behaviour a non-technical
-// user expects from a folder.
-func (s *server) handleCorpus(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "use GET")
-		return
-	}
-	dir := filepath.Join(s.cfg.Dir, "corpus")
-	entries, err := os.ReadDir(dir)
-	if errors.Is(err, fs.ErrNotExist) {
-		writeJSON(w, http.StatusOK, []CorpusDocument{})
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "reading corpus folder: %v", err)
-		return
-	}
-
-	docs := []CorpusDocument{}
-	for _, e := range entries {
-		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".txt") {
-			continue
-		}
-		// A leading underscore or dot parks a file: it stays in the folder but
-		// is not a document. The folder's own instructions file uses this, and
-		// it gives users a way to set a document aside without deleting it.
-		if strings.HasPrefix(e.Name(), "_") || strings.HasPrefix(e.Name(), ".") {
-			continue
-		}
-		raw, err := os.ReadFile(filepath.Join(dir, e.Name()))
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "reading %s: %v", e.Name(), err)
-			return
-		}
-		docs = append(docs, CorpusDocument{
-			Name: strings.TrimSuffix(e.Name(), filepath.Ext(e.Name())),
-			Text: string(raw),
-		})
-	}
-	sort.Slice(docs, func(i, j int) bool { return docs[i].Name < docs[j].Name })
-	writeJSON(w, http.StatusOK, docs)
 }
 
 // handleValidate type-checks a draft pipeline. The composer prevents illegal
@@ -194,7 +138,6 @@ func (s *server) handleExport(w http.ResponseWriter, r *http.Request) {
 	if err := export.Write(w, export.Options{
 		Pipeline:    p,
 		Registry:    s.cfg.Registry,
-		CorpusDir:   filepath.Join(s.cfg.Dir, "corpus"),
 		BinariesDir: binaries,
 	}); err != nil {
 		// Headers are already sent, so the client sees a truncated zip. Log

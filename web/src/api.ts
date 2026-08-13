@@ -35,16 +35,6 @@ export async function getRegistry(): Promise<Registry> {
   return json(await fetch("/api/registry"), "loading module registry");
 }
 
-/** The .txt files in the platform's corpus folder, read fresh each call. */
-export async function getCorpus(): Promise<CorpusDocument[]> {
-  return json(await fetch("/api/corpus"), "loading documents");
-}
-
-/**
- * Returns the pipeline this platform runs, or null when the server is in
- * compose mode. That distinction is how the app decides which half of the
- * product to render — there is no build-time flag.
- */
 export async function getPipeline(): Promise<Pipeline | null> {
   const res = await fetch("/api/pipeline");
   if (res.status === 404) return null;
@@ -70,24 +60,6 @@ export async function ensureUsers(count: number): Promise<User[]> {
 }
 
 // --- datasets and tasks -----------------------------------------------------
-
-/**
- * Stores documents as a named dataset and returns its id.
- *
- * Idempotent. Documents already present keep their id, so annotations made
- * against them survive a corpus that has grown since.
- */
-export async function syncDataset(
-  name: string,
-  documents: CorpusDocument[],
-): Promise<number> {
-  const out = await post<{ dataset_id: number }>(
-    "/api/datasets/sync",
-    { name, documents },
-    "storing documents",
-  );
-  return out.dataset_id;
-}
 
 /** A dataset's documents, as stored. */
 export async function getDatasetDocuments(datasetId: number): Promise<CorpusDocument[]> {
