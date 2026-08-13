@@ -13,7 +13,7 @@
     "vue": "^3.4.0",
     "vue-iaa-metrics": "^1.0.2",
     "vue-legal-docs-visualizer": "^1.1.0",
-    "vue-legal-query-builder": "file:../../vue-legal-query-builder"
+    "vue-legal-query-builder": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
