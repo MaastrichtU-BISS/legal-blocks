@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
+	"github.com/MaastrichtU-BISS/legal-blocks/internal/build"
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/export"
 	"github.com/MaastrichtU-BISS/legal-blocks/internal/pipeline"
 )
@@ -94,24 +94,14 @@ func (s *server) handleExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// An export whose binaries predate the registry they embed fails on
-	// somebody else's machine with a message about an unknown module, which
-	// reads like the platform is broken rather than out of date. Refuse now,
-	// while there is still a response to put the reason in.
-	binaries := filepath.Join(s.cfg.Dir, "binaries")
-	if err := export.CheckFresh(s.cfg.Dir, binaries); err != nil {
-		writeError(w, http.StatusConflict, "%v", err)
-		return
-	}
-
 	filename := export.Filename(p.Name)
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 
 	if err := export.Write(w, export.Options{
-		Pipeline:    p,
-		Registry:    s.cfg.Registry,
-		BinariesDir: binaries,
+		Pipeline: p,
+		Registry: s.cfg.Registry,
+		Image:    build.PlatformRef(),
 	}); err != nil {
 		// Headers are already sent, so the client sees a truncated zip. Log
 		// loudly; there is nothing useful left to say over the wire.
