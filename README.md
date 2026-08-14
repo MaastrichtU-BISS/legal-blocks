@@ -2,9 +2,9 @@
 
 A proof of concept for composing platforms out of our existing packages.
 
-Pick modules, chain them, export a zip. The recipient extracts it, double-clicks
-one file, and has a working platform — no Node, no npm, no Docker, nothing to
-install.
+Pick modules, chain them, export a zip. The recipient extracts it, runs
+`docker compose up`, and has a working platform — no Node, no npm, no Go,
+nothing to build.
 
 ```
 Import documents →  Annotate  →  Agreement metrics     a workspace, stored
@@ -17,28 +17,32 @@ Search  →  Annotate  →  Agreement  →  Download         a pipeline, kept no
 ## Try it
 
 ```bash
-go run ./cmd/legal-blocks compose
+docker compose up --build
 ```
 
-The composer opens in your browser. Add **Import documents**, **Annotate** and
-**Agreement metrics**, then press **Export platform** to get the zip. Unzip it
-and run its Start script to use what you built.
+Then open <http://localhost:7788>. Add **Import documents**, **Annotate** and
+**Agreement metrics**, and press **Export platform** to get the zip.
 
-To rebuild the frontend after changing anything under `web/src`:
+From source instead, which is the faster loop while developing:
 
 ```bash
-cd web && npm install && npm run build
+cd web && npm install && npm run build && cd ..
+go run ./cmd/composer
 ```
 
-And to make exports that run on Windows and Linux as well as your own machine:
+The Go binaries embed `web/dist`, so a frontend change needs that build before
+`go run` picks it up. While working on the frontend use `npm run dev:composer`
+instead — it proxies `/api` to port 7788.
+
+An export names a platform image *by version*, and a local build is version
+`dev`, which no registry has. To actually run what you exported, build the
+platform image first:
 
 ```bash
-./script/build-platforms.sh
+./script/docker-build.sh
+LEGAL_BLOCKS_PLATFORM_IMAGE=ghcr.io/maastrichtu-biss/legal-blocks-platform \
+  docker compose up
 ```
-
-The Go binary embeds `web/dist`, so a frontend change needs that build before
-`go run` picks it up. While working on the frontend, run the composer with
-`-no-open` and use `npm run dev` instead — it proxies `/api` to port 7788.
 
 ---
 
@@ -126,33 +130,31 @@ disagree on a name, the packages win: `confidence` not `difficulty_rating`,
 
 ## What an export contains
 
+About 2 KB:
+
 ```
 my-platform/
-  platform-darwin-arm64        one binary per operating system, ~9 MB each,
-  platform-darwin-amd64        everything inside — frontend, services, all of it
-  platform-windows-amd64.exe
-  platform-linux-amd64
-  Start.command                macOS: double-click
-  Start.bat                    Windows: double-click
-  start.sh                     Linux
+  docker-compose.yml           names the platform image, by version
   pipeline.json                the only file that differs between exports
   credentials.json             access tokens, when the platform needs any
   data/                        created on first run, when the platform stores things
   README.txt                   written for someone who has never used a terminal
 ```
 
-Each start script picks the binary matching the machine it is run on, and only
-ships when there is a binary it can actually launch — a zip with no Windows
-binary contains no `Start.bat`, rather than one that fails with "not
-recognized as an internal or external command".
+`docker compose up`, then <http://localhost:7777>.
 
-Nothing is compiled or bundled at export time. The frontend is prebuilt and
-identical in every export — it reads `pipeline.json` at startup and dynamically
-imports only the modules that pipeline names — and the binary already contains
-every Go service. Exporting is: copy two prebuilt artefacts, write one JSON
-file, add the documents. It takes about a second.
+Nothing is compiled and no program is copied. The image already contains the
+frontend and every Go service; the frontend reads `pipeline.json` at startup
+and dynamically imports only the modules that pipeline names.
 
-**Persistence** is `data/platform.db`, a SQLite database. Server-side rather
+Three lines in the compose file are load-bearing, and each has a test:
+the port publishes to `127.0.0.1` only, because the platform has no login;
+`./data` is a bind mount rather than a named volume, so "copy the data folder"
+is true; and `credentials.json` is mounted only when one exists, because
+Compose silently creates a *directory* where a bind source is missing.
+
+**Persistence** is `data/platform.db`, a SQLite database in the folder the
+platform was started from. Server-side rather
 than in the browser on purpose — it survives a cache clear, users can back it
 up by copying one file or send it to you when something looks wrong, and it is
 the same seam a hosted Postgres will occupy.
@@ -204,7 +206,7 @@ type Service interface {
 }
 ```
 
-Register it in [`cmd/legal-blocks/main.go`](cmd/legal-blocks/main.go), give it a
+Register it in [`cmd/platform/main.go`](cmd/platform/main.go), give it a
 manifest with `"kind": "service"`, and it is mounted at
 `/api/services/<id>/`. No new process, no port to allocate, no orchestration.
 
@@ -230,44 +232,20 @@ Worth naming before anyone finds them in a demo.
 - **No migrations.** A schema change means deleting `data/platform.db` and
   starting over. Fine while the shape is still moving; it needs solving before
   anyone has work they care about.
-- **A persistent platform is still one task.** Labels, level and annotator
-  count are set in the composer and baked into `pipeline.json`, so an exported
-  platform runs the task it was composed with rather than letting its users
-  create their own. Those settings are marked in the manifest as the composer's
-  business *only until there is a runtime screen for creating tasks* — building
-  that screen, and moving those fields to session-only, is the next real piece
-  of work. It is what turns a persistent export from an appliance into a
-  platform.
 - **One pipeline holds one of each module.** Nothing is scoped to a pipeline
   step, so two annotate steps would silently share one task rather than failing.
-- **Cross-platform exports need a build step first.** Run
-  `./script/build-platforms.sh` to cross-compile the platform binary for
-  macOS (both architectures), Windows and Linux into `binaries/`. The composer
-  ships whatever it finds there, so one zip runs everywhere — about 14 MB.
-  Skip it and an export carries only the binary that built it, runs on that
-  one operating system, and says so in its README rather than shipping start
-  scripts it cannot honour.
-
-  This works because the code is CGO-free. A future service needing a C
-  library would break cross-compilation and need a CI matrix building on each
-  operating system instead.
-- **Unsigned binaries.** macOS refuses to run anything downloaded from a
-  browser that is not notarised — and it *kills the process with SIGKILL and
-  no message* rather than warning, so a user who gets past the dialog on
-  `Start.command` would otherwise watch the platform die silently. `Start.command`
-  therefore clears the quarantine flag on the extracted folder before
-  launching, which is what Finder's "Open Anyway" does and needs no password.
-  The recipient still meets Gatekeeper once; `README.txt` walks them through
-  starting from the Terminal, which avoids the dialog entirely.
-
-  Note that the old right-click → Open workaround no longer exists on macOS
-  Sequoia — the only routes are the Terminal, or System Settings → Privacy &
-  Security → Open Anyway. Removing the friction properly needs an Apple
-  Developer ID ($99/yr) and notarisation, and Windows will want its own
-  code-signing certificate.
-- **Exports carry unused modules.** A few MB of JavaScript for modules the
-  pipeline does not use. Trimming it means per-export builds, i.e. a build
-  service rather than a zip writer.
+- **The recipient needs Docker.** That is the trade for deleting the binary
+  export: no cross-compilation, no code signing, no Gatekeeper walkthrough, but
+  also nothing to double-click and no offline first run.
+- **Nothing has been run as a container yet.** The images are defined and both
+  compose files parse, but no `docker compose up` has actually executed against
+  them. First thing to check.
+- **No published images.** `./script/docker-build.sh <version> push` expects
+  `ghcr.io/maastrichtu-biss` to exist and be writable. Until something is
+  pushed, every export names a tag nobody can pull.
+- **Exports carry unused modules.** The platform image holds every module's
+  JavaScript regardless of the pipeline. Trimming it means per-pipeline images,
+  i.e. a build service rather than a zip writer.
 - **The chain is linear.** `pipeline.json` is a graph and the validator handles
   arbitrary DAGs, including rejecting cycles; only the composer UI is
   restricted to a chain.
@@ -300,21 +278,26 @@ in every manifest, rather than changing the format.
 ## Layout
 
 ```
-cmd/legal-blocks/     entry point: `compose` and `run` modes
+cmd/composer/         design platforms, export zips
+cmd/platform/         run one exported platform
 registry/*.json       the module catalogue — start here
 internal/manifest/    manifest types, registry loading, type compatibility
 internal/pipeline/    pipeline model and validation
 internal/db/          the database: schema, queries, the domain model
 internal/service/     the Go backend contract
-internal/services/    Go backends (currently: lawnotation-iaa)
-internal/host/        the server both modes run on
-internal/export/      zip assembly
+internal/services/    Go backends: lawnotation-iaa, docs-import, legal-docs
+internal/composer/    the composer's server
+internal/host/        the platform's server
+internal/serve/       what both servers share
+internal/build/       version and image reference, stamped at link time
+internal/export/      zip assembly: compose file, pipeline, credentials
 web/src/runtime/      renders a pipeline — what an exported platform runs
 web/src/composer/     the composer UI
 web/src/sources/      host implementations of each package's Source contract
 web/src/adapters.ts   conversions between port types
-binaries/             cross-compiled platform binaries (build-platforms.sh)
-script/               build helpers
+web/apps/             one index.html per bundle (composer, platform)
+Dockerfile            both images, two targets
+script/               docker build, docs
 ```
 
 ## Dependencies

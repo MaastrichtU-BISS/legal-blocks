@@ -62,50 +62,62 @@ Two consequences worth stating early, because a lot follows from them:
 
 ---
 
-# 2. Two products, one binary
+# 2. Two programs, two images
 
-The same binary is both halves of the product, selected by a subcommand:
-
-```
-  legal-blocks compose        design a platform, export it as a zip
-  legal-blocks run            run an exported platform
-```
-
-An exported zip ships a copy of this same binary, invoked as `run` by its start
-script. One binary, two modes — so an export cannot drift from the composer
-that built it.
-
-The frontend is likewise one bundle. `web/src/App.vue` decides which half you
-get by asking the server whether it has a pipeline:
+They are separate programs, built from one source tree into two images:
 
 ```
-                 GET /api/pipeline
-                        |
-              +---------+---------+
-              |                   |
-          404 (none)          200 (a pipeline)
-              |                   |
-          Composer.vue        Runtime.vue
-       "design a platform"   "this is the platform"
+  cmd/composer   ->  legal-blocks-composer   design a platform, export a zip
+  cmd/platform   ->  legal-blocks-platform   run one exported platform
 ```
 
-No build flag, no second entry point. The bundle an export ships is
-byte-identical to the composer's.
+Neither can do the other's job, and that is checked at the linker rather than
+by reading:
 
-## What each mode serves
+```
+  go list -deps ./cmd/platform | grep internal/export     -> nothing
+  go list -deps ./cmd/composer | grep internal/host       -> nothing
+```
 
-|                      | `compose`            | `run`                      |
-| -------------------- | -------------------- | -------------------------- |
-| Frontend bundle      | yes                  | yes                        |
-| `/api/registry`      | yes                  | yes                        |
-| `/api/pipeline`      | 404 — no draft here  | the committed pipeline     |
-| `/api/validate`      | yes                  | no                         |
-| `/api/export`        | yes                  | no                         |
-| Database             | **no**               | only for a workspace       |
-| Go services mounted  | **no**               | those the pipeline names   |
+The frontend splits the same way — two Vite builds from one source tree, into
+`web/dist/composer` and `web/dist/platform`, each embedded into its own image.
+The composer bundle is about 78 KB because it carries no module code at all;
+the platform's carries every module it might mount.
 
-The composer opens no database and mounts no services. It designs platforms; it
-does not run them. (This became true when Preview was removed — see §11.)
+```
+  web/apps/composer/index.html -> src/composer.ts -> ComposerApp.vue
+  web/apps/platform/index.html -> src/platform.ts -> PlatformApp.vue
+                                        \
+                                         both call boot(), share src/
+```
+
+## What each serves
+
+|                     | composer             | platform                   |
+| ------------------- | -------------------- | -------------------------- |
+| Frontend bundle     | its own              | its own                    |
+| `/api/registry`     | yes                  | yes                        |
+| `/api/pipeline`     | no — there is no draft on the server | the mounted pipeline |
+| `/api/export`       | yes                  | no                         |
+| Database            | **no**               | only for a workspace       |
+| Go services mounted | **no**               | those the pipeline names   |
+
+Both register an `/api/` catch-all that answers JSON. Without it an unknown API
+path falls through to the single-page handler and returns `200` with
+`index.html` — an endpoint that does not exist answering successfully, in HTML.
+That is worth keeping: it cost real debugging time twice.
+
+## What replaced "one binary, two modes"
+
+The old design was one binary with a `compose` and a `run` subcommand, and an
+export was a *copy of that binary*. The argument for it was drift: the export
+and the composer could not differ, because they were the same file.
+
+That guarantee still exists, but it is now a version number. The composer
+writes its own version into the compose file it exports; both images are built
+from one commit by `script/docker-build.sh`. Explicit, inspectable, and
+upgradable by editing one line — none of which was true of a copied binary.
+See §11.
 
 ---
 
@@ -400,7 +412,8 @@ without either module knowing about the other.
 # 8. Go services
 
 A backend module is an ordinary Go package exposing an `http.Handler`, compiled
-into the binary and mounted at `/api/services/<id>/`.
+into the platform binary and mounted at `/api/services/<id>/`. The composer
+mounts none — it runs nothing.
 
 ```
   service.Service       ID() string
@@ -488,45 +501,57 @@ credential is spent?*
 
 # 10. Export
 
+An export is about **2 KB**:
+
 ```
   platform.zip
   |
-  +-- pipeline.json               the design (no secrets)
-  +-- credentials.json            only when the design carries one
-  +-- platform-darwin-arm64       \
-  +-- platform-darwin-amd64        |  whatever build-platforms.sh produced,
-  +-- platform-linux-amd64         |  so a zip made on a Mac runs on Windows
-  +-- platform-windows-amd64.exe  /
-  +-- Start.command               macOS
-  +-- Start.bat                   Windows
-  +-- start.sh                    Linux
-  +-- README.txt
+  +-- docker-compose.yml     names the platform image, by version
+  +-- pipeline.json          the design (no secrets)
+  +-- credentials.json       only when the design carries one
+  +-- README.txt             what to install, what to type, where the work is
 ```
 
-Nothing is compiled. The frontend is prebuilt and identical in every export —
-it reads `pipeline.json` at startup and loads only the modules that pipeline
-names. The binary already contains every Go service. So an export is: copy two
-prebuilt artefacts, write one JSON file.
+The recipient runs `docker compose up`. Nothing is compiled, and no program is
+copied — the compose file references a published image.
 
-**The cost, stated plainly:** an export carries code for modules its pipeline
-does not use. At proof-of-concept sizes that is a few megabytes of unreachable
-JavaScript. Trimming it means per-export builds, which is a build service, not
-a zip writer. That trade is deliberate and should be revisited only if export
-size becomes a real complaint.
+## Three lines that are load-bearing
 
-## The freshness guard
+Each has a test in `internal/export/export_test.go`, because each is easy to
+undo by accident and none of them fails loudly when wrong.
 
-`internal/export/stale.go` refuses to export when the binaries in `binaries/`
-predate what they embed (`registry`, `web/dist`, `internal`, `cmd`).
+**`ports: "127.0.0.1:7777:7777"`** — the platform has no login. Anything that
+can reach the port can read and write everyone's work. Inside the container it
+listens on `0.0.0.0` because that is the only way a published port can reach
+it, so this line is the entire access boundary.
 
-The reason is empirical: it happened three times while building this, always
-the same way. You add a module, export a pipeline that uses it, and the zip
-fails on somebody else's machine with "references unknown module" — because the
-composer is running today's code and the shipped binary is not. Every time, it
-was discovered by whoever was handed the zip, and it reads like the platform is
-broken rather than out of date.
+**`./data:/app/data`** — a bind mount, not a named volume. "Copy the data
+folder to back up your work" has to be true, and a named volume puts the work
+somewhere a legal researcher will never find.
 
-A refusal costs one command. A broken export costs somebody else's afternoon.
+**`./credentials.json:...` only when there is one** — Compose creates a
+*directory* where a bind mount source is missing. An unconditional line would
+leave every credential-free platform with a puzzling empty folder and a host
+that fails to parse it.
+
+## The cost
+
+The recipient needs Docker, and a network on first run to pull. The old export
+needed nothing at all — it was four binaries and a double-clickable script.
+That was genuinely more convenient for a single non-technical recipient, and it
+is what was traded away.
+
+What was bought: an export went from 58 MB to 2 KB; `script/build-platforms.sh`
+and the discipline of remembering to run it are gone; and the freshness guard
+is gone with them.
+
+> **On the freshness guard, since it was a scar worth remembering.**
+> `internal/export/stale.go` refused to export when the prebuilt binaries
+> predated what they embedded. It existed because that happened three times,
+> always the same way: add a module, export, and the zip fails on somebody
+> else's machine with "references unknown module". A copied artefact can go
+> stale against its source. **A version reference cannot**, which is why the
+> guard could be deleted rather than ported.
 
 ---
 
@@ -534,6 +559,48 @@ A refusal costs one command. A broken export costs somebody else's afternoon.
 
 Newest first. Each entry is a decision, the alternative that was rejected, and
 the reason — which is the part worth having when revisiting.
+
+### Docker-only export — Aug 2026
+
+An export is a compose file naming a published image, not a folder of
+binaries. The binary export was deleted rather than kept alongside.
+
+*Rejected:* keeping both. It means maintaining two export paths and still
+cross-compiling for four targets, to serve recipients who — per the people
+actually using this — all have Docker.
+
+**The guarantee had to move, and that is the whole design question.** One
+binary with two subcommands meant an export could not drift from its composer,
+because it *was* its composer. Splitting them needs something else to hold that
+line, and the something else is: the composer writes its own version into the
+compose file, and `script/docker-build.sh` builds both images from one commit.
+
+Weaker on paper, stronger in practice — a version number is explicit,
+inspectable, and can be changed to upgrade a platform someone already has,
+which a copied binary never could.
+
+*Costs:* Docker required; a network needed on first run; a registry and a
+publish step that did not exist before. *Gone:* `build-platforms.sh`,
+`CheckFresh`, the Gatekeeper and SmartScreen sections of the README, and the
+quarantine-clearing dance in `Start.command`.
+
+### Composer and platform split in two — Aug 2026
+
+`cmd/composer` and `cmd/platform`, two images, two frontend bundles. Verified
+at the linker: neither dependency graph contains the other's packages.
+
+This is what the Docker change was really for. Containerising alone would have
+shipped the same coupled artefact behind a nicer front door — every exported
+platform still carrying the zip writer, the export endpoint and the composer UI,
+unreachable but present.
+
+*Order mattered:* Docker first, split second. Splitting first would have meant
+cross-compiling and shipping **two** binaries per export — worse before better.
+After containerising, the split cost nothing at export time.
+
+*Also removed:* `/api/validate` (no caller since Preview went; export
+re-validates by parsing anyway), and `openBrowser`, which cannot work from
+inside a container.
 
 ### Preview removed from the composer — Aug 2026
 
@@ -637,20 +704,30 @@ tab. Validation should catch this. It does not yet.
 dropdowns, not emails. `TaskAnnotators` returns ids and `Annotations` formats
 `user_id`. Affects both span and document tasks.
 
-**`/api/validate` and `validatePipeline` are uncalled** since Preview was
-removed. Either wire validate into export as a pre-check, or delete both.
-
 **Manifests live in this repo, not in the packages.** `registry/*.module.json`
 is where they are during the proof of concept, so the npm packages do not all
 need republishing at once. The format is exactly what they will carry at their
 own package roots — moving them is a file move.
 
-**Unknown `/api/` paths in a running platform fall through to the SPA handler**
-and return `200` with `index.html`. Only endpoints that exist behave like
-endpoints. This surprised me twice while testing removals; a request that
-"works" may just be the HTML shell.
+**`legal-annotation-kit` cannot be code-split.** `src/sources/memory.ts`
+imports it statically while `loaders.ts` imports it dynamically, so Rollup
+keeps it in the platform's entry chunk. Every platform downloads it, including
+ones with no annotate step. Vite says so on every build.
 
-**Export ships unreachable module code.** See §10. Deliberate.
+**Nothing has been run as a container yet.** The images are defined and the
+compose files parse, but the Docker daemon was not available when this was
+written, so `docker compose up` has never actually executed here. The Go
+binaries and the export were verified directly. This is the first thing to
+check.
+
+**No registry publishes the images yet.** `script/docker-build.sh <version>
+push` expects `ghcr.io/maastrichtu-biss` to exist and to be writable. Until
+something is published, every export names a tag nobody can pull.
+
+**Export ships unreachable module code.** The platform image carries every
+module's JavaScript regardless of the pipeline. Now that images are versioned
+rather than copied, per-pipeline images are at least *possible* — but that is a
+build service, and it is not obviously worth it.
 
 ---
 
@@ -664,14 +741,43 @@ endpoints. This surprised me twice while testing removals; a request that
 
 Source is `docs/architecture.md`. The PDF is generated and not tracked.
 
-## After changing Go code or the frontend
+## Running the composer
+
+From source, which is the fast loop:
 
 ```bash
-./script/build-platforms.sh
+cd web && npm run build && cd .. && go run ./cmd/composer
 ```
 
-Exports embed the binaries in `binaries/`. If you skip this, the freshness
-guard refuses the next export and tells you so — but only after you have tried.
+Or as a container, which is what other people will use:
+
+```bash
+docker compose up --build
+```
+
+## Trying a platform you exported
+
+An export names an image by version, and a local composer is version `dev`,
+which nobody can pull. So build the platform image locally first and tell the
+composer to name it:
+
+```bash
+./script/docker-build.sh
+LEGAL_BLOCKS_PLATFORM_IMAGE=ghcr.io/maastrichtu-biss/legal-blocks-platform docker compose up
+```
+
+Then unzip the export and `docker compose up` in it.
+
+## Releasing
+
+```bash
+./script/docker-build.sh 1.4.2 push
+```
+
+Both images, one version, one commit. **Do not publish them separately.** The
+composer writes its own version into every export and the export pulls the
+platform by that tag; a composer released without a matching platform produces
+exports that cannot start.
 
 ## Adding a web module
 
@@ -689,29 +795,40 @@ Steps 3 and 4 are the only frontend code a new module touches.
 
 1. Implement `service.Service` (and `service.Credentialed` only if it calls an
    outside API).
-2. Register it in `cmd/legal-blocks/main.go`.
+2. Register it in `cmd/platform/main.go` — the platform runs services; the
+   composer mounts none.
 3. Name it in the manifest's `services` array.
 
 ## Repository map
 
 ```
-  cmd/legal-blocks/       both subcommands
+  Dockerfile              both images, two targets
+  docker-compose.yml      runs the composer from this repo
+  cmd/
+    composer/             design platforms, export zips
+    platform/             run one exported platform
   internal/
     manifest/             the module contract, Kind, ConfigField
     pipeline/             what a composed platform is; validation; secrets
-    host/                 the server: routes, data API, credentials, upstreams
+    composer/             the composer's server
+    host/                 the platform's server: routes, data API, upstreams
+    serve/                what both servers share: JSON, static, listen
+    build/                version and image reference, stamped at link time
     db/                   schema, queries, resources
-    export/               zip assembly; the freshness guard
+    export/               the zip: compose file, pipeline, credentials, README
     service/              the backend-module interface
     services/             the backends themselves
   registry/               module manifests, adapter table
-  web/src/
-    App.vue               composer or runtime
-    composer/             design a platform
-    runtime/              run one: resolve, bindings, ModuleHost
-    workspace/            the tabbed shell's host-side content
-    sources/              adapters onto packages' own source interfaces
-    modules/              the import map and builtin modules
-  script/                 cross-compilation, docs
+  web/
+    apps/<app>/           one index.html per bundle
+    src/
+      composer.ts         entry -> ComposerApp.vue
+      platform.ts         entry -> PlatformApp.vue
+      composer/           design a platform
+      runtime/            run one: resolve, bindings, ModuleHost
+      workspace/          the tabbed shell's host-side content
+      sources/            adapters onto packages' own source interfaces
+      modules/            the import map and builtin modules
+  script/                 docker build, docs
   docs/                   this
 ```
