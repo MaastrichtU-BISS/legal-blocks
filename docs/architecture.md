@@ -714,11 +714,23 @@ imports it statically while `loaders.ts` imports it dynamically, so Rollup
 keeps it in the platform's entry chunk. Every platform downloads it, including
 ones with no annotate step. Vite says so on every build.
 
-**Nothing has been run as a container yet.** The images are defined and the
-compose files parse, but the Docker daemon was not available when this was
-written, so `docker compose up` has never actually executed here. The Go
-binaries and the export were verified directly. This is the first thing to
-check.
+**The frontend is built on the host, not in the image.** The Dockerfile had a
+node stage that ran `npm run build`, so an image could never ship a stale
+bundle. It cannot work while `web/package.json` depends on
+`vue-legal-workspace` as `file:../../vue-legal-workspace` — an unpublished
+package outside the build context, which npm in a container cannot resolve.
+`script/docker-build.sh` runs the build on the host instead, and the Dockerfile
+fails with a readable message if you run `docker build` yourself and skip it.
+Restore the node stage once the package set is published; it is four lines and
+it is the better design.
+
+**Data folder ownership differs between Docker Desktop and Linux.** Desktop
+virtualises bind-mount ownership so the container's user can write to a folder
+belonging to whoever ran it. On native Linux the mount keeps host ownership,
+Compose creates a missing folder as root, and the unprivileged container user
+cannot write. `checkWritable` catches this at startup and prints the `chown`
+command with the right uid — **but this has only been tested by simulating the
+failure on Desktop, not on a real Linux host.**
 
 **No registry publishes the images yet.** `script/docker-build.sh <version>
 push` expects `ghcr.io/maastrichtu-biss` to exist and to be writable. Until

@@ -84,10 +84,14 @@ func Run(cfg Config) error {
 	// so it happens here rather than in the page — storing nothing and doing
 	// nothing on the server are different claims.
 	if p.ExportKind() == manifest.KindWorkspace {
-		if err := os.MkdirAll(filepath.Join(cfg.Dir, "data"), 0o755); err != nil {
+		dataDir := filepath.Join(cfg.Dir, "data")
+		if err := os.MkdirAll(dataDir, 0o755); err != nil {
 			return fmt.Errorf("creating data directory: %w", err)
 		}
-		database, err := db.Open(filepath.Join(cfg.Dir, "data", "platform.db"))
+		if err := checkWritable(dataDir); err != nil {
+			return err
+		}
+		database, err := db.Open(filepath.Join(dataDir, "platform.db"))
 		if err != nil {
 			return err
 		}
@@ -97,6 +101,36 @@ func Run(cfg Config) error {
 
 	s.routes(mux)
 	return serve.Run("Your platform", cfg.Port, mux)
+}
+
+// checkWritable fails early, and legibly, when the data folder cannot be
+// written to.
+//
+// This is the one thing that differs between running the platform on Docker
+// Desktop and on Linux. Desktop virtualises bind-mount ownership, so the
+// container's user can write to a folder belonging to the person who ran it.
+// On native Linux the mount keeps its host ownership, Compose creates a
+// missing folder as root, and the container's unprivileged user cannot write
+// there.
+//
+// Without this the first symptom is SQLite's own message — "unable to open
+// database file (14)" — an errno, with no folder named and nothing to act on,
+// repeating forever because the compose file restarts the platform. The uid is
+// reported from inside the container so the fix can be copied as written.
+func checkWritable(dir string) error {
+	probe := filepath.Join(dir, ".write-test")
+	f, err := os.Create(probe)
+	if err == nil {
+		f.Close()
+		os.Remove(probe)
+		return nil
+	}
+	return fmt.Errorf(
+		"cannot write to the data folder, so this platform cannot save anything.\n\n"+
+			"  The folder is \"data\", next to docker-compose.yml.\n"+
+			"  It belongs to another user, so the platform cannot write to it.\n\n"+
+			"  On Linux, fix it with:   sudo chown -R %d:%d data\n\n"+
+			"  (%v)", os.Getuid(), os.Getgid(), err)
 }
 
 // loadPipeline reads and validates pipeline.json from the working directory.

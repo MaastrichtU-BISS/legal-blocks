@@ -306,6 +306,14 @@ IF SOMETHING GOES WRONG
       Check the terminal for a line mentioning pipeline.json. That file has to
       stay in this folder next to docker-compose.yml.
 
+  "cannot write to the data folder"  (Linux only)
+      The "data" folder belongs to another user. The message in the terminal
+      includes the exact command to fix it, which looks like:
+
+        sudo chown -R 10001:10001 data
+
+      This does not happen on macOS or Windows.
+
 %s%s`, opts.Pipeline.Name, strings.Repeat("=", len(opts.Pipeline.Name)),
 		steps.String(), port, port,
 		storageSection(opts.Pipeline.ExportKind()), credentials)

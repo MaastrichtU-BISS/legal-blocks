@@ -23,6 +23,17 @@ PLATFORM="$REGISTRY/legal-blocks-platform:$VERSION"
 echo "Building $VERSION"
 echo
 
+# The frontend is built here rather than inside the image, because
+# web/package.json still points at an unpublished package on disk that npm in a
+# container cannot resolve. See the note at the top of the Dockerfile.
+#
+# Doing it here rather than trusting the committed web/dist is what keeps the
+# guarantee the in-image build gave: an image never carries a bundle older than
+# the source it was built from.
+echo "Building the frontend"
+(cd web && npm run build >/dev/null)
+echo
+
 docker build --target platform \
 	--build-arg "VERSION=$VERSION" \
 	-t "$PLATFORM" .
