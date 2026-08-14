@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "dev:composer": "APP=composer vite",
+    "build": "npm run build:composer && npm run build:platform",
+    "build:composer": "APP=composer vite build",
+    "build:platform": "APP=platform vite build",
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {

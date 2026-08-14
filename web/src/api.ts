@@ -346,10 +346,6 @@ export async function createDataset(
 
 // --- composer ---------------------------------------------------------------
 
-export async function validatePipeline(p: Pipeline): Promise<{ valid: boolean; error?: string }> {
-  return post("/api/validate", p, "validating pipeline");
-}
-
 /** Asks the host to build the platform zip and hands it to the browser. */
 export async function exportPipeline(p: Pipeline): Promise<void> {
   const res = await fetch("/api/export", {

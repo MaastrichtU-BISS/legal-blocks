@@ -2,11 +2,28 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
-// One bundle serves both the composer and every exported platform. Module
-// components are dynamically imported (see src/modules/loaders.ts), so Vite
-// splits each one into its own chunk and a platform only downloads the modules
-// its pipeline actually uses.
+// Two apps, two builds, one source tree.
+//
+// The composer and an exported platform used to be one bundle that decided at
+// runtime which half to show. That meant every exported platform downloaded
+// the composer UI and shipped it inside its image. Building them separately is
+// what makes "the platform contains no composer" true rather than merely
+// unreachable.
+//
+// Each app is a folder under apps/ holding only an index.html. Vite's `root`
+// points at one of them, so the build emits an index.html the Go static
+// handler can serve without renaming anything.
+//
+//   APP=composer npm run build   ->  dist/composer/index.html
+//   APP=platform npm run build   ->  dist/platform/index.html
+//
+// Module components are dynamically imported (see src/modules/loaders.ts), so
+// Vite splits each into its own chunk and a platform only downloads the
+// modules its pipeline actually uses.
+const app = process.env.APP === "composer" ? "composer" : "platform";
+
 export default defineConfig({
+  root: `apps/${app}`,
   plugins: [vue()],
   resolve: {
     alias: {
@@ -25,14 +42,16 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "dist",
+    // Relative to root, which is apps/<app>.
+    outDir: `../../dist/${app}`,
     emptyOutDir: true,
   },
   server: {
-    // `npm run dev` talks to a Go host started separately with
-    // `go run ./cmd/legal-blocks compose -no-open`.
+    // `npm run dev` talks to a Go host started separately:
+    //   go run ./cmd/composer   (port 7788)  for APP=composer
+    //   go run ./cmd/platform   (port 7777)  for APP=platform
     proxy: {
-      "/api": "http://localhost:7788",
+      "/api": app === "composer" ? "http://localhost:7788" : "http://localhost:7777",
     },
   },
 });

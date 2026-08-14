@@ -176,9 +176,9 @@ func TestReadmeSaysWhereWorkGoesForEachKind(t *testing.T) {
 
 func TestFilenameIsSafe(t *testing.T) {
 	for in, want := range map[string]string{
-		"My workspace":  "my-workspace.zip",
-		"  Trim  me  ":  "trim--me.zip",
-		"!!!":           "platform.zip",
+		"My workspace": "my-workspace.zip",
+		"  Trim  me  ": "trim--me.zip",
+		"!!!":          "platform.zip",
 		// Anything that is not a letter, a digit or a separator is dropped
 		// rather than replaced, so a path separator cannot survive into a
 		// filename in any form.

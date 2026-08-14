@@ -1,17 +1,10 @@
 package host
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/fs"
 	"net/http"
-	"os"
-	"path"
 	"strings"
 
-	"github.com/MaastrichtU-BISS/legal-blocks/internal/build"
-	"github.com/MaastrichtU-BISS/legal-blocks/internal/export"
-	"github.com/MaastrichtU-BISS/legal-blocks/internal/pipeline"
+	"github.com/MaastrichtU-BISS/legal-blocks/internal/serve"
 )
 
 // maxBodyBytes caps request bodies. Documents can be long, so this is generous
@@ -19,31 +12,44 @@ import (
 const maxBodyBytes = 64 << 20 // 64 MB
 
 func (s *server) routes(mux *http.ServeMux) {
+	// Registered first and matched last: ServeMux prefers the longest pattern,
+	// so every specific route below wins and this catches whatever is left.
+	//
+	// Without it, an unknown /api/ path falls through to the single-page
+	// handler and comes back as 200 with index.html — an endpoint that does
+	// not exist answering successfully, in HTML, to a caller expecting JSON.
+	// That cost real debugging time twice while splitting this program in two.
+	mux.HandleFunc("/api/", s.handleUnknownAPI)
+
 	mux.HandleFunc("/api/registry", s.handleRegistry)
 	mux.HandleFunc("/api/pipeline", s.handlePipeline)
 	s.dataRoutes(mux)
+	mux.Handle("/", serve.Static(s.cfg.Web))
+}
 
-	if s.cfg.Mode == ModeCompose {
-		mux.HandleFunc("/api/validate", s.handleValidate)
-		mux.HandleFunc("/api/export", s.handleExport)
+// handleUnknownAPI answers anything under /api/ that nothing else claimed.
+//
+// A platform that stores nothing gets most of the way here, and "does not
+// exist" would be true but unhelpful: the caller asked for stored data in a
+// platform built not to store any, which is a wiring mistake worth naming.
+func (s *server) handleUnknownAPI(w http.ResponseWriter, r *http.Request) {
+	if s.db == nil && !strings.HasPrefix(r.URL.Path, "/api/services/") {
+		writeError(w, http.StatusNotImplemented,
+			"this platform stores nothing, so %s does not exist here", r.URL.Path)
+		return
 	}
-
-	mux.Handle("/", s.staticHandler())
+	writeError(w, http.StatusNotFound, "no such endpoint: %s", r.URL.Path)
 }
 
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
-}
+func writeJSON(w http.ResponseWriter, status int, v any) { serve.JSON(w, status, v) }
 
 func writeError(w http.ResponseWriter, status int, format string, args ...any) {
-	writeJSON(w, status, map[string]string{"error": fmt.Sprintf(format, args...)})
+	serve.Error(w, status, format, args...)
 }
 
-// handleRegistry serves the module catalogue. The composer renders its palette
-// from this, and the runtime uses it to find each node's component and config
-// schema — neither has any hardcoded knowledge of a specific module.
+// handleRegistry serves the module catalogue. The runtime uses it to find each
+// node's component and config schema, so it has no hardcoded knowledge of any
+// specific module.
 func (s *server) handleRegistry(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "use GET")
@@ -52,85 +58,11 @@ func (s *server) handleRegistry(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.cfg.Registry)
 }
 
-// handlePipeline serves the pipeline this platform runs. In compose mode there
-// is no committed pipeline: the draft lives in the store like any other state.
+// handlePipeline serves the pipeline this platform runs.
 func (s *server) handlePipeline(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "use GET")
 		return
 	}
-	if s.pipeline == nil {
-		writeError(w, http.StatusNotFound, "no pipeline: this server is in compose mode")
-		return
-	}
 	writeJSON(w, http.StatusOK, s.pipeline)
-}
-
-// handleValidate type-checks a draft pipeline. The composer prevents illegal
-// connections in the UI, but it asks the server for the authoritative answer
-// so the rule lives in exactly one place.
-func (s *server) handleValidate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, "use POST")
-		return
-	}
-	_, err := pipeline.Parse(http.MaxBytesReader(w, r.Body, maxBodyBytes), s.cfg.Registry)
-	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"valid": false, "error": err.Error()})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"valid": true})
-}
-
-// handleExport builds the runnable platform zip.
-func (s *server) handleExport(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, "use POST")
-		return
-	}
-	p, err := pipeline.Parse(http.MaxBytesReader(w, r.Body, maxBodyBytes), s.cfg.Registry)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "%v", err)
-		return
-	}
-
-	filename := export.Filename(p.Name)
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
-
-	if err := export.Write(w, export.Options{
-		Pipeline: p,
-		Registry: s.cfg.Registry,
-		Image:    build.PlatformRef(),
-	}); err != nil {
-		// Headers are already sent, so the client sees a truncated zip. Log
-		// loudly; there is nothing useful left to say over the wire.
-		fmt.Fprintf(os.Stderr, "export failed: %v\n", err)
-	}
-}
-
-// staticHandler serves the built frontend, falling back to index.html so the
-// runtime's client-side routes survive a reload — which matters here, since
-// "does my work survive a refresh?" is the question the whole store exists to
-// answer.
-func (s *server) staticHandler() http.Handler {
-	sub, err := fs.Sub(s.cfg.Web, "dist")
-	if err != nil {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			writeError(w, http.StatusInternalServerError, "frontend bundle missing: %v", err)
-		})
-	}
-	files := http.FileServer(http.FS(sub))
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		clean := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
-		if clean == "" {
-			clean = "index.html"
-		}
-		if _, err := fs.Stat(sub, clean); err != nil {
-			r = r.Clone(r.Context())
-			r.URL.Path = "/"
-		}
-		files.ServeHTTP(w, r)
-	})
 }
