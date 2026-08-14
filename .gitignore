@@ -18,3 +18,8 @@
 # Exported platforms and local builds.
 *.zip
 /legal-blocks
+
+# Rendered documentation. The markdown is the source; regenerate with
+# ./script/build-docs.sh. Tracking the PDF would put a binary diff in every
+# commit that touches a sentence.
+/docs/*.pdf
