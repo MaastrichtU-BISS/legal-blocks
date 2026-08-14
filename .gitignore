@@ -7,17 +7,17 @@
 
 /web/node_modules/
 
-# web/dist is deliberately NOT ignored: the Go binary embeds it, so committing
-# it is what lets someone clone this and run `go run ./cmd/legal-blocks compose`
-# with no Node installed at all. Rebuild it with `cd web && npm run build`.
-
-# Cross-compiled platform binaries. Build artifacts, ~36 MB; regenerate with
-# ./script/build-platforms.sh.
-/binaries/
+# web/dist is deliberately NOT ignored: the Go binaries embed it, so committing
+# it is what lets someone clone this and run `go run ./cmd/composer` with no
+# Node installed at all. Rebuild it with `cd web && npm run build`.
+#
+# The Docker build ignores the committed copy and rebuilds from source anyway,
+# so an image can never ship a bundle older than the commit it came from.
 
 # Exported platforms and local builds.
 *.zip
-/legal-blocks
+/composer
+/platform
 
 # Rendered documentation. The markdown is the source; regenerate with
 # ./script/build-docs.sh. Tracking the PDF would put a binary diff in every
