@@ -20,9 +20,9 @@ Search  →  Annotate  →  Agreement  →  Download         a pipeline, kept no
 go run ./cmd/legal-blocks compose
 ```
 
-The composer opens in your browser. Add **Import documents**, **Annotate**,
-**Agreement metrics**, press **Preview** to use it, or **Export platform** to
-get the zip.
+The composer opens in your browser. Add **Import documents**, **Annotate** and
+**Agreement metrics**, then press **Export platform** to get the zip. Unzip it
+and run its Start script to use what you built.
 
 To rebuild the frontend after changing anything under `web/src`:
 

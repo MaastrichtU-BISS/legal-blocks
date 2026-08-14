@@ -26,8 +26,6 @@ func (s *server) routes(mux *http.ServeMux) {
 	if s.cfg.Mode == ModeCompose {
 		mux.HandleFunc("/api/validate", s.handleValidate)
 		mux.HandleFunc("/api/export", s.handleExport)
-		mux.HandleFunc("/api/credentials", s.handleCredentials)
-		mux.HandleFunc("/api/preview", s.handlePreview)
 	}
 
 	mux.Handle("/", s.staticHandler())
@@ -82,31 +80,6 @@ func (s *server) handleValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"valid": true})
-}
-
-// handlePreview readies the composer's server for a draft: it takes the
-// pipeline being previewed, splits the credentials out of it, and hands them
-// to whichever services make outside calls.
-//
-// This is how a token typed into the composer reaches the service that needs
-// it without being written anywhere. It is held in memory for as long as the
-// composer runs and is never read back.
-func (s *server) handlePreview(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, "use POST")
-		return
-	}
-	p, err := pipeline.Parse(http.MaxBytesReader(w, r.Body, maxBodyBytes), s.cfg.Registry)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "%v", err)
-		return
-	}
-	_, secrets := p.SplitSecrets(s.cfg.Registry)
-	if err := s.applyUpstreams(p.Upstreams(s.cfg.Registry, secrets)); err != nil {
-		writeError(w, http.StatusBadRequest, "%v", err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 // handleExport builds the runnable platform zip.

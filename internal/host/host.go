@@ -2,10 +2,9 @@
 //
 // In run mode it serves an exported platform: the frontend bundle, the
 // pipeline definition, persistent storage, and whichever Go
-// services the pipeline's modules declare. In compose mode it additionally
-// serves the composer UI and the export endpoint. One server, one binary, and
-// the composer's preview is therefore the same code path the exported
-// platform runs — export cannot drift from what was previewed.
+// services the pipeline's modules declare. In compose mode it serves the
+// composer UI and the export endpoint, and nothing else: no database, no
+// services, no way to run a draft. One server, one binary, two jobs.
 package host
 
 import (
@@ -21,7 +20,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"syscall"
 	"time"
 
@@ -63,11 +61,6 @@ type server struct {
 	cfg      Config
 	db       *db.DB
 	pipeline *pipeline.Pipeline
-
-	// Guards state that changes while serving: the composer replaces this
-	// every time it previews a draft.
-	mu      sync.RWMutex
-	secrets pipeline.Secrets
 }
 
 // Run starts the server and blocks until interrupted.
@@ -97,7 +90,6 @@ func Run(cfg Config) error {
 		if err != nil {
 			return err
 		}
-		s.secrets = secrets
 		upstreams := p.Upstreams(cfg.Registry, secrets)
 		if err := s.applyUpstreams(upstreams); err != nil {
 			return err
@@ -105,13 +97,10 @@ func Run(cfg Config) error {
 		if len(upstreams) > 0 {
 			log.Printf("outside services: %s", describeUpstreams(upstreams))
 		}
-	} else {
-		// The composer previews any pipeline the user builds, so every
-		// service in the build has to be reachable.
-		if err := cfg.Services.Mount(mux, cfg.Services.IDs()); err != nil {
-			return err
-		}
 	}
+	// Compose mode mounts no services. It validates drafts and builds zips;
+	// nothing it serves calls an outside API, and with no pipeline committed
+	// there is no credential for a service to use anyway.
 
 	// A pipeline opens no database and creates no data directory — there is
 	// nothing to put in one. That is not an optimisation: it is what makes an
@@ -122,7 +111,9 @@ func Run(cfg Config) error {
 	// so it happens here rather than in the page — storing nothing and doing
 	// nothing on the server are different claims.
 	//
-	// The composer always opens one, because it previews both kinds.
+	// The composer opens none either. It only ever opened one so that Preview
+	// could run a draft workspace, and a composer that leaves a database file
+	// beside itself invites the question of whose data that is.
 	if s.needsDatabase() {
 		if err := os.MkdirAll(filepath.Join(cfg.Dir, "data"), 0o755); err != nil {
 			return fmt.Errorf("creating data directory: %w", err)
@@ -174,12 +165,10 @@ func Run(cfg Config) error {
 	return srv.Shutdown(ctx)
 }
 
-// needsDatabase reports whether this server has to open one.
+// needsDatabase reports whether this server has to open one. Only a running
+// workspace does: a pipeline keeps nothing, and the composer builds zips.
 func (s *server) needsDatabase() bool {
-	if s.cfg.Mode == ModeCompose {
-		return true
-	}
-	return s.pipeline.ExportKind() == manifest.KindWorkspace
+	return s.cfg.Mode == ModeRun && s.pipeline.ExportKind() == manifest.KindWorkspace
 }
 
 func productName(m Mode) string {

@@ -28,8 +28,8 @@ import (
 
 // Service searches case law at /api/services/legal-docs/{search,laws}.
 type Service struct {
-	// The composer repoints this whenever it previews a draft with a
-	// different token, while requests may be in flight.
+	// Set once at startup, before anything is served. Guarded anyway so that
+	// a future reconfigure path is not a data race waiting to happen.
 	mu     sync.RWMutex
 	client *legaldocs.Client
 }
@@ -41,8 +41,8 @@ func New() *Service { return &Service{} }
 // ID implements service.Service.
 func (*Service) ID() string { return "legal-docs" }
 
-// SetCredentials implements service.Credentialed: the host calls this with the
-// address and token the pipeline carries, once at startup or on every preview.
+// SetCredentials implements service.Credentialed: the host calls this at
+// startup with the address and token the pipeline carries.
 //
 // An empty token leaves the service unconfigured rather than half-configured.
 // The API would refuse the call anyway, and its 401 reads as an expired key —

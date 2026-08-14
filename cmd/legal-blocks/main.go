@@ -4,8 +4,8 @@
 //	legal-blocks run       run an exported platform
 //
 // Exported platforms ship a copy of this same binary, invoked as `run` by
-// their Start script. One binary, two modes, so the composer's preview and the
-// exported platform cannot behave differently.
+// their Start script. One binary, two modes, so an export cannot drift from
+// the composer that built it.
 package main
 
 import (

@@ -18,8 +18,7 @@
 
 import { computed, ref, watch } from "vue";
 import ConfigForm from "./ConfigForm.vue";
-import Runtime from "../runtime/Runtime.vue";
-import { exportPipeline, preparePreview, validatePipeline } from "../api";
+import { exportPipeline } from "../api";
 import type { Manifest, Kind, Node, Pipeline, Registry } from "../types";
 import { canConnect, configWithDefaults, fieldAppliesIn, exportKind, supportsKind } from "../types";
 
@@ -73,7 +72,6 @@ function startOver() {
 const kind = computed<Kind>(() => exportKind(pipeline.value));
 
 const selected = ref<string | null>(null);
-const previewing = ref(false);
 const status = ref("");
 const problem = ref("");
 
@@ -212,24 +210,6 @@ function updateConfig(config: Record<string, unknown>) {
   if (selectedNode.value) selectedNode.value.config = config;
 }
 
-async function preview() {
-  problem.value = "";
-  const result = await validatePipeline(pipeline.value);
-  if (!result.valid) {
-    problem.value = result.error ?? "This pipeline is not valid.";
-    return;
-  }
-  try {
-    // Preview runs against the real services, so the server needs whatever
-    // access tokens this draft carries before the first request goes out.
-    await preparePreview(pipeline.value);
-  } catch (e) {
-    problem.value = e instanceof Error ? e.message : String(e);
-    return;
-  }
-  previewing.value = true;
-}
-
 async function doExport() {
   problem.value = "";
   status.value = "Building…";
@@ -244,16 +224,8 @@ async function doExport() {
 </script>
 
 <template>
-  <div v-if="previewing" class="preview">
-    <div class="preview-bar lb-ui">
-      <span>Preview — this is exactly what the exported platform runs.</span>
-      <button @click="previewing = false">Back to composer</button>
-    </div>
-    <Runtime :pipeline="pipeline" :registry="registry" />
-  </div>
-
   <!-- Before anything else: what is being made. -->
-  <div v-else-if="!chosen" class="app lb-ui start">
+  <div v-if="!chosen" class="app lb-ui start">
     <h1>What are you building?</h1>
     <div class="choices">
       <button class="choice" @click="start('pipeline')">
@@ -288,7 +260,6 @@ async function doExport() {
 
       <div class="row">
         <span v-if="status" class="muted">{{ status }}</span>
-        <button :disabled="pipeline.nodes.length === 0" @click="preview">Preview</button>
         <button class="primary" :disabled="pipeline.nodes.length === 0" @click="doExport">
           Export platform
         </button>
@@ -378,8 +349,7 @@ async function doExport() {
 </template>
 
 <style scoped>
-.app,
-.preview {
+.app {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -449,16 +419,6 @@ header {
 .mode-note {
   margin: 0 0 1rem;
   line-height: 1.5;
-}
-
-.preview-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
-  background: #fef3c7;
-  border-bottom: 1px solid #fcd34d;
 }
 
 .columns {

@@ -22,13 +22,19 @@ func (s *server) dataRoutes(mux *http.ServeMux) {
 	// binding asked for stored data in a platform that stores none, which is a
 	// wiring mistake worth saying out loud.
 	if s.db == nil {
+		// The composer reaches this too, and "stores nothing" would be the
+		// wrong thing to tell someone there: it designs platforms, it does not
+		// run them, so no platform data exists yet rather than by choice.
+		reason := "this platform stores nothing, so %s does not exist here"
+		if s.cfg.Mode == ModeCompose {
+			reason = "the composer designs platforms and runs none, so %s exists only in an export"
+		}
 		mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasPrefix(r.URL.Path, "/api/services/") {
 				http.NotFound(w, r)
 				return
 			}
-			writeError(w, http.StatusNotImplemented,
-				"this platform stores nothing, so %s does not exist here", r.URL.Path)
+			writeError(w, http.StatusNotImplemented, reason, r.URL.Path)
 		})
 		return
 	}
