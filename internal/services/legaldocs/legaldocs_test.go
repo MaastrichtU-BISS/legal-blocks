@@ -358,3 +358,37 @@ func TestUnscorableNetworkStillReturnsItsDocuments(t *testing.T) {
 		t.Errorf("the document was dropped along with its statistics: %s", rec.Body.String())
 	}
 }
+
+// The API says when its own answer is too partial to score. Degrees and
+// communities from a truncated graph are wrong rather than missing.
+func TestPartialGraphIsNotScored(t *testing.T) {
+	h, calls := graphUpstream(t,
+		`{"nodes":[{"id":"ECLI:A","data":{}},{"id":"ECLI:B","data":{}}],
+		  "edges":[{"source":"ECLI:A","target":"ECLI:B"}],
+		  "graph":{"graphComplete":false,"statisticsSafe":false,
+		           "partialReasons":["responseNodeLimit"]}}`,
+		`{"ECLI:A":{"degree":1,"community":0}}`)
+
+	if rec := call(h, http.MethodPost, "/search", `{"dataset":"RS","params":{}}`); rec.Code != http.StatusOK {
+		t.Fatalf("search returned %d: %s", rec.Code, rec.Body.String())
+	}
+	if *calls != 0 {
+		t.Errorf("scored a graph the API called unsafe %d times, want none", *calls)
+	}
+}
+
+// A complete graph says so, and is scored.
+func TestCompleteGraphIsScored(t *testing.T) {
+	h, calls := graphUpstream(t,
+		`{"nodes":[{"id":"ECLI:A","data":{}},{"id":"ECLI:B","data":{}}],
+		  "edges":[{"source":"ECLI:A","target":"ECLI:B"}],
+		  "graph":{"graphComplete":true,"statisticsSafe":true,"partialReasons":[]}}`,
+		`{"ECLI:A":{"degree":1,"community":0},"ECLI:B":{"degree":1,"community":0}}`)
+
+	if rec := call(h, http.MethodPost, "/search", `{"dataset":"RS","params":{}}`); rec.Code != http.StatusOK {
+		t.Fatalf("search returned %d: %s", rec.Code, rec.Body.String())
+	}
+	if *calls != 1 {
+		t.Errorf("scored a complete graph %d times, want once", *calls)
+	}
+}

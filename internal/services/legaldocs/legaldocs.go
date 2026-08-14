@@ -198,6 +198,11 @@ func withStatistics(ctx context.Context, client *legaldocs.Client, result *legal
 	if result == nil || len(result.Nodes) == 0 || len(result.Edges) == 0 {
 		return
 	}
+	if !statisticsSafe(result.Graph) {
+		log.Printf("legal-docs: the search returned a partial graph, so it is not scored — " +
+			"documents will be drawn without clusters")
+		return
+	}
 
 	raw, err := client.ComputeStatistics(ctx, result.Nodes, result.Edges)
 	if err != nil {
@@ -232,6 +237,31 @@ func withStatistics(ctx context.Context, client *legaldocs.Client, result *legal
 		}
 		result.Nodes[i].Data = merged
 	}
+}
+
+// statisticsSafe reports whether scoring this result would mean anything.
+//
+// The API answers that question itself, in the graph block every search
+// carries: a result truncated by a node or edge limit, or one page of a larger
+// one, is missing citations. Scored anyway it produces figures that are
+// confidently wrong rather than absent — documents drawn as isolated because
+// the citation joining them was cut off, and communities detected in a graph
+// that is not the graph. Uncoloured and honest is the better of the two.
+//
+// A response carrying no graph block is scored. Older deployments do not send
+// one, and refusing to colour anything they return would trade a real feature
+// for a hypothetical.
+func statisticsSafe(graph json.RawMessage) bool {
+	if len(graph) == 0 {
+		return true
+	}
+	var meta struct {
+		StatisticsSafe *bool `json:"statisticsSafe"`
+	}
+	if err := json.Unmarshal(graph, &meta); err != nil || meta.StatisticsSafe == nil {
+		return true
+	}
+	return *meta.StatisticsSafe
 }
 
 // decodeParams reads the dataset's own query parameters.
