@@ -15,6 +15,7 @@
 package legaldocs
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -101,6 +102,7 @@ func (s *Service) handleSearch(w http.ResponseWriter, r *http.Request) {
 		}
 		query.AttributesToFetch = withContent(query.AttributesToFetch)
 		result, err := client.FetchRechtspraak(r.Context(), query)
+		withStatistics(r.Context(), client, result)
 		respond(w, result, err)
 	case "ECHR":
 		var query legaldocs.EchrQuery
@@ -109,6 +111,7 @@ func (s *Service) handleSearch(w http.ResponseWriter, r *http.Request) {
 		}
 		query.AttributesToFetch = withContent(query.AttributesToFetch)
 		result, err := client.FetchEchr(r.Context(), query)
+		withStatistics(r.Context(), client, result)
 		respond(w, result, err)
 	default:
 		// CJEU is offered by the query builder and not by the API yet, so a
@@ -168,6 +171,67 @@ func withContent(requested legaldocs.AttributesToFetch) legaldocs.AttributesToFe
 		return requested
 	}
 	return legaldocs.AttributesAll
+}
+
+// withStatistics scores the citation network and folds each node's figures
+// into that node, under "statistics".
+//
+// The search endpoints return a graph and no measurements of it; degree,
+// community and the centralities come from a second endpoint that takes the
+// graph back. Nothing downstream can make that call — the token lives here —
+// so a search that skipped it handed the viewer a graph with no statistics on
+// it, and the viewer draws exactly that: every node grey, because it reads a
+// missing degree as zero and colours isolated documents grey, and no clusters,
+// because clusters are its communities.
+//
+// Merging here rather than in the browser keeps this the one operation the
+// page asks for. It is also where the shape is known: the endpoint answers
+// with a map from node id to that node's figures, and the viewer wants them
+// hanging off the node.
+//
+// A failure is not the search's failure. The documents were found and are
+// worth showing uncoloured, so this logs and leaves the result alone.
+func withStatistics(ctx context.Context, client *legaldocs.Client, result *legaldocs.NetworkResponse) {
+	// Statistics of a graph with no citations are not a smaller answer, they
+	// are no answer: the endpoint returns an empty object for an edgeless
+	// graph. Everything is genuinely isolated, and grey is correct.
+	if result == nil || len(result.Nodes) == 0 || len(result.Edges) == 0 {
+		return
+	}
+
+	raw, err := client.ComputeStatistics(ctx, result.Nodes, result.Edges)
+	if err != nil {
+		log.Printf("legal-docs: could not score the citation network, "+
+			"documents will be drawn without clusters: %v", err)
+		return
+	}
+
+	// Deliberately loose. The API adds metrics over time and this relays
+	// whatever it sent rather than naming the ones known today.
+	var byNode map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &byNode); err != nil {
+		log.Printf("legal-docs: unreadable network statistics: %v", err)
+		return
+	}
+
+	for i, node := range result.Nodes {
+		stats, ok := byNode[node.ID]
+		if !ok {
+			continue
+		}
+		var data map[string]json.RawMessage
+		if err := json.Unmarshal(node.Data, &data); err != nil {
+			// One unreadable document should not cost the other nodes their
+			// colours, so this drops the node's statistics and not the batch.
+			continue
+		}
+		data["statistics"] = stats
+		merged, err := json.Marshal(data)
+		if err != nil {
+			continue
+		}
+		result.Nodes[i].Data = merged
+	}
 }
 
 // decodeParams reads the dataset's own query parameters.

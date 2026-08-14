@@ -256,3 +256,105 @@ func TestAnEmptyTokenIsNotAConfiguredService(t *testing.T) {
 		t.Errorf("called the API at %q with no credential, which can only fail", u.path)
 	}
 }
+
+// graphUpstream answers per endpoint, which the shared stub cannot: a search
+// that scores its network makes two calls, and the test is about what the
+// second one does to the first one's answer.
+func graphUpstream(t *testing.T, search, statistics string) (http.Handler, *int) {
+	t.Helper()
+	statsCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/statistics" {
+			statsCalls++
+			_, _ = io.WriteString(w, statistics)
+			return
+		}
+		_, _ = io.WriteString(w, search)
+	}))
+	t.Cleanup(server.Close)
+
+	s := New()
+	if err := s.SetCredentials(server.URL, token); err != nil {
+		t.Fatalf("SetCredentials: %v", err)
+	}
+	return s.Handler(), &statsCalls
+}
+
+// The viewer colours and clusters documents from their statistics, and the
+// search endpoint does not supply any. Without this the whole graph is grey.
+func TestSearchScoresTheCitationNetwork(t *testing.T) {
+	h, calls := graphUpstream(t,
+		`{"nodes":[{"id":"ECLI:A","data":{"ecli":"ECLI:A"}},{"id":"ECLI:B","data":{"ecli":"ECLI:B"}}],
+		  "edges":[{"source":"ECLI:A","target":"ECLI:B"}]}`,
+		`{"ECLI:A":{"degree":1,"community":0},"ECLI:B":{"degree":1,"community":0}}`)
+
+	rec := call(h, http.MethodPost, "/search", `{"dataset":"RS","params":{}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("search returned %d: %s", rec.Code, rec.Body.String())
+	}
+	if *calls != 1 {
+		t.Errorf("the network was scored %d times, want once", *calls)
+	}
+
+	var out struct {
+		Nodes []struct {
+			ID   string `json:"id"`
+			Data struct {
+				Ecli       string `json:"ecli"`
+				Statistics *struct {
+					Degree    int `json:"degree"`
+					Community int `json:"community"`
+				} `json:"statistics"`
+			} `json:"data"`
+		} `json:"nodes"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("reading the search result: %v", err)
+	}
+	if len(out.Nodes) != 2 {
+		t.Fatalf("got %d nodes, want 2", len(out.Nodes))
+	}
+	for _, n := range out.Nodes {
+		if n.Data.Statistics == nil {
+			t.Fatalf("%s came back without statistics, so the viewer draws it grey", n.ID)
+		}
+		if n.Data.Statistics.Degree != 1 {
+			t.Errorf("%s degree = %d, want 1", n.ID, n.Data.Statistics.Degree)
+		}
+		// Merged into the document, not put in place of it.
+		if n.Data.Ecli != n.ID {
+			t.Errorf("%s lost its own attributes: %+v", n.ID, n.Data)
+		}
+	}
+}
+
+// The statistics endpoint answers with an empty object for a graph with no
+// citations, so asking is a round trip that can only return nothing.
+func TestSearchWithoutCitationsIsNotScored(t *testing.T) {
+	h, calls := graphUpstream(t,
+		`{"nodes":[{"id":"ECLI:A","data":{"ecli":"ECLI:A"}}],"edges":[]}`, `{}`)
+
+	if rec := call(h, http.MethodPost, "/search", `{"dataset":"RS","params":{}}`); rec.Code != http.StatusOK {
+		t.Fatalf("search returned %d: %s", rec.Code, rec.Body.String())
+	}
+	if *calls != 0 {
+		t.Errorf("scored an edgeless graph %d times, want none", *calls)
+	}
+}
+
+// Documents that were found are worth showing without colours. Losing the
+// search because the scoring failed would be the worse of the two outcomes.
+func TestUnscorableNetworkStillReturnsItsDocuments(t *testing.T) {
+	h, _ := graphUpstream(t,
+		`{"nodes":[{"id":"ECLI:A","data":{"ecli":"ECLI:A"}}],
+		  "edges":[{"source":"ECLI:A","target":"ECLI:A"}]}`,
+		`not json`)
+
+	rec := call(h, http.MethodPost, "/search", `{"dataset":"RS","params":{}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("search returned %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "ECLI:A") {
+		t.Errorf("the document was dropped along with its statistics: %s", rec.Body.String())
+	}
+}
