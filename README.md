@@ -35,13 +35,14 @@ git show go-final:internal/host/data.go     # if you ever need to compare
 
 ### What is left
 
-- **`lawnotation-iaa` is not published.** An export whose pipeline computes
-  agreement names `ghcr.io/maastrichtu-biss/lawnotation-iaa:<version>`, and
-  nothing exists at that tag. Agreement metrics will not work until it does.
-- **No images are published at all**, so an export only runs on a machine that
-  built them itself. `./script/docker-build.sh <version> push` when ready.
-- **A pipeline can still produce work with no way out.** `Search → Annotate`
-  with no download step exports happily and loses everything on tab close.
+- **Nothing is pushed to `ghcr.io` yet**, so an export only runs on a machine
+  that built the images itself. All three are built and verified at `0.1.0`;
+  publishing needs a token with `write:packages` for the organisation:
+
+  ```bash
+  docker login ghcr.io -u <your-github-username>
+  ./script/docker-build.sh 0.1.0 push
+  ```
 
 ---
 

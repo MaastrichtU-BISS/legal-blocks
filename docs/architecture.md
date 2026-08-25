@@ -626,6 +626,19 @@ is gone with them.
 Newest first. Each entry is a decision, the alternative that was rejected, and
 the reason — which is the part worth having when revisiting.
 
+### A pipeline may end in a view — Aug 2026
+
+Dropped the long-standing gap that a pipeline producing work must end in a step
+where the work can leave. Visualising data is itself a form of output, and
+`Search -> Explore` is a complete, sensible platform with nothing to download.
+
+*The case this does not cover, recorded because it is the one to watch:*
+`Search -> Annotate` with no download step. There, work really is produced —
+annotations, held in the browser for the session — and really is lost on tab
+close. If that turns out to bite somebody, the check belongs in
+`validatePipeline` and applies only to a pipeline whose last step *consumes*
+`annotated-task@1` without offering a way out.
+
 ### The Go implementation deleted mid-rewrite — Aug 2026
 
 Removed `cmd/`, `internal/`, `go.mod` and the Docker setup before the Nuxt
@@ -797,13 +810,6 @@ frontend grew its own `Pipeline` and `Registry` types when the server was Go and
 the two could not share code. They can now, and the duplicates should go when
 the apps are wired.
 
-**A pipeline that produces work is not required to end somewhere the work can
-leave.** You can compose `Search -> Annotate` with no Download step, export it,
-and hand somebody a platform where their annotations vanish when they close the
-tab. Validation should catch this. It does not yet — and this is the best moment
-to add it, since `packages/manifest` is where it belongs and it is freshly
-written.
-
 **Annotators are shown as numeric user ids** in the metrics cards and filter
 dropdowns, not emails. Carried over unchanged in the port.
 
@@ -819,8 +825,9 @@ is where they are during the proof of concept, so the npm packages do not all
 need republishing at once. The format is exactly what they will carry at their
 own package roots — moving them is a file move.
 
-**No images are published.** Nothing exists at `ghcr.io/maastrichtu-biss`, and
-the Docker setup was deleted with the Go tree; it has to be rebuilt for Nuxt.
+**Nothing is pushed to `ghcr.io` yet.** All three images build and have been
+verified together at `0.1.0`; the push needs a token with `write:packages` for
+the organisation. Until then an export only runs where the images were built.
 
 **The composer/platform split is now a convention, not a proof.** See §2.
 
