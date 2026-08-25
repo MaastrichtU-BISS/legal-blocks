@@ -1,0 +1,14 @@
+# Everything the build does not need. Keeping this tight matters more than
+# usual: the context is sent to the daemon on every build, and node_modules
+# alone is several hundred megabytes.
+.git
+.gitignore
+node_modules
+**/node_modules
+**/.nuxt
+**/.output
+docs/*.pdf
+apps/platform/dev/data
+*.zip
+.DS_Store
+.vscode

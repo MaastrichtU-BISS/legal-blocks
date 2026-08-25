@@ -6,9 +6,10 @@ date: "Last updated: 14 August 2026"
 
 # Status: mid-rewrite
 
-The Go implementation was deleted. It is reachable at the tag **`go-final`**,
-and nothing runs right now — there is no composer and no export until the Nuxt
-side is built.
+The Go implementation was deleted and replaced. It is reachable at the tag
+**`go-final`**. The Nuxt side now runs end to end: the composer exports, the
+export runs under Docker, and the only Go left in the product is
+`lawnotation-iaa`, as its own image.
 
 **Sections 1, 3 and 4 are unchanged by this** — the problem, the module
 contract and the `Kind` axis are the design, not the implementation. **Sections
@@ -22,9 +23,9 @@ describe today.
 | `packages/manifest` | ported — §3, §4 |
 | `packages/db` | ported — §7 |
 | `node-legal-docs-import` | its own repo — §8 |
-| `layers/base`, `apps/*` | Vue moved into place, not wired |
-| the server (§5, §6) | to build as Nitro routes |
-| the export (§10) | to rebuild, with a second service |
+| `packages/export` | rebuilt, two services — §10 |
+| `layers/base`, `apps/*` | wired; both apps build and run |
+| the server (§5, §6) | Nitro routes over packages/db |
 
 ---
 
@@ -559,11 +560,12 @@ credential is spent?*
 
 # 10. Export
 
-> **To rebuild.** The compose file an export writes now needs **two** services:
-> the platform and the `lawnotation-iaa` sidecar. That is why this was not
-> ported as-is. The original, including the README text written for someone who
-> has never used a terminal, is at
-> `git show go-final:internal/export/export.go`.
+> **Rebuilt in `packages/export`.** The compose file now names **two** images:
+> the platform, and `lawnotation-iaa` as a sidecar — and the sidecar only
+> appears when the pipeline actually computes agreement, so a search-and-explore
+> platform does not make somebody pull a container it never calls. The sidecar
+> is never published on the host; the platform reaches it over the compose
+> network, so the only reachable port is still the platform's.
 
 An export is about **2 KB**:
 

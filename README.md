@@ -11,18 +11,14 @@ Search  →  Annotate  →  Agreement  →  Download         a pipeline, kept no
 
 ---
 
-## ⚠ Mid-rewrite — nothing runs yet
+## Status
 
-The Go implementation was deleted in favour of a Nuxt one. **There is currently
-no runnable composer and no way to export a platform.** That is expected and
-temporary.
-
-Everything the Go version did is reachable in git history — the last commit
-holding it is tagged **`go-final`**:
+The Nuxt rewrite is functional end to end: design a platform in the composer,
+export it, run it with Docker. The Go implementation it replaced is at the tag
+**`go-final`**.
 
 ```bash
-git show go-final:internal/export/export.go
-git log go-final --oneline
+git show go-final:internal/host/data.go     # if you ever need to compare
 ```
 
 ### What exists
@@ -32,24 +28,20 @@ git log go-final --oneline
 | `packages/manifest` | module contract, pipeline validation, secrets | ✅ ported, 26 tests |
 | `packages/db` | schema and queries over better-sqlite3 | ✅ ported, 10 tests |
 | `node-legal-docs-import` | text · HTML · Word · PDF, server-only | ✅ its own repo, 16 tests |
-| `layers/base` | the runtime: resolve, bindings, ModuleHost, workspace | ⏳ moved, not wired |
-| `apps/composer` | composer UI | ⏳ moved, not wired |
-| `apps/platform` | the exported platform's UI | ⏳ moved, not wired |
+| `packages/export` | the zip: compose file, pipeline, credentials, README | ✅ 9 tests |
+| `layers/base` | the runtime: resolve, bindings, ModuleHost, workspace | ✅ wired |
+| `apps/composer` | composer UI + `/api/export` | ✅ builds, exports |
+| `apps/platform` | the platform: 25 routes over the database | ✅ builds, runs |
 
-### What still has to be built
+### What is left
 
-- **Nuxt scaffolding.** `layers/base` and both apps hold Vue files in the right
-  places but no `nuxt.config.ts`, no Nitro routes, no dependencies.
-- **The server.** `internal/host` and `internal/composer` become Nitro routes
-  over `packages/db`. Not started; the Go original is HTTP plumbing that Nitro
-  replaces wholesale rather than something to port line by line.
-- **The export.** `internal/export` wrote the zip: `docker-compose.yml`,
-  `pipeline.json`, `credentials.json`, `README.txt`. Deliberately *not* ported
-  yet, because it changes shape — the Nuxt platform needs a compose file with
-  **two** services, since `lawnotation-iaa` stays a Go sidecar. Recover the
-  original wording with `git show go-final:internal/export/export.go`; the
-  README text in it is worth keeping.
-- **Docker.** Two images, plus the published `lawnotation-iaa` image.
+- **`lawnotation-iaa` is not published.** An export whose pipeline computes
+  agreement names `ghcr.io/maastrichtu-biss/lawnotation-iaa:<version>`, and
+  nothing exists at that tag. Agreement metrics will not work until it does.
+- **No images are published at all**, so an export only runs on a machine that
+  built them itself. `./script/docker-build.sh <version> push` when ready.
+- **A pipeline can still produce work with no way out.** `Search → Annotate`
+  with no download step exports happily and loses everything on tab close.
 
 ---
 
@@ -104,9 +96,20 @@ npm run dev:composer
 
 Then open <http://localhost:7788>.
 
-The palette and the canvas work; you can add modules, connect them and see
-connections refused with a reason. **Export platform** fails — `/api/export` is
-not written yet, so there is nothing to run at the other end.
+Add modules, connect them, and press **Export platform**. You get a ~2 kB zip:
+a `docker-compose.yml`, your `pipeline.json`, a `credentials.json` when the
+design carries a token, and a README written for someone who has never used a
+terminal.
+
+To run what you exported, build the images locally first — an export names them
+by version and a local build is `:dev`, which no registry has:
+
+```bash
+./script/docker-build.sh
+```
+
+Then `docker compose up` inside the unzipped folder, and open
+<http://localhost:7777>.
 
 ### Tests
 
@@ -120,11 +123,14 @@ npm run type-check
 ```
 packages/manifest/    the module contract, pipeline model, validation, secrets
 packages/db/          schema, queries, resources
-layers/base/          shared runtime — resolve, bindings, ModuleHost, workspace
+packages/export/      the zip an export is
+layers/base/          shared Nuxt layer — resolve, bindings, ModuleHost, workspace
 apps/composer/        design platforms, export zips
 apps/platform/        run one exported platform
 registry/*.json       the module catalogue — start here
 docs/architecture.md  why things are the way they are
+Dockerfile            both images, two targets
+script/docker-build.sh  builds and pushes them, one version
 script/build-docs.sh  renders the architecture note to PDF
 ```
 
