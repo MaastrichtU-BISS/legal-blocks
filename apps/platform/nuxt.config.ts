@@ -10,6 +10,10 @@ export default defineNuxtConfig({
     // Where pipeline.json and data/ live. /app in the image, the folder you
     // started it from otherwise.
     dir: process.env.LEGAL_BLOCKS_DIR ?? ".",
+
+    // Where the agreement service is. Set by the export's compose file, which
+    // starts it as a second container beside the platform.
+    iaaUrl: process.env.LEGAL_BLOCKS_IAA_URL ?? "",
   },
 
   nitro: {
