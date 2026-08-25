@@ -52,6 +52,24 @@ and the export pulls the other two by that tag.
 
 ## Running it yourself
 
+### Just using the composer
+
+You do not need this repository, Node, or npm. The composer writes nothing and
+reads nothing but its own bundle, so there is no volume to mount and nothing to
+configure — one command is the whole setup:
+
+```bash
+docker run --rm -p 7788:7788 ghcr.io/maastrichtu-biss/legal-blocks-composer:0.1.0
+```
+
+Then open <http://localhost:7788>. Its exports name the public `0.1.0` images,
+so the zip it gives you runs on any machine with Docker.
+
+That is the command to hand a colleague. Everything below is for working *on*
+legal-blocks.
+
+### Working on the source
+
 Node 24, pinned in `.nvmrc`. `nvm use` only affects the shell you run it in, so
 it is per-terminal rather than something that stays set.
 
@@ -115,6 +133,11 @@ by version and a local build is `:dev`, which no registry has:
 
 Then `docker compose up` inside the unzipped folder, and open
 <http://localhost:7777>.
+
+Which means a zip exported from the dev server **runs nowhere but here**. That
+is deliberate — see the version guarantee — but if you are exporting something
+to hand over rather than to test a change, export from the published composer
+image above instead.
 
 ### Tests
 

@@ -105,6 +105,12 @@ with this composer about the module registry and the frontend contract. That is
 the whole drift guarantee. **Never publish the images separately** — a composer
 whose platform tag does not exist produces exports that cannot start.
 
+An unreleased composer is `:dev`, deliberately, rather than `:latest`. So a zip
+exported from `npm run dev:composer` runs only on a machine that has built the
+`:dev` images itself: it fails loudly on anyone else's rather than quietly
+running whatever `:latest` happened to be that week. Export from a published
+image for anything you intend to hand over.
+
 ---
 
 # 3. The linking contract
@@ -472,6 +478,18 @@ from `process.env` at request time, and the platform's server holds no
 ---
 
 # 9. Working on it — the daily loop
+
+Everything from here on assumes you are changing legal-blocks. **Using** the
+composer needs none of it — no clone, no Node, no npm:
+
+```bash
+docker run --rm -p 7788:7788 ghcr.io/maastrichtu-biss/legal-blocks-composer:0.1.0
+```
+
+The composer writes nothing and reads nothing but its own bundle, so there is
+no volume, no data folder and nothing to configure. That is the command to give
+a colleague who wants to design a platform rather than work on one, and its
+exports name the public `0.1.0` images so the zip runs on their machine too.
 
 Node 24, pinned in `.nvmrc`. `nvm use` affects only the shell you run it in.
 
