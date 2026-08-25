@@ -15,9 +15,16 @@ import { registry } from "../../../../layers/base/server-registry";
 let pipelineCache: Pipeline | null = null;
 let dbCache: Handle | null = null;
 
-/** Where pipeline.json and data/ live. /app in the image. */
+/**
+ * Where pipeline.json and data/ live. /app in the image, the folder you
+ * started the platform from otherwise.
+ *
+ * Read from the environment at request time, not from runtimeConfig — a
+ * runtimeConfig default is baked in at build time and would ignore whatever
+ * the compose file sets.
+ */
 function dir(): string {
-  return resolve(useRuntimeConfig().dir ?? ".");
+  return resolve(process.env["LEGAL_BLOCKS_DIR"] || ".");
 }
 
 /**

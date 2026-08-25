@@ -6,15 +6,15 @@
 export default defineNuxtConfig({
   extends: ["../../layers/base"],
 
-  runtimeConfig: {
-    // Where pipeline.json and data/ live. /app in the image, the folder you
-    // started it from otherwise.
-    dir: process.env.LEGAL_BLOCKS_DIR ?? ".",
-
-    // Where the agreement service is. Set by the export's compose file, which
-    // starts it as a second container beside the platform.
-    iaaUrl: process.env.LEGAL_BLOCKS_IAA_URL ?? "",
-  },
+  // Deliberately no runtimeConfig for the two settings a compose file sets.
+  //
+  // A runtimeConfig default is evaluated when the image is *built*, so
+  // `process.env.X ?? "..."` there reads the build environment and bakes the
+  // result in — the compose file's `environment:` block then changes nothing.
+  // That shipped an export whose agreement metrics were silently unreachable,
+  // and it looked like a networking problem rather than a config one.
+  //
+  // Both are read at request time instead. See server/utils/platform.ts.
 
   nitro: {
     // Reshapes every failure into {"error": "..."} — see server/error.ts.

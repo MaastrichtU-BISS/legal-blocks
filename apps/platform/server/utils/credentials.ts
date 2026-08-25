@@ -55,7 +55,7 @@ export function requireUpstream(event: Parameters<typeof fail>[0], service: stri
 }
 
 function readSecrets(): Secrets {
-  const path = join(resolve(useRuntimeConfig().dir ?? "."), "credentials.json");
+  const path = join(resolve(process.env["LEGAL_BLOCKS_DIR"] || "."), "credentials.json");
   // A missing file is normal: a platform whose modules need no outside API has
   // none, and a deployment may prefer the environment instead.
   if (!existsSync(path)) return {};

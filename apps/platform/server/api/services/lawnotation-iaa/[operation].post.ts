@@ -17,7 +17,9 @@ export default defineEventHandler(async (event) => {
     throw fail(event, 404, `the agreement service has no operation "${operation}"`);
   }
 
-  const base = useRuntimeConfig().iaaUrl;
+  // From the environment at request time: the compose file sets this, and a
+  // runtimeConfig default would have been fixed when the image was built.
+  const base = process.env["LEGAL_BLOCKS_IAA_URL"];
   if (!base) {
     throw fail(
       event,
