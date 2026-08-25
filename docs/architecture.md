@@ -773,9 +773,10 @@ Things that are true today and that you will trip over.
 **Nothing runs.** See the status note at the top. This is the gap that
 subsumes most of the others until the port lands.
 
-**Node 22.17 is too old for Nuxt 4.5**, which wants `^22.19 || ^24.11 || >=26`.
-The three ported packages are pure TypeScript and build on anything; the apps
-will not start until this is fixed.
+**Node is pinned to 24 in `.nvmrc`**, because Nuxt 4.5 wants
+`^22.19 || ^24.11 || >=26` and this machine defaults to 22.17. `nvm use` is
+per-shell, not a setting — a command failing on the version is almost always
+a terminal where it was not run.
 
 **`layers/base` and `apps/*` hold Vue in the right folders and nothing else.**
 No `nuxt.config.ts`, no Nitro routes, no dependencies, no type-checking. They
@@ -818,6 +819,7 @@ the Docker setup was deleted with the Go tree; it has to be rebuilt for Nuxt.
 ## The whole loop today
 
 ```bash
+nvm use               # .nvmrc — Node 24
 npm install
 npm test              # vitest, every package
 npm run type-check
@@ -839,8 +841,7 @@ took several passes to get right. `internal/host/data.go` is the route surface
 
 ## Order of the remaining work
 
-1. **Node ≥ 22.19**, then scaffold Nuxt: `layers/base/nuxt.config.ts` and one
-   per app.
+1. **Scaffold Nuxt**: `layers/base/nuxt.config.ts` and one per app.
 2. **Nitro routes** over `packages/db`, matching what `layers/base/api.ts`
    already calls. Do the platform first — it is the bigger surface and the one
    with a database behind it.

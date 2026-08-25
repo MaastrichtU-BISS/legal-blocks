@@ -51,25 +51,23 @@ git log go-final --oneline
   README text in it is worth keeping.
 - **Docker.** Two images, plus the published `lawnotation-iaa` image.
 
-### Blocked on
-
-**Node ≥ 22.19.** Nuxt 4.5 requires `^22.19 || ^24.11 || >=26`; the packages
-above are pure TypeScript and build on anything, but the apps will not start
-until this is sorted.
-
-```bash
-nvm install 24 && nvm use 24
-```
-
 ---
 
 ## Working on it
 
+Node 24 — pinned in `.nvmrc`, because Nuxt 4.5 wants
+`^22.19 || ^24.11 || >=26` and the usual default here is 22.17.
+
 ```bash
+nvm use            # reads .nvmrc
 npm install
-npm test          # vitest across every package
+npm test           # vitest across every package
 npm run type-check
 ```
+
+`nvm use` only affects the shell you run it in, so it is per-terminal rather
+than something that stays set. If a command fails with a version complaint,
+that is what happened.
 
 ## Layout
 
