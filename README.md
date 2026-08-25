@@ -33,16 +33,20 @@ git show go-final:internal/host/data.go     # if you ever need to compare
 | `apps/composer` | composer UI + `/api/export` | ✅ builds, exports |
 | `apps/platform` | the platform: 25 routes over the database | ✅ builds, runs |
 
-### What is left
+### Published
 
-- **Nothing is pushed to `ghcr.io` yet**, so an export only runs on a machine
-  that built the images itself. All three are built and verified at `0.1.0`;
-  publishing needs a token with `write:packages` for the organisation:
+`0.1.0` is on GHCR and public, so an exported platform runs on a machine that
+has never seen this repository:
 
-  ```bash
-  docker login ghcr.io -u <your-github-username>
-  ./script/docker-build.sh 0.1.0 push
-  ```
+```
+ghcr.io/maastrichtu-biss/legal-blocks-composer:0.1.0
+ghcr.io/maastrichtu-biss/legal-blocks-platform:0.1.0
+ghcr.io/maastrichtu-biss/lawnotation-iaa:0.1.0
+```
+
+Cut the next one with `./script/docker-build.sh <version> push`. All three
+carry the same version, because the composer writes its own into every export
+and the export pulls the other two by that tag.
 
 ---
 

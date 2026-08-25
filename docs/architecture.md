@@ -24,6 +24,7 @@ describe today.
 | `packages/db` | ported — §7 |
 | `node-legal-docs-import` | its own repo — §8 |
 | `packages/export` | rebuilt, two services — §10 |
+| published | `0.1.0` on GHCR, public |
 | `layers/base`, `apps/*` | wired; both apps build and run |
 | the server (§5, §6) | Nitro routes over packages/db |
 
@@ -824,10 +825,6 @@ it, where offsets would shift. New imports are unaffected.
 is where they are during the proof of concept, so the npm packages do not all
 need republishing at once. The format is exactly what they will carry at their
 own package roots — moving them is a file move.
-
-**Nothing is pushed to `ghcr.io` yet.** All three images build and have been
-verified together at `0.1.0`; the push needs a token with `write:packages` for
-the organisation. Until then an export only runs where the images were built.
 
 **The composer/platform split is now a convention, not a proof.** See §2.
 
