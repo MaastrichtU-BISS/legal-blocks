@@ -12,9 +12,9 @@
   "dependencies": {
     "@legal-blocks/base": "*",
     "@legal-blocks/db": "*",
-    "@legal-blocks/docs-import": "*",
     "@legal-blocks/manifest": "*",
     "node-legal-docs-client": "^1.0.0",
+    "node-legal-docs-import": "file:../../../node-legal-docs-import",
     "nuxt": "^4.5.0",
     "vue": "^3.5.0"
   }

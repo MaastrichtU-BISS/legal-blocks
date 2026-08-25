@@ -31,7 +31,7 @@ git log go-final --oneline
 |---|---|---|
 | `packages/manifest` | module contract, pipeline validation, secrets | ✅ ported, 26 tests |
 | `packages/db` | schema and queries over better-sqlite3 | ✅ ported, 10 tests |
-| `packages/docs-import` | text · HTML · Word · PDF, server-only | ✅ written, 16 tests |
+| `node-legal-docs-import` | text · HTML · Word · PDF, server-only | ✅ its own repo, 16 tests |
 | `layers/base` | the runtime: resolve, bindings, ModuleHost, workspace | ⏳ moved, not wired |
 | `apps/composer` | composer UI | ⏳ moved, not wired |
 | `apps/platform` | the exported platform's UI | ⏳ moved, not wired |
@@ -74,7 +74,6 @@ that is what happened.
 ```
 packages/manifest/    the module contract, pipeline model, validation, secrets
 packages/db/          schema, queries, resources
-packages/docs-import/ server-side document parsing
 layers/base/          shared runtime — resolve, bindings, ModuleHost, workspace
 apps/composer/        design platforms, export zips
 apps/platform/        run one exported platform

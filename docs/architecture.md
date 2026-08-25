@@ -21,7 +21,7 @@ describe today.
 |---|---|
 | `packages/manifest` | ported — §3, §4 |
 | `packages/db` | ported — §7 |
-| `packages/docs-import` | written — §8 |
+| `node-legal-docs-import` | its own repo — §8 |
 | `layers/base`, `apps/*` | Vue moved into place, not wired |
 | the server (§5, §6) | to build as Nitro routes |
 | the export (§10) | to rebuild, with a second service |
@@ -451,8 +451,16 @@ without either module knowing about the other.
 
 # 8. Backend services
 
-> **Changed by the rewrite.** `docs-import` is now `packages/docs-import`, an
-> ordinary Node module the platform imports — not a service, not a container.
+> **Changed by the rewrite.** `docs-import` is now `node-legal-docs-import`, an
+> ordinary npm package the platform imports — not a service, not a container.
+>
+> That distinction is the point, and it is easy to get wrong by reaching for
+> symmetry. `lawnotation-iaa` is a service for exactly one reason: it is Go, and
+> Node cannot import Go. Nothing forces that on a parser written in TypeScript,
+> and a library beats a service on every axis here — no image to tag, no version
+> pinned in the export's compose file, no network hop, no health state, no
+> partial-failure mode. If PDF parsing ever blocks the event loop badly enough
+> to matter, `worker_threads` fixes it inside the library.
 > `legal-docs` becomes Nitro routes over the published `node-legal-docs-client`.
 > Only `lawnotation-iaa` stays a Go service, as its own image, because it is
 > 1,500 lines of agreement statistics that already exist and work.
@@ -798,7 +806,9 @@ written.
 dropdowns, not emails. Carried over unchanged in the port.
 
 **PDF text will differ from the Go extractor's.** `pdfjs-dist` and
-`ledongthuc/pdf` do not produce identical output. It matters only when
+`ledongthuc/pdf` do not produce identical output. Nothing has been deployed, so
+this currently applies to zero databases — but it stops being free the moment
+one exists. It matters only when
 re-importing *the same PDF* into a dataset that already carries annotations on
 it, where offsets would shift. New imports are unaffected.
 
@@ -868,7 +878,6 @@ Steps 3 and 4 are the only frontend code a new module touches.
   packages/
     manifest/             the module contract, Kind, pipeline validation, secrets
     db/                   schema, queries, resources
-    docs-import/          text, HTML, Word and PDF parsing — server-side only
   layers/base/            shared runtime, moved from web/src, not yet wired
     runtime/              resolve, bindings, ModuleHost
     workspace/            the tabbed shell's host-side content
