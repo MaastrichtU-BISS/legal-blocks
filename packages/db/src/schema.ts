@@ -1,3 +1,16 @@
+// The platform's schema, as a string rather than a file.
+//
+// It used to be schema.sql read at startup, which worked when the Go binary
+// embedded it and broke the moment a bundler was involved: the read resolved
+// relative to the emitted chunk, so a built server looked for
+// .output/server/schema.sql and found nothing. Same lesson as
+// registry/index.ts — a bundler can follow an import and cannot follow a file
+// read.
+//
+// Kept as one template literal so it still reads as SQL and still diffs as
+// SQL. Editing it is editing this.
+
+export const SCHEMA = `
 -- The platform's shared database.
 --
 -- Every module reads and writes here rather than being handed data by the step
@@ -255,3 +268,4 @@ CREATE INDEX idx_span_relations_from ON span_relations (from_span_id);
 CREATE INDEX idx_span_relations_to ON span_relations (to_span_id);
 CREATE INDEX idx_document_relations_from ON document_relations (from_assignment_id);
 CREATE INDEX idx_document_relations_to ON document_relations (to_assignment_id);
+`;

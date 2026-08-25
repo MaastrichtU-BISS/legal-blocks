@@ -13,9 +13,7 @@
 
 import Database from "better-sqlite3";
 import type { Database as Handle } from "better-sqlite3";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { SCHEMA } from "./schema.js";
 
 /** Thrown when a requested row does not exist. */
 export class NotFoundError extends Error {
@@ -24,8 +22,6 @@ export class NotFoundError extends Error {
     this.name = "NotFoundError";
   }
 }
-
-const schemaPath = join(dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
 /**
  * Opens (creating if needed) the database at `path` and applies the schema.
@@ -56,7 +52,7 @@ function applySchema(db: Handle): void {
     .prepare(`SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'users'`)
     .get() as { n: number };
   if (existing.n > 0) return;
-  db.exec(readFileSync(schemaPath, "utf8"));
+  db.exec(SCHEMA);
 }
 
 /**

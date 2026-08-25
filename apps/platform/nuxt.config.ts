@@ -12,6 +12,11 @@ export default defineNuxtConfig({
     dir: process.env.LEGAL_BLOCKS_DIR ?? ".",
   },
 
+  nitro: {
+    // Reshapes every failure into {"error": "..."} — see server/error.ts.
+    errorHandler: "~~/server/error",
+  },
+
   devServer: { port: 7777 },
   compatibilityDate: "2026-08-25",
 });
