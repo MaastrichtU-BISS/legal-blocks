@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "Development workspace",
+  "kind": "workspace",
+  "nodes": [
+    { "id": "import1", "module": "vue-legal-docs-import", "label": "Import documents" },
+    { "id": "annot1", "module": "legal-annotation-kit", "label": "Annotate" },
+    { "id": "iaa1", "module": "vue-iaa-metrics", "label": "Agreement metrics" }
+  ],
+  "edges": []
+}

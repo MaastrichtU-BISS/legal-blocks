@@ -31,13 +31,28 @@ export function usePipeline(): Pipeline {
   if (pipelineCache) return pipelineCache;
 
   const path = join(dir(), "pipeline.json");
+
+  // 503 rather than an unhandled 500, because both of these are somebody's to
+  // fix and the message says how. An unhandled error would be swallowed by the
+  // error handler as "something went wrong on the platform", which is the
+  // least useful thing it could say about a file being in the wrong place.
   if (!existsSync(path)) {
-    throw new Error(
-      `cannot find ${path} — it should sit next to docker-compose.yml in the ` +
-        `folder you started the platform from`,
-    );
+    throw createError({
+      statusCode: 503,
+      statusMessage:
+        `this platform has no pipeline.json. It should sit next to ` +
+        `docker-compose.yml in the folder you started the platform from ` +
+        `(looked in ${dir()}).`,
+    });
   }
-  pipelineCache = parsePipeline(readFileSync(path, "utf8"), registry);
+  try {
+    pipelineCache = parsePipeline(readFileSync(path, "utf8"), registry);
+  } catch (e) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: `${path} is not a valid pipeline: ${e instanceof Error ? e.message : String(e)}`,
+    });
+  }
   return pipelineCache;
 }
 

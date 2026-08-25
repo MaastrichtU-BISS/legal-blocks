@@ -53,21 +53,67 @@ git log go-final --oneline
 
 ---
 
-## Working on it
+## Running it yourself
 
-Node 24 — pinned in `.nvmrc`, because Nuxt 4.5 wants
-`^22.19 || ^24.11 || >=26` and the usual default here is 22.17.
+Node 24, pinned in `.nvmrc`. `nvm use` only affects the shell you run it in, so
+it is per-terminal rather than something that stays set.
 
 ```bash
-nvm use            # reads .nvmrc
+nvm use
 npm install
+```
+
+### The platform — what an exported platform is
+
+```bash
+npm run dev:platform
+```
+
+Then open <http://localhost:7777>.
+
+You get the workspace: **Documents**, **Labels**, **Tasks**. It runs against
+`apps/platform/dev/pipeline.json`, which stands in for the `pipeline.json` an
+export would ship. Its database appears at `apps/platform/dev/data/` and is
+gitignored — delete that folder to start over.
+
+**What works today:** everything backed by the database. Create a labelset
+under **Labels**, and once documents exist, a task under **Tasks** and annotate
+it.
+
+**What does not:** the **Add documents** button opens its modal and the upload
+inside it fails — `/api/services/docs-import` is not written yet. Until it is,
+put documents in through the API:
+
+```bash
+curl -X POST localhost:7777/api/datasets \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Rulings","documents":[
+        {"name":"doc-a","full_text":"The tenant shall pay rent"},
+        {"name":"doc-b","full_text":"The landlord may terminate"}]}'
+```
+
+Reload, and **Documents** shows the dataset. From there **Labels** → **New
+labelset**, then **Tasks** → **New task** over the two, and the annotation
+screen works.
+
+### The composer — where platforms are designed
+
+```bash
+npm run dev:composer
+```
+
+Then open <http://localhost:7788>.
+
+The palette and the canvas work; you can add modules, connect them and see
+connections refused with a reason. **Export platform** fails — `/api/export` is
+not written yet, so there is nothing to run at the other end.
+
+### Tests
+
+```bash
 npm test           # vitest across every package
 npm run type-check
 ```
-
-`nvm use` only affects the shell you run it in, so it is per-terminal rather
-than something that stays set. If a command fails with a version complaint,
-that is what happened.
 
 ## Layout
 

@@ -21,3 +21,6 @@ node_modules/
 
 # Nuxt writes here too.
 .output/
+
+# The dev platform writes its database here.
+/apps/platform/dev/data/
