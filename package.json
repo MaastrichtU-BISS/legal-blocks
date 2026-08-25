@@ -1,0 +1,20 @@
+{
+  "name": "legal-blocks",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "layers/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --build --force"
+  },
+  "devDependencies": {
+    "@types/node": "^26.3.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}

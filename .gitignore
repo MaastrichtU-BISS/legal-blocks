@@ -6,6 +6,11 @@
 .DS_Store
 
 /web/node_modules/
+node_modules/
+
+# Nuxt build output
+.nuxt/
+.output/
 
 # web/dist is deliberately NOT ignored: the Go binaries embed it, so committing
 # it is what lets someone clone this and run `go run ./cmd/composer` with no
