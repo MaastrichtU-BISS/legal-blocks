@@ -11,6 +11,9 @@
     "apps/*"
   ],
   "scripts": {
+    "dev:platform": "npm -w @legal-blocks/platform run dev",
+    "dev:composer": "npm -w @legal-blocks/composer run dev",
+    "build": "npm -w @legal-blocks/platform run build && npm -w @legal-blocks/composer run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "tsc --build --force"

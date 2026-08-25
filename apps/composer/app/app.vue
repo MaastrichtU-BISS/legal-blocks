@@ -3,9 +3,9 @@
 // pipeline: the draft lives in the browser until it is exported.
 
 import { ref } from "vue";
-import Composer from "./composer/Composer.vue";
-import { getRegistry } from "./api";
-import type { Registry } from "./types";
+import Composer from "./components/Composer.vue";
+import { getRegistry } from "@base/api";
+import type { Registry } from "@base/types";
 
 const registry = ref<Registry | null>(null);
 const error = ref("");

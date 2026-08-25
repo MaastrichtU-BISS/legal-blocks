@@ -18,9 +18,9 @@
 
 import { computed, ref, watch } from "vue";
 import ConfigForm from "./ConfigForm.vue";
-import { exportPipeline } from "../api";
-import type { Manifest, Kind, Node, Pipeline, Registry } from "../types";
-import { canConnect, configWithDefaults, fieldAppliesIn, exportKind, supportsKind } from "../types";
+import { exportPipeline } from "@base/api";
+import type { Manifest, Kind, Node, Pipeline, Registry } from "@base/types";
+import { canConnect, configWithDefaults, fieldAppliesIn, exportKind, supportsKind } from "@base/types";
 
 const props = defineProps<{ registry: Registry }>();
 

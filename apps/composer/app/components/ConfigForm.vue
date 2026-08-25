@@ -2,7 +2,7 @@
 // Renders a node's settings from its manifest's config schema. No module is
 // named here — a new setting on any module appears automatically.
 
-import type { ConfigField } from "../types";
+import type { ConfigField } from "@base/types";
 
 defineProps<{ fields: ConfigField[]; modelValue: Record<string, unknown> }>();
 const emit = defineEmits<{ "update:modelValue": [Record<string, unknown>] }>();

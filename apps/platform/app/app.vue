@@ -4,9 +4,9 @@
 // than a second mode, and says so.
 
 import { ref } from "vue";
-import Runtime from "./runtime/Runtime.vue";
-import { getPipeline, getRegistry } from "./api";
-import type { Pipeline, Registry } from "./types";
+import Runtime from "@base/runtime/Runtime.vue";
+import { getPipeline, getRegistry } from "@base/api";
+import type { Pipeline, Registry } from "@base/types";
 
 const registry = ref<Registry | null>(null);
 const pipeline = ref<Pipeline | null>(null);

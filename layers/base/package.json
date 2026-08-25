@@ -1,0 +1,16 @@
+{
+  "name": "@legal-blocks/base",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./nuxt.config.ts",
+  "dependencies": {
+    "@legal-blocks/manifest": "*",
+    "legal-annotation-kit": "^1.0.0",
+    "vue-iaa-metrics": "^1.0.2",
+    "vue-legal-docs-import": "^1.1.0",
+    "vue-legal-docs-visualizer": "^1.2.0",
+    "vue-legal-query-builder": "^2.0.0",
+    "vue-legal-workspace": "^1.0.1"
+  }
+}
