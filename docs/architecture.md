@@ -4,6 +4,30 @@ subtitle: "A working note for the developer, not a README"
 date: "Last updated: 14 August 2026"
 ---
 
+# Status: mid-rewrite
+
+The Go implementation was deleted. It is reachable at the tag **`go-final`**,
+and nothing runs right now — there is no composer and no export until the Nuxt
+side is built.
+
+**Sections 1, 3 and 4 are unchanged by this** — the problem, the module
+contract and the `Kind` axis are the design, not the implementation. **Sections
+2 and 5–10 describe the Go implementation** and are kept as the record of what
+the Nuxt side has to reproduce; they are marked where they no longer describe
+anything on disk. Section 11 is history and stays true. Sections 12 and 13
+describe today.
+
+| | |
+|---|---|
+| `packages/manifest` | ported — §3, §4 |
+| `packages/db` | ported — §7 |
+| `packages/docs-import` | written — §8 |
+| `layers/base`, `apps/*` | Vue moved into place, not wired |
+| the server (§5, §6) | to build as Nitro routes |
+| the export (§10) | to rebuild, with a second service |
+
+---
+
 # How to read this
 
 This document exists to hold the *reasoning*, not the API surface. The code
@@ -64,20 +88,32 @@ Two consequences worth stating early, because a lot follows from them:
 
 # 2. Two programs, two images
 
-They are separate programs, built from one source tree into two images:
+> **Was the Go implementation.** The shape survives the rewrite — two apps, two
+> images, neither able to do the other's job — but the mechanism does not. Go
+> gave the split away for free at the linker; Nuxt needs it expressed as
+> structure. See the note at the end of this section.
+
+They were separate programs, built from one source tree into two images:
 
 ```
   cmd/composer   ->  legal-blocks-composer   design a platform, export a zip
   cmd/platform   ->  legal-blocks-platform   run one exported platform
 ```
 
-Neither can do the other's job, and that is checked at the linker rather than
-by reading:
+Neither could do the other's job, and that was checked at the linker rather
+than by reading:
 
 ```
   go list -deps ./cmd/platform | grep internal/export     -> nothing
   go list -deps ./cmd/composer | grep internal/host       -> nothing
 ```
+
+**That proof does not survive the move to Nuxt, and it is the one thing lost in
+the rewrite worth naming.** Two Nuxt apps extending a shared layer separate by
+*where files sit*: `server/api/export.post.ts` lives in one app and not the
+other. That is clean, and it is a convention rather than a guarantee — nothing
+stops an import crossing the line. If the confidence matters, it has to come
+back as a bundle-analysis check in CI.
 
 The frontend splits the same way — two Vite builds from one source tree, into
 `web/dist/composer` and `web/dist/platform`, each embedded into its own image.
@@ -255,6 +291,10 @@ miniature: **settings moved from build time to run time.**
 
 # 5. How a pipeline becomes a screen
 
+> The Vue described here — `resolve.ts`, `bindings.ts`, `ModuleHost.vue` — moved
+> to `layers/base/` intact and is what the Nuxt apps are built from. Only the
+> server behind `api.ts` has to be rebuilt.
+
 There is no "run the pipeline" pass. Nothing executes top to bottom. Instead a
 step asks for its inputs when it is opened, and that request walks *backwards*
 through the edges to whatever produces them.
@@ -409,7 +449,17 @@ without either module knowing about the other.
 
 ---
 
-# 8. Go services
+# 8. Backend services
+
+> **Changed by the rewrite.** `docs-import` is now `packages/docs-import`, an
+> ordinary Node module the platform imports — not a service, not a container.
+> `legal-docs` becomes Nitro routes over the published `node-legal-docs-client`.
+> Only `lawnotation-iaa` stays a Go service, as its own image, because it is
+> 1,500 lines of agreement statistics that already exist and work.
+>
+> The section below describes the Go arrangement, and the reasoning in it — why
+> a credential-holding service exposes named operations rather than a path —
+> carries over unchanged.
 
 A backend module is an ordinary Go package exposing an `http.Handler`, compiled
 into the platform binary and mounted at `/api/services/<id>/`. The composer
@@ -501,6 +551,12 @@ credential is spent?*
 
 # 10. Export
 
+> **To rebuild.** The compose file an export writes now needs **two** services:
+> the platform and the `lawnotation-iaa` sidecar. That is why this was not
+> ported as-is. The original, including the README text written for someone who
+> has never used a terminal, is at
+> `git show go-final:internal/export/export.go`.
+
 An export is about **2 KB**:
 
 ```
@@ -559,6 +615,25 @@ is gone with them.
 
 Newest first. Each entry is a decision, the alternative that was rejected, and
 the reason — which is the part worth having when revisiting.
+
+### The Go implementation deleted mid-rewrite — Aug 2026
+
+Removed `cmd/`, `internal/`, `go.mod` and the Docker setup before the Nuxt
+replacement existed, leaving nothing runnable.
+
+*Rejected:* keeping Go until Nuxt worked, which is what was planned and what I
+argued for. The reason for reversing it was not technical — two implementations
+of the same product in two languages in one tree is a lot to hold in your head,
+and the cost of that was being paid every time anyone opened the repo.
+
+The trade is real and worth being honest about: for the length of the port
+there is no composer, no export, nothing to demo. What makes it acceptable is
+that nothing is *lost* — the tag `go-final` holds all of it, and the two pieces
+most worth re-reading are named in §10 and §13.
+
+The frontend was **moved rather than deleted**: `web/src` became `layers/base`
+and the two apps. It is Vue either way, and re-creating 2,500 lines from history
+would have been work with nothing to show for it.
 
 ### Docker-only export — Aug 2026
 
@@ -695,152 +770,114 @@ in §3.
 
 Things that are true today and that you will trip over.
 
+**Nothing runs.** See the status note at the top. This is the gap that
+subsumes most of the others until the port lands.
+
+**Node 22.17 is too old for Nuxt 4.5**, which wants `^22.19 || ^24.11 || >=26`.
+The three ported packages are pure TypeScript and build on anything; the apps
+will not start until this is fixed.
+
+**`layers/base` and `apps/*` hold Vue in the right folders and nothing else.**
+No `nuxt.config.ts`, no Nitro routes, no dependencies, no type-checking. They
+are staged, not wired, and `npm test` does not touch them.
+
+**`api.ts` and `types.ts` in `layers/base` overlap `packages/manifest`.** The
+frontend grew its own `Pipeline` and `Registry` types when the server was Go and
+the two could not share code. They can now, and the duplicates should go when
+the apps are wired.
+
 **A pipeline that produces work is not required to end somewhere the work can
 leave.** You can compose `Search -> Annotate` with no Download step, export it,
 and hand somebody a platform where their annotations vanish when they close the
-tab. Validation should catch this. It does not yet.
+tab. Validation should catch this. It does not yet — and this is the best moment
+to add it, since `packages/manifest` is where it belongs and it is freshly
+written.
 
 **Annotators are shown as numeric user ids** in the metrics cards and filter
-dropdowns, not emails. `TaskAnnotators` returns ids and `Annotations` formats
-`user_id`. Affects both span and document tasks.
+dropdowns, not emails. Carried over unchanged in the port.
+
+**PDF text will differ from the Go extractor's.** `pdfjs-dist` and
+`ledongthuc/pdf` do not produce identical output. It matters only when
+re-importing *the same PDF* into a dataset that already carries annotations on
+it, where offsets would shift. New imports are unaffected.
 
 **Manifests live in this repo, not in the packages.** `registry/*.module.json`
 is where they are during the proof of concept, so the npm packages do not all
 need republishing at once. The format is exactly what they will carry at their
 own package roots — moving them is a file move.
 
-**`legal-annotation-kit` cannot be code-split.** `src/sources/memory.ts`
-imports it statically while `loaders.ts` imports it dynamically, so Rollup
-keeps it in the platform's entry chunk. Every platform downloads it, including
-ones with no annotate step. Vite says so on every build.
+**No images are published.** Nothing exists at `ghcr.io/maastrichtu-biss`, and
+the Docker setup was deleted with the Go tree; it has to be rebuilt for Nuxt.
 
-**The frontend is built on the host, not in the image.** The Dockerfile had a
-node stage that ran `npm run build`, so an image could never ship a stale
-bundle. It cannot work while `web/package.json` depends on
-`vue-legal-workspace` as `file:../../vue-legal-workspace` — an unpublished
-package outside the build context, which npm in a container cannot resolve.
-`script/docker-build.sh` runs the build on the host instead, and the Dockerfile
-fails with a readable message if you run `docker build` yourself and skip it.
-Restore the node stage once the package set is published; it is four lines and
-it is the better design.
-
-**Data folder ownership differs between Docker Desktop and Linux.** Desktop
-virtualises bind-mount ownership so the container's user can write to a folder
-belonging to whoever ran it. On native Linux the mount keeps host ownership,
-Compose creates a missing folder as root, and the unprivileged container user
-cannot write. `checkWritable` catches this at startup and prints the `chown`
-command with the right uid — **but this has only been tested by simulating the
-failure on Desktop, not on a real Linux host.**
-
-**No registry publishes the images yet.** `script/docker-build.sh <version>
-push` expects `ghcr.io/maastrichtu-biss` to exist and to be writable. Until
-something is published, every export names a tag nobody can pull.
-
-**Export ships unreachable module code.** The platform image carries every
-module's JavaScript regardless of the pipeline. Now that images are versioned
-rather than copied, per-pipeline images are at least *possible* — but that is a
-build service, and it is not obviously worth it.
+**The composer/platform split is now a convention, not a proof.** See §2.
 
 ---
 
 # 13. Working on this
 
-## Regenerating this document
+## The whole loop today
 
 ```bash
+npm install
+npm test              # vitest, every package
+npm run type-check
 ./script/build-docs.sh
 ```
 
-Source is `docs/architecture.md`. The PDF is generated and not tracked.
-
-## Running the composer
-
-From source, which is the fast loop:
+## Recovering something from the Go implementation
 
 ```bash
-cd web && npm run build && cd .. && go run ./cmd/composer
+git show go-final:internal/export/export.go      # the zip and its README text
+git show go-final:internal/host/data.go          # the data API's route shapes
+git log go-final --oneline
 ```
 
-Or as a container, which is what other people will use:
+Two are worth reading before rebuilding their replacements. `internal/export`
+holds README prose written for someone who has never used a terminal, which
+took several passes to get right. `internal/host/data.go` is the route surface
+`layers/base/api.ts` calls, so it is the specification for the Nitro routes.
 
-```bash
-docker compose up --build
-```
+## Order of the remaining work
 
-## Trying a platform you exported
-
-An export names an image by version, and a local composer is version `dev`,
-which nobody can pull. So build the platform image locally first and tell the
-composer to name it:
-
-```bash
-./script/docker-build.sh
-LEGAL_BLOCKS_PLATFORM_IMAGE=ghcr.io/maastrichtu-biss/legal-blocks-platform docker compose up
-```
-
-Then unzip the export and `docker compose up` in it.
-
-## Releasing
-
-```bash
-./script/docker-build.sh 1.4.2 push
-```
-
-Both images, one version, one commit. **Do not publish them separately.** The
-composer writes its own version into every export and the export pulls the
-platform by that tag; a composer released without a matching platform produces
-exports that cannot start.
+1. **Node ≥ 22.19**, then scaffold Nuxt: `layers/base/nuxt.config.ts` and one
+   per app.
+2. **Nitro routes** over `packages/db`, matching what `layers/base/api.ts`
+   already calls. Do the platform first — it is the bigger surface and the one
+   with a database behind it.
+3. **`legal-docs` as named operations**, not a pass-through path. See §9; this
+   is the one place where getting the shape wrong reintroduces a real
+   vulnerability.
+4. **The export**, with two services in its compose file.
+5. **Docker**, then delete nothing — there is nothing left to delete.
 
 ## Adding a web module
 
-1. Publish the package (or wire it as `file:../<package>` while iterating —
-   `file:` specs symlink, so a rebuild in the package is live immediately, and
-   they publish through unchanged).
+1. Publish the package.
 2. Write `registry/<id>.module.json`.
-3. Add one line to the import map in `web/src/modules/loaders.ts`.
-4. Add a host contract to `web/src/runtime/bindings.ts` — **two**
+3. Add one line to the import map in `layers/base/modules/loaders.ts`.
+4. Add a host contract to `layers/base/runtime/bindings.ts` — **two**
    implementations, one per kind, unless the module declares only one.
 
 Steps 3 and 4 are the only frontend code a new module touches.
 
-## Adding a Go service
-
-1. Implement `service.Service` (and `service.Credentialed` only if it calls an
-   outside API).
-2. Register it in `cmd/platform/main.go` — the platform runs services; the
-   composer mounts none.
-3. Name it in the manifest's `services` array.
-
 ## Repository map
 
 ```
-  Dockerfile              both images, two targets
-  docker-compose.yml      runs the composer from this repo
-  cmd/
+  package.json            npm workspaces root
+  packages/
+    manifest/             the module contract, Kind, pipeline validation, secrets
+    db/                   schema, queries, resources
+    docs-import/          text, HTML, Word and PDF parsing — server-side only
+  layers/base/            shared runtime, moved from web/src, not yet wired
+    runtime/              resolve, bindings, ModuleHost
+    workspace/            the tabbed shell's host-side content
+    sources/              adapters onto packages' own source interfaces
+    modules/              the import map and builtin modules
+    api.ts                what the frontend calls — the Nitro route spec
+  apps/
     composer/             design platforms, export zips
     platform/             run one exported platform
-  internal/
-    manifest/             the module contract, Kind, ConfigField
-    pipeline/             what a composed platform is; validation; secrets
-    composer/             the composer's server
-    host/                 the platform's server: routes, data API, upstreams
-    serve/                what both servers share: JSON, static, listen
-    build/                version and image reference, stamped at link time
-    db/                   schema, queries, resources
-    export/               the zip: compose file, pipeline, credentials, README
-    service/              the backend-module interface
-    services/             the backends themselves
   registry/               module manifests, adapter table
-  web/
-    apps/<app>/           one index.html per bundle
-    src/
-      composer.ts         entry -> ComposerApp.vue
-      platform.ts         entry -> PlatformApp.vue
-      composer/           design a platform
-      runtime/            run one: resolve, bindings, ModuleHost
-      workspace/          the tabbed shell's host-side content
-      sources/            adapters onto packages' own source interfaces
-      modules/            the import map and builtin modules
-  script/                 docker build, docs
+  script/                 docs
   docs/                   this
 ```

@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { Handle } from "../src/index.js";
 import {
   addDocuments,
@@ -66,14 +65,6 @@ describe("opening the database", () => {
     second.close();
   });
 
-  // The schema is duplicated while the Go implementation still exists beside
-  // this one. Byte equality is the only thing keeping them from drifting, and
-  // this test goes away when internal/db does.
-  it("uses a schema identical to the Go implementation's", () => {
-    const ts = fileURLToPath(new URL("../src/schema.sql", import.meta.url));
-    const go = fileURLToPath(new URL("../../../internal/db/schema.sql", import.meta.url));
-    expect(readFileSync(ts, "utf8")).toBe(readFileSync(go, "utf8"));
-  });
 });
 
 describe("users", () => {

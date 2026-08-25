@@ -5,24 +5,14 @@
 /.vscode/
 .DS_Store
 
-/web/node_modules/
 node_modules/
 
 # Nuxt build output
 .nuxt/
 .output/
 
-# web/dist is deliberately NOT ignored: the Go binaries embed it, so committing
-# it is what lets someone clone this and run `go run ./cmd/composer` with no
-# Node installed at all. Rebuild it with `cd web && npm run build`.
-#
-# The Docker build ignores the committed copy and rebuilds from source anyway,
-# so an image can never ship a bundle older than the commit it came from.
-
-# Exported platforms and local builds.
+# Exported platforms.
 *.zip
-/composer
-/platform
 
 # Rendered documentation. The markdown is the source; regenerate with
 # ./script/build-docs.sh. Tracking the PDF would put a binary diff in every
