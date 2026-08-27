@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { H3Event } from "h3";
 import { exportKind, parsePipeline, type Pipeline } from "@legal-blocks/manifest";
-import { open, usersByEmail, type Handle } from "@legal-blocks/db";
+import { open, setRole, usersByEmail, type Handle } from "@legal-blocks/db";
 import { registry } from "../../../../layers/base/server-registry";
 
 let pipelineCache: Pipeline | null = null;
@@ -77,6 +77,13 @@ export function useDb(): Handle | null {
   const data = join(dir(), "data");
   mkdirSync(data, { recursive: true });
   dbCache = open(join(data, "platform.db"));
+
+  // Settle the platform's own account now rather than on the first write.
+  // Whether somebody is an admin decides what the workspace offers them, and
+  // that question is asked by a read — so an account that only becomes an
+  // admin once something has been saved is an account that looks like an
+  // annotator to the first person who opens the platform.
+  owner(dbCache);
   return dbCache;
 }
 
@@ -111,5 +118,15 @@ const OWNER_EMAIL = "owner@platform.invalid";
 export function owner(db: Handle): number {
   const [user] = usersByEmail(db, [OWNER_EMAIL]);
   if (!user) throw new Error("could not resolve the platform's owner account");
+
+  // usersByEmail creates everyone as an annotator, because that is what an
+  // address typed into a task's annotator list is. This account is not one, and
+  // the difference has to be recorded rather than inferred from the address:
+  // the workspace decides what to show from the role, and a role the database
+  // does not hold is a rule living in a string comparison somewhere.
+  if (user.role !== "admin") {
+    setRole(db, user.id, "admin");
+    return user.id;
+  }
   return user.id;
 }

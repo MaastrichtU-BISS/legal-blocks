@@ -14,6 +14,7 @@ import {
   queue,
   saveAssignment,
   syncTask,
+  taskProgress,
   users,
   usersByEmail,
 } from "../src/index.js";
@@ -261,5 +262,63 @@ describe("adding documents to a dataset", () => {
     // is DO NOTHING: the row keeps its id *and* its text is refreshed.
     expect(after.document.full_text).toBe("The tenant shall pay the rent");
     expect(after.document.id).toBe(b.document.id);
+  });
+});
+
+describe("task progress", () => {
+  // The three cuts have to agree, because they are read together and a reader
+  // will do the arithmetic. Both annotators starting the same document is the
+  // case worth pinning: the totals are identical either way, and only the
+  // per-document cut shows that half the corpus is untouched.
+  it("counts started assignments per annotator and per document", () => {
+    const { taskId, people } = seed();
+
+    // Anna and Bram each annotate doc-a, and neither touches doc-b.
+    for (const person of people) {
+      const q = queue(db, taskId, person.id);
+      const first = q.find((e) => e.name === "doc-a")!;
+      const b = bundle(db, first.assignment_id);
+      b.assignment.annotations = [
+        { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 4, relations: [] },
+      ];
+      saveAssignment(db, first.assignment_id, b.assignment);
+    }
+
+    const p = taskProgress(db, taskId);
+
+    expect(p.total).toBe(4);
+    expect(p.done).toBe(2);
+
+    expect(p.byAnnotator.map((r) => [r.name, r.done, r.total])).toEqual([
+      ["anna@example.org", 1, 2],
+      ["bram@example.org", 1, 2],
+    ]);
+
+    expect(p.byDocument.map((r) => [r.name, r.done, r.total])).toEqual([
+      ["doc-a", 2, 2],
+      ["doc-b", 0, 2],
+    ]);
+
+    // The cuts are two groupings of one set, so both must sum to the whole.
+    const sum = (rows: { done: number; total: number }[]) => ({
+      done: rows.reduce((n, r) => n + r.done, 0),
+      total: rows.reduce((n, r) => n + r.total, 0),
+    });
+    expect(sum(p.byAnnotator)).toEqual({ done: p.done, total: p.total });
+    expect(sum(p.byDocument)).toEqual({ done: p.done, total: p.total });
+  });
+
+  // A document-level tag with no spans is still work somebody did. Counting
+  // only span_annotations would report an annotator who tagged every document
+  // as having started nothing.
+  it("counts a document-level tag as started", () => {
+    const { taskId, people } = seed();
+    const q = queue(db, taskId, people[0]!.id);
+    const b = bundle(db, q[0]!.assignment_id);
+    b.assignment.annotations = [];
+    b.assignment.document_annotations = [{ id: -1, label: "Obligation", confidence: 5 }];
+    saveAssignment(db, q[0]!.assignment_id, b.assignment);
+
+    expect(taskProgress(db, taskId).done).toBe(1);
   });
 });

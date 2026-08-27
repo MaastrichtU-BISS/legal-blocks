@@ -15,6 +15,7 @@
     "pipeline",
     "workspace"
   ],
+  "requiredRole": "admin",
   "services": [
     "lawnotation-iaa"
   ],

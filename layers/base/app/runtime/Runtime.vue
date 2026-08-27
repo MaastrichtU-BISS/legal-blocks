@@ -36,6 +36,19 @@ watch(annotator, (value) => localStorage.setItem(ANNOTATOR_KEY, String(value)));
 const identified = computed(() => kind.value === "workspace" || annotator.value > 0);
 
 /**
+ * What the current identity is allowed to see.
+ *
+ * A pipeline has no accounts, so everyone running one is the person who built
+ * it and there is nothing to withhold. In a workspace the platform's own
+ * account is an admin and everybody added to a task is an annotator.
+ */
+const role = computed(() =>
+  kind.value === "pipeline"
+    ? "admin"
+    : (users.value.find((u) => u.id === annotator.value)?.role ?? "annotator"),
+);
+
+/**
  * Who can work here.
  *
  * With storage these are rows in the users table, put there when somebody was
@@ -163,6 +176,7 @@ function goTo(index: number) {
       :env="env"
       :pipeline="pipeline"
       :registry="registry"
+      :role="role"
       @changed="loadUsers()"
     />
     <ModuleHost

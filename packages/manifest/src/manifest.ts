@@ -141,11 +141,31 @@ export interface Manifest {
   config?: ConfigField[];
 
   /**
-   * The authorisation seam. Nothing reads it yet — it is here so that adding
-   * login later is a matter of enforcing a field that already exists in every
-   * manifest, rather than changing the format.
+   * Who this module is for. Absent means everybody.
+   *
+   * The workspace reads it to decide which of a task's steps to offer: an
+   * annotator is given the document to work on, whoever set the task up also
+   * gets the agreement figures over everyone's work.
+   *
+   * Until there is a login this decides what is *shown*, not what can be
+   * reached — the current identity is a dropdown, and the server has no way to
+   * know who is asking. It is the seam that becomes enforcement, not
+   * enforcement yet.
    */
   requiredRole?: string;
+}
+
+/**
+ * Whether somebody in `role` may use this module.
+ *
+ * Ranked rather than matched exactly, so a manifest asking for `editor` does
+ * not have to also list `admin` — and so adding a role between them later is a
+ * change in one place.
+ */
+export function allowsRole(m: Manifest, role: string): boolean {
+  if (!m.requiredRole) return true;
+  const rank: Record<string, number> = { annotator: 0, editor: 1, admin: 2 };
+  return (rank[role] ?? 0) >= (rank[m.requiredRole] ?? 0);
 }
 
 /** Whether the module belongs in the given kind of export. */

@@ -142,6 +142,25 @@ export async function getIncomingRelations(assignmentId: number): Promise<unknow
   );
 }
 
+/** How far along one annotator, or one document, is. */
+export interface ProgressRow {
+  id: number;
+  name: string;
+  done: number;
+  total: number;
+}
+
+export interface TaskProgress {
+  done: number;
+  total: number;
+  byAnnotator: ProgressRow[];
+  byDocument: ProgressRow[];
+}
+
+export async function getTaskProgress(taskId: number): Promise<TaskProgress> {
+  return json(await fetch(`/api/tasks/${taskId}/progress`), "loading progress");
+}
+
 // --- metrics ----------------------------------------------------------------
 
 export async function getTaskAnnotators(taskId: number): Promise<string[]> {

@@ -15,20 +15,28 @@
 // decide which tasks. Neither knows about the other, and this file is where
 // they meet.
 
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { LegalWorkspace } from "vue-legal-workspace";
 import type { Row, WorkspaceTab } from "vue-legal-workspace";
 import "vue-legal-workspace/style.css";
 
 import ModuleHost from "../runtime/ModuleHost.vue";
 import type { ResolveEnv } from "../runtime/resolve";
+import { allowsRole } from "../types";
 import type { Manifest, Pipeline, Registry } from "../types";
 import type { DatasetSummary, LabelsetSummary, TaskSummary } from "../api";
 import { getDatasets, getLabelsets, getTasks } from "../api";
 import NewLabelsetForm from "./NewLabelsetForm.vue";
+import TaskProgressPanel from "./TaskProgressPanel.vue";
 import NewTaskForm from "./NewTaskForm.vue";
 
-const props = defineProps<{ env: ResolveEnv; pipeline: Pipeline; registry: Registry }>();
+const props = defineProps<{
+  env: ResolveEnv;
+  pipeline: Pipeline;
+  registry: Registry;
+  /** What the current identity may see. See Runtime.vue. */
+  role: string;
+}>();
 const emit = defineEmits<{ changed: [] }>();
 
 /** The modules that bring documents in: import, search, whatever comes next. */
@@ -49,11 +57,26 @@ const taskSteps = computed(() =>
     .map((node) => ({ node, manifest: props.registry.modules[node.module] }))
     .filter(({ manifest }) => {
       if (!manifest || manifest.kind === "source") return false;
+      // Not everything a task can do is for everybody. An annotator opens a
+      // task to do their own work; the agreement figures are over everyone's,
+      // and are declared admin-only in the manifest rather than named here.
+      if (!allowsRole(manifest, props.role)) return false;
       return [...(manifest.inputs ?? []), ...(manifest.outputs ?? [])].some(
         (p) => p.type === "annotated-task@1",
       );
     }),
 );
+
+/**
+ * Whether to show where the task stands, above its steps.
+ *
+ * An annotator sees their own queue and that is the right thing to show them.
+ * Whoever is running the task needs the other view — who has started, which
+ * documents are covered — and needs it before the agreement figures, because
+ * a high score over two annotators who have each done one document is not a
+ * result.
+ */
+const showProgress = computed(() => props.role === "admin");
 
 // Kept here as well as fetched by their tabs, because the Tasks tab has to
 // know whether there is anything to make a task from before either of the
@@ -142,6 +165,13 @@ const tabs = computed<WorkspaceTab[]>(() => {
 
 const step = ref(0);
 const revision = ref(0);
+
+// Keep the open step in range as the steps change. Switching from the owner to
+// an annotator takes the metrics step away, and an index pointing past the end
+// renders nothing at all.
+watch(taskSteps, (steps) => {
+  if (step.value >= steps.length) step.value = 0;
+});
 
 /**
  * What the documents about to be uploaded will be called.
@@ -244,6 +274,14 @@ function created() {
 
     <!-- A task, open. The pipeline's own steps, scoped to it. -->
     <template #open-tasks="{ item }">
+      <!-- Whoever set the task up gets a read on it before anything else.
+           Annotators do not: their own queue is what they came for. -->
+      <TaskProgressPanel
+        v-if="showProgress"
+        :task-id="Number(item.id)"
+        :revision="revision"
+      />
+
       <nav v-if="taskSteps.length > 1" class="steps">
         <button
           v-for="(s, i) in taskSteps"

@@ -10,6 +10,18 @@ export function users(db: Handle): User[] {
 }
 
 /**
+ * Changes what somebody is allowed to do.
+ *
+ * Separate from usersByEmail because the two answer different questions. That
+ * one turns an address into a row and has no opinion about the person; this
+ * says what the row is for. Today only the platform's own account uses it, to
+ * become an admin rather than the annotator every created row starts as.
+ */
+export function setRole(db: Handle, userId: number, role: string): void {
+  db.prepare(`UPDATE users SET role = ? WHERE id = ?`).run(role, userId);
+}
+
+/**
  * Resolves each address to a user, creating one for any it has not seen, and
  * returns them in the order given.
  *

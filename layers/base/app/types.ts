@@ -105,6 +105,20 @@ export function supportsKind(m: Manifest, kind: Kind): boolean {
   return !m.worksIn || m.worksIn.length === 0 || m.worksIn.includes(kind);
 }
 
+/**
+ * Whether somebody in `role` may use this module.
+ *
+ * Only asked in a workspace. A pipeline has no accounts — its "annotators" are
+ * positions somebody switches between to produce two passes over the same
+ * documents — so there is nobody for a role to belong to, and everyone running
+ * one is the person who built it.
+ */
+export function allowsRole(m: Manifest, role: string): boolean {
+  if (!m.requiredRole) return true;
+  const rank: Record<string, number> = { annotator: 0, editor: 1, admin: 2 };
+  return (rank[role] ?? 0) >= (rank[m.requiredRole] ?? 0);
+}
+
 /** Whether a setting is offered for the given kind. */
 export function fieldAppliesIn(f: ConfigField, kind: Kind): boolean {
   return !f.worksIn || f.worksIn.length === 0 || f.worksIn.includes(kind);

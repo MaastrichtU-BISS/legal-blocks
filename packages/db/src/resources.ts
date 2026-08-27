@@ -236,6 +236,78 @@ export function tasks(db: Handle): TaskSummary[] {
   return rows.map((r) => ({ ...r, annotators: byTask.get(r.id) ?? [] }));
 }
 
+/** How far along one annotator, or one document, is. */
+export interface ProgressRow {
+  id: number;
+  name: string;
+  done: number;
+  total: number;
+}
+
+/**
+ * A task's progress, cut three ways.
+ *
+ * Whoever set the task up needs to know where it stands before agreement
+ * figures mean anything: two annotators can agree perfectly on the four
+ * documents they have both finished while a third has not started. The
+ * per-annotator cut says who to chase; the per-document cut says which
+ * documents are ready to measure.
+ */
+export interface TaskProgress {
+  done: number;
+  total: number;
+  byAnnotator: ProgressRow[];
+  byDocument: ProgressRow[];
+}
+
+/**
+ * Counts assignments touched against assignments in total, per annotator and
+ * per document.
+ *
+ * "Touched" is the same definition the task list uses — an assignment with any
+ * annotation on it, of either kind. It deliberately does not mean "finished":
+ * nothing in the schema records that somebody considers a document done, and
+ * inventing a threshold here would put a number on the screen that no other
+ * count agrees with.
+ */
+export function taskProgress(db: Handle, taskId: number): TaskProgress {
+  // One CTE so the three cuts cannot drift apart. Written once, grouped twice.
+  const touched = `
+    SELECT a.id, a.user_id, a.document_id,
+           CASE WHEN EXISTS (SELECT 1 FROM span_annotations s WHERE s.assignment_id = a.id)
+                  OR EXISTS (SELECT 1 FROM document_annotations d WHERE d.assignment_id = a.id)
+                THEN 1 ELSE 0 END AS done
+      FROM assignments a
+     WHERE a.task_id = ?`;
+
+  const byAnnotator = db
+    .prepare(
+      `WITH t AS (${touched})
+       SELECT u.id AS id,
+              COALESCE(NULLIF(u.email, ''), u.name) AS name,
+              SUM(t.done) AS done,
+              COUNT(*) AS total
+         FROM t JOIN users u ON u.id = t.user_id
+        GROUP BY u.id
+        ORDER BY name`,
+    )
+    .all(taskId) as ProgressRow[];
+
+  const byDocument = db
+    .prepare(
+      `WITH t AS (${touched})
+       SELECT d.id AS id, d.name AS name, SUM(t.done) AS done, COUNT(*) AS total
+         FROM t JOIN documents d ON d.id = t.document_id
+        GROUP BY d.id
+        ORDER BY d.name`,
+    )
+    .all(taskId) as ProgressRow[];
+
+  const total = byAnnotator.reduce((n, r) => n + r.total, 0);
+  const done = byAnnotator.reduce((n, r) => n + r.done, 0);
+  return { done, total, byAnnotator, byDocument };
+}
+
 /**
  * Makes a task over a dataset with a labelset, and gives every named annotator
  * every document in the dataset.
