@@ -47,36 +47,81 @@ const sources = computed(() =>
 );
 
 /**
- * The steps that work on a task: annotating it, reporting agreement on it,
+ * The modules that work on a task: annotating it, reporting agreement on it,
  * taking the results out. A module qualifies by speaking annotated-task@1,
  * which is the same declaration the composer uses to decide what may connect
  * to what — so nothing here names a module.
+ *
+ * Deliberately not filtered by who is looking. Whether this platform has tasks
+ * at all is a property of what it was composed from, and a Tasks tab that
+ * disappears for its owner because they cannot open one of its steps would be
+ * a workspace that forgets what it is.
  */
-const taskSteps = computed(() =>
+const taskModules = computed(() =>
   props.pipeline.nodes
     .map((node) => ({ node, manifest: props.registry.modules[node.module] }))
     .filter(({ manifest }) => {
       if (!manifest || manifest.kind === "source") return false;
-      // Not everything a task can do is for everybody. An annotator opens a
-      // task to do their own work; the agreement figures are over everyone's,
-      // and are declared admin-only in the manifest rather than named here.
-      if (!allowsRole(manifest, props.role)) return false;
       return [...(manifest.inputs ?? []), ...(manifest.outputs ?? [])].some(
         (p) => p.type === "annotated-task@1",
       );
     }),
 );
 
+/** Somebody with documents of their own to work through in this task. */
+function isAssigned(task: TaskSummary): boolean {
+  return task.annotators.some((a) => a.id === props.env.annotator);
+}
+
 /**
- * Whether to show where the task stands, above its steps.
+ * What an open task offers, which depends on who opened it.
  *
- * An annotator sees their own queue and that is the right thing to show them.
- * Whoever is running the task needs the other view — who has started, which
- * documents are covered — and needs it before the agreement figures, because
- * a high score over two annotators who have each done one document is not a
- * result.
+ * Two different jobs, so two different screens rather than one screen with
+ * parts missing:
+ *
+ *   an annotator came to work      -> their queue, and nothing else
+ *   whoever runs it came to look   -> where it stands, then the agreement
+ *
+ * The two rules are different on purpose. Agreement is a question of
+ * authority — it reports on everybody — so the manifest declares the role, and
+ * it is `requiredRole` that hides it. Annotating is a question of having work:
+ * the owner is not assigned any documents, so there is no queue to show them.
+ * Withholding it by role would be the wrong reason, and would also hide it from
+ * somebody who runs the task and annotates in it too.
  */
-const showProgress = computed(() => props.role === "admin");
+type TaskView = { id: string; label: string; step?: (typeof taskModules.value)[number] };
+
+const taskViews = computed<(task: TaskSummary) => TaskView[]>(() => (task) => {
+  const views: TaskView[] = [];
+
+  if (props.role === "admin") {
+    views.push({ id: "progress", label: "Progress" });
+  }
+
+  for (const step of taskModules.value) {
+    const manifest = step.manifest!;
+    if (!allowsRole(manifest, props.role)) continue;
+    // Whether this module is where annotations get *made*, which is what
+    // needs a queue and therefore an assignment.
+    //
+    // Not simply "outputs annotated-task@1": the metrics module outputs one
+    // too, because it passes its input along so it can sit mid-chain. The
+    // module that makes them is the one that does not take one to begin with —
+    // it turns a corpus into an annotated task. Everything downstream is a
+    // view over work that already exists.
+    const consumes = (manifest.inputs ?? []).some((p) => p.type === "annotated-task@1");
+    const makes =
+      !consumes && (manifest.outputs ?? []).some((p) => p.type === "annotated-task@1");
+    if (makes && !isAssigned(task)) continue;
+    views.push({
+      id: step.node.id,
+      label: step.node.label || manifest.name || step.node.module,
+      step,
+    });
+  }
+
+  return views;
+});
 
 // Kept here as well as fetched by their tabs, because the Tasks tab has to
 // know whether there is anything to make a task from before either of the
@@ -124,7 +169,7 @@ const tabs = computed<WorkspaceTab[]>(() => {
     },
   ];
 
-  if (!taskSteps.value.length) return out;
+  if (!taskModules.value.length) return out;
 
   out.push(
     {
@@ -166,11 +211,11 @@ const tabs = computed<WorkspaceTab[]>(() => {
 const step = ref(0);
 const revision = ref(0);
 
-// Keep the open step in range as the steps change. Switching from the owner to
-// an annotator takes the metrics step away, and an index pointing past the end
-// renders nothing at all.
-watch(taskSteps, (steps) => {
-  if (step.value >= steps.length) step.value = 0;
+// Back to the first view whenever who is looking changes. The two identities
+// are offered different screens, so an index carried across from the other one
+// means nothing — and past the end it renders nothing at all.
+watch([() => props.role, () => props.env.annotator], () => {
+  step.value = 0;
 });
 
 /**
@@ -272,37 +317,50 @@ function created() {
       {{ progress(item) }}
     </template>
 
-    <!-- A task, open. The pipeline's own steps, scoped to it. -->
+    <!-- A task, open. What it offers depends on who opened it — see taskViews.
+         `views` is bound once here so the nav and the panel below cannot be
+         computed from different lists. -->
     <template #open-tasks="{ item }">
-      <!-- Whoever set the task up gets a read on it before anything else.
-           Annotators do not: their own queue is what they came for. -->
-      <TaskProgressPanel
-        v-if="showProgress"
-        :task-id="Number(item.id)"
-        :revision="revision"
-      />
+      <!-- v-for over one element is how a template names a local. The nav and
+           the panel under it must come from the same list, and calling
+           taskViews in each of the three places invites them to diverge. -->
+      <template v-for="views in [taskViews(item as TaskSummary)]" :key="item.id">
+        <nav v-if="views.length > 1" class="steps">
+          <button
+            v-for="(v, i) in views"
+            :key="v.id"
+            :class="{ 'lw-primary': i === step }"
+            @click="
+              step = i;
+              revision++;
+            "
+          >
+            {{ v.label }}
+          </button>
+        </nav>
 
-      <nav v-if="taskSteps.length > 1" class="steps">
-        <button
-          v-for="(s, i) in taskSteps"
-          :key="s.node.id"
-          :class="{ 'lw-primary': i === step }"
-          @click="
-            step = i;
-            revision++;
-          "
-        >
-          {{ s.node.label || s.manifest?.name }}
-        </button>
-      </nav>
+        <TaskProgressPanel
+          v-if="views[step] && !views[step].step"
+          :task-id="Number(item.id)"
+          :revision="revision"
+        />
 
-      <ModuleHost
-        :env="taskEnv(Number(item.id))"
-        :node="taskSteps[step].node"
-        :manifest="taskSteps[step].manifest as Manifest"
-        :revision="revision"
-        @mounted="void 0"
-      />
+        <ModuleHost
+          v-else-if="views[step]"
+          :env="taskEnv(Number(item.id))"
+          :node="views[step].step!.node"
+          :manifest="views[step].step!.manifest as Manifest"
+          :revision="revision"
+          @mounted="void 0"
+        />
+
+        <!-- An annotator opening a task nobody assigned them. Better said than
+             shown as an empty screen with a step bar above it. -->
+        <p v-else class="lw-muted">
+          You have nothing to do in this task — nobody has assigned you any
+          documents in it.
+        </p>
+      </template>
     </template>
   </LegalWorkspace>
 </template>
