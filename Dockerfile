@@ -60,11 +60,16 @@ CMD ["node", ".output/server/index.mjs"]
 # --- platform -----------------------------------------------------------------
 FROM node:24-alpine AS platform
 
-# /app is where the compose file mounts pipeline.json and data/. It is created
-# owned by the app user because data/ is written to at runtime — a bind mount
-# from the host arrives owned by the host user, which is why the compose file
-# and not this line is the thing to look at if writes ever fail.
-RUN adduser -D -u 10001 app && mkdir -p /app && chown app:app /app
+# /app is where the compose file mounts pipeline.json, and /app/data is where
+# the platform's named volume lands.
+#
+# /app/data must exist here, owned by app, even though a volume is mounted over
+# it: Docker initialises a fresh named volume from the ownership of the
+# directory it covers. That is the whole reason an export works on Linux
+# without the recipient chowning anything — a bind mount would be created
+# root-owned by the daemon there, and the platform could not write its
+# database into it.
+RUN adduser -D -u 10001 app && mkdir -p /app/data && chown -R app:app /app
 USER app
 WORKDIR /app
 

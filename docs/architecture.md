@@ -231,15 +231,15 @@ That is the difference between a platform and an appliance, in one field:
 
 # 5. How a pipeline becomes a screen
 
-There is no "run the pipeline" pass. A step asks for its inputs when it is
-opened, and that request walks **backwards** through the edges.
+There is no "run the pipeline" pass. **The order is the wiring**: a pipeline is
+a list, nobody can skip a step, so step C reads what step B produced.
 
 ```
-   user opens step C
+   user opens step C  (index 2)
           |
           v
    resolveInput(C, "corpus")
-          |   find the edge landing on C.corpus
+          |   the step in front of C is B — that is the whole lookup
           v
    produce(B, "task") --------> B's binding .output(ctx)
           |                          |   may itself call ctx.input(...)
@@ -254,6 +254,24 @@ Two properties fall out, both of which matter: **steps nobody opened cost
 nothing**, and a step is **re-resolved on demand** — `ModuleHost` remounts when
 the node changes, when the annotator changes (their queue differs, so their
 source differs), or when the parent bumps a revision counter.
+
+This used to be a graph, resolved by walking an edge list backwards. The edges
+only ever described the chain the composer had already laid out, and three
+failure modes it had to defend against — cycles, unknown ports, one input
+connected twice — are simply unrepresentable in a list.
+
+## Moving on by itself
+
+A pipeline advances when a step produces something. A source calls
+`ctx.produced()` the moment it has data — the upload finished, the search came
+back — and the runtime opens the step that reads it. The data appears where it
+is used rather than leaving somebody on a finished form wondering which tab to
+press.
+
+Only the step on screen may advance the pipeline, so a background refresh
+landing on a step nobody is looking at moves no one. Steps with no natural
+finish — annotating is never "done" — never call it, and are moved on from with
+the **Next** button in the step bar.
 
 `layers/base/app/runtime/ModuleHost.vue` mounts one step and is deliberately
 ignorant:
@@ -342,7 +360,7 @@ Two decisions in that fix are reusable:
 - When two subsystems need the same denormalised shape, pick the encoding one of
   them **already** uses rather than inventing a third.
 
-## What travels along an edge
+## What travels from one step to the next
 
 A **reference**, not a blob:
 
@@ -452,9 +470,15 @@ can reach the port can read and write everyone's work. Inside the container it
 listens on every interface because that is the only way a published port can
 reach it, so this line is the entire access boundary.
 
-**`./data:/app/data`** — a bind mount, not a named volume. "Copy the data folder
-to back up your work" has to be true, and a named volume puts the work somewhere
-a legal researcher will never find.
+**`data:/app/data`** — a named volume, not a bind mount, and `/app/data` exists
+in the image owned by `app` so that Docker gives a fresh volume that ownership.
+This was a bind mount, on the reasoning that "copy the data folder to back up
+your work" should be true. It cost more than it bought: on Linux the daemon
+creates a missing `./data` as `root:root`, the platform runs as uid 10001, and
+every storage route fails with `SQLITE_CANTOPEN`. Docker Desktop virtualises
+bind-mount ownership, so it worked on every Mac it was tested on and on no
+Linux host. Backing up is now `docker compose cp platform:/app/data ./backup`,
+one documented line instead of an architectural promise.
 
 **`credentials.json` mounted only when one exists** — Compose creates a
 *directory* where a bind mount source is missing, so an unconditional line would
@@ -724,8 +748,17 @@ chunk and every platform downloads it, including ones with no annotate step.
 the seam is there so that adding authentication later is enforcing a field that
 already exists rather than changing the format.
 
-**Data folder ownership differs on Linux.** Docker Desktop virtualises bind mount
-ownership; native Linux does not, and Compose creates a missing folder as root.
-`checkWritable` catches it at startup and prints the `chown` command with the
-right uid — but this has only been tested by simulating the failure on Desktop,
-not on a real Linux host.
+**An unwritable data directory is still a bare 500.** The named volume removed
+the common cause — see §8 — but a read-only mount, SELinux or NFS all still
+reach `open()`, which goes straight to `new Database`. The Go build had a
+`checkWritable` that printed the exact remedy; it did not survive the rewrite,
+so what a user sees is `{"error":"something went wrong on the platform"}` and a
+`SQLITE_CANTOPEN` in the log. Worth restoring as a 503 that names the
+directory.
+
+> **What that gap cost, while it was open.** It was recorded as "only tested by
+> simulating the failure on Desktop, not on a real Linux host" — and it was a
+> real bug the whole time, found by a colleague on Linux rather than by us. A
+> gap that says "untested on X" is a bug report about X waiting to happen. The
+> cheap version of the test existed all along: a named volume chowned to root
+> reproduces Linux bind-mount ownership on a Mac in one command.

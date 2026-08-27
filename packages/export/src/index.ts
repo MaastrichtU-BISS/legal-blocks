@@ -108,7 +108,8 @@ function compose(opts: ExportOptions, hasCredentials: boolean): string {
     `# ${opts.pipeline.name}`,
     "#",
     "# Start:  docker compose up",
-    "# Stop:   docker compose down     (your work is kept in ./data)",
+    "# Stop:   docker compose down     (your work is kept)",
+    "#         docker compose down -v  (your work is deleted)",
     "#",
     "# The image tags are the version of Legal Blocks this platform was built",
     "# with. Changing them upgrades the platform; your data is not touched.",
@@ -125,7 +126,12 @@ function compose(opts: ExportOptions, hasCredentials: boolean): string {
     "      - ./pipeline.json:/app/pipeline.json:ro",
   ];
   if (hasCredentials) lines.push("      - ./credentials.json:/app/credentials.json:ro");
-  lines.push("      - ./data:/app/data");
+  // A named volume rather than ./data. Docker gives a fresh one the ownership
+  // of /app/data in the image, so the platform's uid can write to it on Linux
+  // as well as macOS. A bind mount is created root-owned by the daemon on
+  // Linux, and every storage route then fails with SQLITE_CANTOPEN — which is
+  // what shipped, because Docker Desktop virtualises that away on a Mac.
+  lines.push("      - data:/app/data");
 
   if (needsIaa) {
     lines.push(
@@ -141,6 +147,10 @@ function compose(opts: ExportOptions, hasCredentials: boolean): string {
       "    restart: unless-stopped",
     );
   }
+
+  // Last, because both blocks above append to the same list and a top-level
+  // key cannot sit inside a service.
+  lines.push("", "volumes:", "  data:");
 
   return lines.join("\n") + "\n";
 }
@@ -164,13 +174,16 @@ function storageSection(pipeline: Pipeline): string {
   }
   return `YOUR WORK
 
-  Everything you do is saved in the "data" folder next to this file, as you go,
-  so closing the browser or refreshing the page does not lose anything.
+  Everything you do is saved as you go, inside the platform's own storage, so
+  closing the browser or refreshing the page does not lose anything.
 
-  To back up your work, copy the "data" folder. To send it to someone, zip it.
-  To start over, stop the platform and delete it — it is recreated empty.
+    docker compose down       stops the platform and keeps your work
+    docker compose down -v    stops it and deletes your work, permanently
 
-  "docker compose down" stops the platform and leaves the folder alone.
+  To take a copy of your work, run this next to this file while the platform is
+  running:
+
+    docker compose cp platform:/app/data ./backup
 `;
 }
 
@@ -264,14 +277,6 @@ IF SOMETHING GOES WRONG
   The platform opens but is empty
       Check the terminal for a line mentioning pipeline.json. That file has to
       stay in this folder next to docker-compose.yml.
-
-  "cannot write to the data folder"  (Linux only)
-      The "data" folder belongs to another user. The message in the terminal
-      includes the exact command to fix it, which looks like:
-
-        sudo chown -R 10001:10001 data
-
-      This does not happen on macOS or Windows.
 
 ${storageSection(opts.pipeline)}${hasCredentials ? "\n" + credentialsSection() : ""}`;
 }

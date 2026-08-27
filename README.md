@@ -91,13 +91,13 @@ You get the workspace: **Documents**, **Labels**, **Tasks**. It runs against
 export would ship. Its database appears at `apps/platform/dev/data/` and is
 gitignored — delete that folder to start over.
 
-**What works today:** everything backed by the database. Create a labelset
-under **Labels**, and once documents exist, a task under **Tasks** and annotate
-it.
+**Add documents** takes text, HTML, Word and PDF; **Labels** → **New labelset**
+defines what can be annotated; **Tasks** → **New task** over a dataset and a
+labelset opens the annotation screen. Agreement metrics need the sidecar, which
+`npm run dev` does not start — see the architecture note's daily loop for
+running it alongside.
 
-**What does not:** the **Add documents** button opens its modal and the upload
-inside it fails — `/api/services/docs-import` is not written yet. Until it is,
-put documents in through the API:
+You can also put documents in without the UI:
 
 ```bash
 curl -X POST localhost:7777/api/datasets \
@@ -106,10 +106,6 @@ curl -X POST localhost:7777/api/datasets \
         {"name":"doc-a","full_text":"The tenant shall pay rent"},
         {"name":"doc-b","full_text":"The landlord may terminate"}]}'
 ```
-
-Reload, and **Documents** shows the dataset. From there **Labels** → **New
-labelset**, then **Tasks** → **New task** over the two, and the annotation
-screen works.
 
 ### The composer — where platforms are designed
 

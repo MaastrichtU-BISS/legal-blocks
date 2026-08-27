@@ -71,9 +71,16 @@ describe("what an export contains", () => {
   });
 
   // "Copy the data folder to back up your work" has to be true.
-  it("stores work in a folder the user can see", () => {
-    expect(build(workspace)["docker-compose.yml"]).toContain("./data:/app/data");
-    expect(build(workspace)["README.txt"]).toContain('"data" folder');
+  // A named volume, not a bind mount. Docker gives a fresh volume the
+  // ownership of /app/data in the image; a bind mount is created root-owned by
+  // the daemon on Linux and the platform cannot write its database into it.
+  // Declaring the volume matters as much as using it — compose rejects the
+  // file otherwise, so the two assertions are one behaviour.
+  it("keeps work in a volume Docker owns, and declares it", () => {
+    const compose = build(workspace)["docker-compose.yml"] ?? "";
+    expect(compose).toContain("- data:/app/data");
+    expect(compose).not.toContain("./data:");
+    expect(compose).toMatch(/\nvolumes:\n {2}data:/);
   });
 
   it("separates credentials, and mounts them only when they exist", () => {
@@ -89,7 +96,15 @@ describe("what an export contains", () => {
   });
 
   it("tells the reader where work goes, and it differs by kind", () => {
-    expect(build(workspace)["README.txt"]).toContain('saved in the "data" folder');
+    const readme = build(workspace)["README.txt"] ?? "";
+    expect(readme).toContain("saved as you go");
+    // The destructive one has to be named, because "down" and "down -v" are
+    // one keystroke apart and only one of them keeps the work.
+    expect(readme).toContain("docker compose down -v");
+    expect(readme).toContain("docker compose cp platform:/app/data");
+    // And it must not still promise a folder the export no longer has.
+    expect(readme).not.toContain('"data" folder');
+
     expect(build(searching)["README.txt"]).toContain("does not save anything");
   });
 
