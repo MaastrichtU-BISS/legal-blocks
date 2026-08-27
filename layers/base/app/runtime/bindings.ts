@@ -67,9 +67,9 @@ export type TaskValue =
   /**
    * ephemeral: the task itself, plus the node whose saved work belongs to it.
    *
-   * The task travels rather than being rebuilt downstream. A later step cannot
-   * re-resolve the annotate step's inputs — its own edges are the only ones it
-   * can follow — so whatever it needs has to arrive on the port.
+   * The task travels rather than being rebuilt downstream. A later step can
+   * only read what the step in front of it produced, so whatever it needs has
+   * to arrive on the port.
    */
   | { kind: "session"; nodeId: string; task: TaskData };
 
@@ -89,6 +89,15 @@ export interface BindingContext {
   input(portName: string): Promise<unknown>;
   /** Re-runs the current step, after something changes its inputs. */
   refresh(): void;
+  /**
+   * Says this step has produced its output.
+   *
+   * A source calls it the moment it has data — the upload finished, the search
+   * came back. In a pipeline the runtime takes that as the cue to open the
+   * next step, so the data appears where it is read rather than waiting to be
+   * clicked through to. A module that never finishes never calls it.
+   */
+  produced(): void;
 }
 
 /** One contract, implemented once per kind of export. */
@@ -232,7 +241,7 @@ const contracts: Record<string, KindBindings> = {
       async props(ctx) {
         return importProps(async (documents) => {
           sessionUploads.set(ctx.nodeId, documents);
-          ctx.refresh();
+          ctx.produced();
         });
       },
       async output(ctx): Promise<CorpusValue> {
@@ -260,6 +269,7 @@ const contracts: Record<string, KindBindings> = {
       async props(ctx) {
         return searchProps(ctx, async (result) => {
           sessionResults.set(ctx.nodeId, result);
+          ctx.produced();
         });
       },
       async output(ctx): Promise<CorpusValue> {

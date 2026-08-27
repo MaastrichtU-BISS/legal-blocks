@@ -23,12 +23,6 @@ function searching(token: string, baseUrl?: string): Pipeline {
         { id: "search", module: "vue-legal-query-builder", config },
         { id: "explore", module: "vue-legal-docs-visualizer" },
       ],
-      edges: [
-        {
-          from: { node: "search", port: "documents" },
-          to: { node: "explore", port: "documents" },
-        },
-      ],
     }),
     reg,
   );
@@ -48,7 +42,7 @@ describe("splitting secrets out of a pipeline", () => {
 
   it("leaves a pipeline with no secrets untouched", () => {
     const p = parsePipeline(
-      `{"kind":"workspace","nodes":[{"id":"docs","module":"vue-legal-docs-import"}],"edges":[]}`,
+      `{"kind":"workspace","nodes":[{"id":"docs","module":"vue-legal-docs-import"}]}`,
       reg,
     );
     const { clean, secrets } = splitSecrets(p, reg);
@@ -93,7 +87,7 @@ describe("resolving upstreams", () => {
 
   it("lists nothing for a pipeline that calls no outside API", () => {
     const p = parsePipeline(
-      `{"kind":"workspace","nodes":[{"id":"docs","module":"vue-legal-docs-import"}],"edges":[]}`,
+      `{"kind":"workspace","nodes":[{"id":"docs","module":"vue-legal-docs-import"}]}`,
       reg,
     );
     expect(upstreams(p, reg, {})).toEqual([]);

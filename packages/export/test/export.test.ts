@@ -18,14 +18,13 @@ beforeAll(async () => {
 const workspace = `{"version":1,"name":"My workspace","kind":"workspace","nodes":[
   {"id":"import1","module":"vue-legal-docs-import"},
   {"id":"annot1","module":"legal-annotation-kit"},
-  {"id":"iaa1","module":"vue-iaa-metrics"}],"edges":[]}`;
+  {"id":"iaa1","module":"vue-iaa-metrics"}]}`;
 
 /** Search and view: no storage, no agreement service, and a token. */
 const searching = `{"version":1,"name":"Find cases","kind":"pipeline","nodes":[
   {"id":"search1","module":"vue-legal-query-builder",
    "config":{"api_token":"secret-value","api_base_url":"https://example.invalid"}},
-  {"id":"viz1","module":"vue-legal-docs-visualizer"}],
- "edges":[{"from":{"node":"search1","port":"documents"},"to":{"node":"viz1","port":"documents"}}]}`;
+  {"id":"viz1","module":"vue-legal-docs-visualizer"}]}`;
 
 function build(body: string): Record<string, string> {
   const zip = buildExport({

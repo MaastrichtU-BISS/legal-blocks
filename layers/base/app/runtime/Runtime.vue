@@ -70,36 +70,17 @@ function sessionAnnotators(): User[] {
 
 void loadUsers();
 
-const steps = computed(() => {
-  const byId = new Map(props.pipeline.nodes.map((n) => [n.id, n]));
-  return props.pipeline.nodes
-    .slice()
-    .sort((a, b) => orderIndex(a.id) - orderIndex(b.id))
-    .map((node) => ({
-      node: byId.get(node.id)!,
-      manifest: props.registry.modules[node.module],
-    }));
-});
-
-// Dependency order: a step comes after everything feeding it.
-function orderIndex(nodeId: string): number {
-  const order: string[] = [];
-  const deps = new Map<string, string[]>();
-  for (const e of props.pipeline.edges) {
-    deps.set(e.to.node, [...(deps.get(e.to.node) ?? []), e.from.node]);
-  }
-  const seen = new Set<string>();
-  const walk = (id: string) => {
-    if (seen.has(id)) return;
-    seen.add(id);
-    for (const dep of deps.get(id) ?? []) walk(dep);
-    order.push(id);
-  };
-  for (const n of props.pipeline.nodes) walk(n.id);
-  return order.indexOf(nodeId);
-}
+// The order they are written in is the order they run: the pipeline is a list
+// and a step reads what the step before it produced.
+const steps = computed(() =>
+  props.pipeline.nodes.map((node) => ({
+    node,
+    manifest: props.registry.modules[node.module],
+  })),
+);
 
 const current = ref(0);
+const hasNext = computed(() => current.value < steps.value.length - 1);
 
 // Bumped to re-resolve the visible step's inputs — after a search returns, or
 // when the user moves to a step whose upstream data may have changed since it
@@ -112,7 +93,27 @@ const env = computed<ResolveEnv>(() => ({
   kind: kind.value,
   annotator: annotator.value,
   refresh: () => revision.value++,
+  produced: (nodeId) => onProduced(nodeId),
 }));
+
+/**
+ * A step has produced its output.
+ *
+ * In a pipeline that is the cue to open the step which reads it — the search
+ * returned, so show what it found, rather than leaving somebody looking at a
+ * finished form wondering which tab to press. Only the step on screen may
+ * advance the pipeline: a background refresh finishing on a step nobody is
+ * looking at should not move anyone.
+ *
+ * Steps with no natural finish — annotating is never "done" — never call this,
+ * and are moved on from with Next instead.
+ */
+function onProduced(nodeId: string) {
+  if (kind.value !== "pipeline") return;
+  if (steps.value[current.value]?.node.id !== nodeId) return;
+  if (!hasNext.value) return;
+  goTo(current.value + 1);
+}
 
 function goTo(index: number) {
   current.value = index;
@@ -139,6 +140,12 @@ function goTo(index: number) {
           {{ i + 1 }}. {{ step.node.label || step.manifest?.name || step.node.module }}
         </button>
       </nav>
+
+      <!-- Steps that produce something move on by themselves; this is for the
+           ones that never finish, like annotating. -->
+      <button v-if="kind === 'pipeline' && hasNext" class="primary" @click="goTo(current + 1)">
+        Next →
+      </button>
 
       <label v-if="users.length > 1" class="who">
         Working as

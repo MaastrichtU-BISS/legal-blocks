@@ -1,7 +1,12 @@
-// What a composed platform *is*: a list of module instances and the
-// connections between them. A pipeline.json plus the platform image is the
-// entire exported product, which is why nothing here is specific to any one
-// module.
+// What a composed platform *is*: an ordered list of module instances. A
+// pipeline.json plus the platform image is the entire exported product, which
+// is why nothing here is specific to any one module.
+//
+// The order is the wiring. A pipeline runs its steps front to back and nobody
+// can skip one, so step 2 reads what step 1 produced — there is nothing for a
+// connection to say that the position does not already say. This used to be a
+// graph with an explicit edge list, and the edges only ever described the
+// chain the composer had already laid out.
 
 import type { Kind } from "./kinds.js";
 import type { Manifest, Port, Registry } from "./manifest.js";
@@ -16,22 +21,6 @@ export interface Node {
   module: string;
   label?: string;
   config?: Record<string, unknown>;
-}
-
-/** One port on one node. */
-export interface Endpoint {
-  node: string;
-  port: string;
-}
-
-export function endpointName(e: Endpoint): string {
-  return `${e.node}.${e.port}`;
-}
-
-/** Connects an output port to an input port. */
-export interface Edge {
-  from: Endpoint;
-  to: Endpoint;
 }
 
 /** The exported platform's definition. */
@@ -49,8 +38,8 @@ export interface Pipeline {
    * the behaviour it had.
    */
   kind?: Kind;
+  /** The steps, in the order they run. */
   nodes: Node[];
-  edges: Edge[];
 }
 
 /** What this is, defaulting to a workspace. */
@@ -67,25 +56,64 @@ const ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
  * composing, and "cannot connect a to b" is the whole feedback loop.
  */
 export function parsePipeline(raw: unknown, reg: Registry): Pipeline {
-  const p = (typeof raw === "string" ? JSON.parse(raw) : raw) as Pipeline;
+  const p = migrate((typeof raw === "string" ? JSON.parse(raw) : raw) as Pipeline);
   validatePipeline(p, reg);
   return p;
 }
 
 /**
- * Checks that every node names a known module, every edge connects ports that
- * exist and carry compatible types, and every required input is connected.
+ * Brings a pipeline written when this was a graph up to the ordered list.
  *
- * This is the same check the composer applies when the user draws a
- * connection, so an exported pipeline cannot be one the composer would have
- * rejected.
+ * An export's compose file invites upgrading in place by changing an image
+ * tag, so a pipeline.json written by an older composer will meet a newer
+ * platform. Back then the runtime laid steps out in dependency order rather
+ * than array order, and the two could differ — so reading such a file means
+ * putting the nodes in the order its edges implied, then forgetting them.
+ *
+ * Anything that is already a list passes through untouched.
+ */
+function migrate(p: Pipeline): Pipeline {
+  const legacy = (p as { edges?: { from?: { node?: string }; to?: { node?: string } }[] }).edges;
+  if (!Array.isArray(legacy) || legacy.length === 0 || !Array.isArray(p.nodes)) return p;
+
+  const deps = new Map<string, string[]>();
+  for (const e of legacy) {
+    const to = e?.to?.node;
+    const from = e?.from?.node;
+    if (typeof to === "string" && typeof from === "string") {
+      deps.set(to, [...(deps.get(to) ?? []), from]);
+    }
+  }
+
+  const byId = new Map(p.nodes.map((n) => [n.id, n]));
+  const ordered: Node[] = [];
+  const seen = new Set<string>();
+  const walk = (id: string): void => {
+    // A cycle in a hand-edited legacy file stops here rather than looping: the
+    // result is still a list, which is the only shape that can run now.
+    if (seen.has(id)) return;
+    seen.add(id);
+    for (const dep of deps.get(id) ?? []) walk(dep);
+    const node = byId.get(id);
+    if (node) ordered.push(node);
+  };
+  for (const n of p.nodes) walk(n.id);
+
+  const { edges: _dropped, ...rest } = p as Pipeline & { edges?: unknown };
+  return { ...rest, nodes: ordered };
+}
+
+/**
+ * Checks that every node names a known module, and that in a pipeline each
+ * step's required inputs are satisfied by the step in front of it.
+ *
+ * This is the same check the composer applies when deciding what may be added
+ * next, so an exported pipeline cannot be one the composer would have refused
+ * to build.
  */
 export function validatePipeline(p: Pipeline, reg: Registry): void {
   if (!p || !Array.isArray(p.nodes) || p.nodes.length === 0) {
     throw new Error("pipeline has no nodes");
-  }
-  if (!Array.isArray(p.edges)) {
-    throw new Error("pipeline has no edges list");
   }
 
   const kind = exportKind(p);
@@ -114,115 +142,54 @@ export function validatePipeline(p: Pipeline, reg: Registry): void {
     byId.set(n.id, n);
   }
 
-  // Every edge must land on ports that exist and carry compatible types.
-  const connected = new Set<string>();
-  for (const e of p.edges) {
-    const fromNode = byId.get(e.from?.node ?? "");
-    if (!fromNode) {
-      throw new Error(`edge from unknown node "${e.from?.node}"`);
-    }
-    const toNode = byId.get(e.to?.node ?? "");
-    if (!toNode) {
-      throw new Error(`edge to unknown node "${e.to?.node}"`);
-    }
-    const out = findPort(reg.modules[fromNode.module]?.outputs, e.from.port);
-    if (!out) {
-      throw new Error(`module "${fromNode.module}" has no output port "${e.from.port}"`);
-    }
-    const into = findPort(reg.modules[toNode.module]?.inputs, e.to.port);
-    if (!into) {
-      throw new Error(`module "${toNode.module}" has no input port "${e.to.port}"`);
-    }
-    if (!canConnect(reg, out.type, into.type)) {
-      throw new Error(
-        `cannot connect ${endpointName(e.from)} (${out.type}) to ` +
-          `${endpointName(e.to)} (${into.type}): ${whyNot(out.type, into.type)}`,
-      );
-    }
-    const key = endpointName(e.to);
-    if (connected.has(key)) {
-      throw new Error(`input ${key} is connected more than once`);
-    }
-    connected.add(key);
-  }
-
   // Required inputs are only required in a pipeline.
   //
-  // That is where an edge is how data reaches a step: a search feeds a viewer,
-  // an upload feeds an annotator, and a step with nothing connected has
-  // nothing to work on. In a workspace none of that is true. Documents become
-  // datasets, a task names the dataset and labelset it uses, and the annotate
-  // tool is opened against a task somebody chose — so the corpus arrives from
-  // the workspace, not from whatever happens to be upstream.
-  //
-  // Insisting on an edge there would mean drawing one that lies: connecting
-  // upload to annotate would say "these documents" when the real answer is
-  // "whichever dataset the task names". Edges that are present are still
-  // type-checked above; they just stop being compulsory.
+  // That is where the order is how data reaches a step: a search feeds a
+  // viewer, an upload feeds an annotator, and a first step that needs input
+  // has nothing to work on. In a workspace none of that is true. Documents
+  // become datasets, a task names the dataset and labelset it uses, and the
+  // annotate tool is opened against a task somebody chose — so the corpus
+  // arrives from the workspace, not from the step before.
   if (kind === "pipeline") {
-    for (const n of p.nodes) {
+    p.nodes.forEach((n, i) => {
       for (const input of reg.modules[n.module]?.inputs ?? []) {
-        if (input.required && !connected.has(`${n.id}.${input.name}`)) {
-          throw new Error(`node "${n.id}" has no connection for required input "${input.name}"`);
+        if (!input.required) continue;
+
+        const previous = p.nodes[i - 1];
+        if (!previous) {
+          throw new Error(
+            `step "${n.id}" needs ${input.type} to work on, but it is the first step — ` +
+              `put a step that produces ${input.type} in front of it`,
+          );
+        }
+        const supplied = supplies(reg, previous, input);
+        if (!supplied) {
+          const produced = reg.modules[previous.module]?.outputs?.[0]?.type;
+          throw new Error(
+            `step "${n.id}" needs ${input.type}, but the step before it ("${previous.id}") ` +
+              `produces ${produced ?? "nothing"}: ${whyNot(produced ?? "", input.type)}`,
+          );
         }
       }
-    }
+    });
   }
-
-  checkAcyclic(p);
 }
 
 /**
- * Rejects cycles. The composer only builds linear chains today, but the model
- * is a graph and an exported pipeline.json can be hand-edited, so the runtime
- * must not be able to loop forever resolving inputs.
+ * The port on `previous` that feeds `input`, if any.
+ *
+ * The first compatible output wins. A module with several outputs whose types
+ * a downstream step could take either of is not something the registry has,
+ * and picking the first keeps the rule sayable: a step reads what the step
+ * before it produces.
  */
-function checkAcyclic(p: Pipeline): void {
-  const deps = dependencies(p);
-  const state = new Map<string, "visiting" | "done">();
-
-  const walk = (id: string): void => {
-    const seen = state.get(id);
-    if (seen === "done") return;
-    if (seen === "visiting") {
-      throw new Error(`pipeline contains a cycle through node "${id}"`);
-    }
-    state.set(id, "visiting");
-    for (const dep of deps.get(id) ?? []) walk(dep);
-    state.set(id, "done");
-  };
-
-  for (const n of p.nodes) walk(n.id);
+function supplies(reg: Registry, previous: Node, input: Port): Port | undefined {
+  return reg.modules[previous.module]?.outputs?.find((out) => canConnect(reg, out.type, input.type));
 }
 
-/**
- * Node ids in dependency order — every node after the nodes feeding it. The
- * runtime uses this to lay out the step navigation.
- */
+/** Node ids in the order they run, which is the order they are written in. */
 export function order(p: Pipeline): string[] {
-  const deps = dependencies(p);
-  const out: string[] = [];
-  const seen = new Set<string>();
-
-  const walk = (id: string): void => {
-    if (seen.has(id)) return;
-    seen.add(id);
-    for (const dep of deps.get(id) ?? []) walk(dep);
-    out.push(id);
-  };
-
-  for (const n of p.nodes) walk(n.id);
-  return out;
-}
-
-function dependencies(p: Pipeline): Map<string, string[]> {
-  const deps = new Map<string, string[]>();
-  for (const e of p.edges) {
-    const list = deps.get(e.to.node) ?? [];
-    list.push(e.from.node);
-    deps.set(e.to.node, list);
-  }
-  return deps;
+  return p.nodes.map((n) => n.id);
 }
 
 /**
@@ -259,10 +226,6 @@ function whyNot(from: string, to: string): string {
     );
   }
   return "no adapter declared";
-}
-
-function findPort(ports: Port[] | undefined, name: string): Port | undefined {
-  return ports?.find((p) => p.name.toLowerCase() === name?.toLowerCase());
 }
 
 /** The manifest for a node, or undefined if the registry does not have it. */

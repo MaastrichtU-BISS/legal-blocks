@@ -5,16 +5,14 @@
 // shows most.
 //
 // Without storage it is a chain: search -> annotate -> metrics, each step
-// reading what the one before produced. The list is linear because every
-// example the design started from is, and a linear list needs a fraction of
-// the code a free-form canvas does. The model underneath is still a graph —
-// nodes and edges, exactly as pipeline.json stores it — so branching later is
-// a UI change rather than a data change.
+// reading what the one before produced. Appending to that chain is all the
+// wiring there is — the order is the connection, in this UI and in
+// pipeline.json alike, so there is nothing here to draw or to keep in step.
 //
 // With storage it is not a chain at all. It is a list of what the platform can
 // do; the people using it make datasets, labelsets and tasks, and a task says
-// which of each it uses. Nothing flows along an edge, so nothing needs
-// connecting here.
+// which of each it uses. Nothing flows from one tool to the next, so the order
+// carries no meaning there beyond the order they are listed in.
 
 import { computed, ref, watch } from "vue";
 import ConfigForm from "./ConfigForm.vue";
@@ -34,7 +32,6 @@ const pipeline = ref<Pipeline>({
   version: 1,
   name: "",
   nodes: [],
-  edges: [],
 });
 
 /**
@@ -53,7 +50,6 @@ function start(next: Kind) {
     name: next === "pipeline" ? "My tool" : "My workspace",
     kind: next,
     nodes: [],
-    edges: [],
   };
   selected.value = null;
   problem.value = "";
@@ -64,7 +60,7 @@ function startOver() {
   if (pipeline.value.nodes.length > 0 && !confirm("Start over? This clears what you have built.")) {
     return;
   }
-  pipeline.value = { version: 1, name: "", nodes: [], edges: [] };
+  pipeline.value = { version: 1, name: "", nodes: [] };
   selected.value = null;
   problem.value = "";
 }
@@ -170,34 +166,22 @@ function append(m: Manifest) {
     label: m.name,
     config: configWithDefaults(m, { id: "", module: m.id, label: "" }, kind.value),
   };
-  const previous = chain.value.at(-1);
-
+  // Appending is the whole wiring: a step reads what the step before it
+  // produces, and canAdd has already established that this one can.
   pipeline.value.nodes.push(node);
-  // Edges only mean something without storage. With it, a task says which
-  // dataset and labelset it uses, so an edge here would claim a connection
-  // the platform does not actually make.
-  const required = kind.value === "pipeline" ? m.inputs?.find((p) => p.required) : undefined;
-  if (previous && required) {
-    pipeline.value.edges.push({
-      from: { node: previous.node.id, port: previous.manifest.outputs![0].name },
-      to: { node: node.id, port: required.name },
-    });
-  }
   selected.value = node.id;
   problem.value = "";
 }
 
 /**
  * Removes the last step. Only the last one: removing from the middle would
- * leave the chain disconnected, and re-wiring around a gap is the sort of
- * thing a real canvas does and a proof of concept does not need.
+ * leave the step after it reading something different from what it was added
+ * against, and re-checking the join is the sort of thing a real canvas does
+ * and a proof of concept does not need.
  */
 function removeLast() {
   const removed = pipeline.value.nodes.pop();
   if (!removed) return;
-  pipeline.value.edges = pipeline.value.edges.filter(
-    (e) => e.from.node !== removed.id && e.to.node !== removed.id,
-  );
   if (selected.value === removed.id) selected.value = null;
 }
 
@@ -316,9 +300,9 @@ async function doExport() {
               <strong>{{ i + 1 }}. {{ step.node.label }}</strong>
               <span class="muted small">{{ step.manifest.id }}</span>
             </div>
-            <!-- The wire is only real without storage. With it there are no
-                 edges, so drawing one would claim a connection the platform
-                 does not make. -->
+            <!-- The wire is only real without storage. With it nothing flows
+                 from one tool to the next, so drawing one would claim a
+                 connection the platform does not make. -->
             <p v-if="kind === 'pipeline' && i < chain.length - 1" class="wire muted small">
               ↓ {{ step.manifest.outputs?.[0]?.type }}
             </p>

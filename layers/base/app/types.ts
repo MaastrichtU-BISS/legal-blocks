@@ -87,23 +87,13 @@ export interface Node {
   config?: Record<string, unknown>;
 }
 
-export interface Endpoint {
-  node: string;
-  port: string;
-}
-
-export interface Edge {
-  from: Endpoint;
-  to: Endpoint;
-}
-
 export interface Pipeline {
   version: number;
   name: string;
   /** Absent means workspace, matching files written before this field existed. */
   kind?: Kind;
+  /** The steps, in the order they run. The order is the wiring. */
   nodes: Node[];
-  edges: Edge[];
 }
 
 export function exportKind(p: Pipeline): Kind {

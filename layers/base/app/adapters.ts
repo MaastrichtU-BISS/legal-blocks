@@ -37,3 +37,13 @@ export function adapt(from: string, to: string, value: unknown): unknown {
   }
   return fn(value);
 }
+
+/**
+ * Whether a value can travel from one port type to another.
+ *
+ * Asked when choosing which of a step's outputs feeds the next step, which
+ * happens before there is a value — so this answers without running anything.
+ */
+export function canAdapt(from: string, to: string): boolean {
+  return from === to || `${from}->${to}` in adapters;
+}

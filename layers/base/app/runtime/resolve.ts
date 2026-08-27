@@ -1,13 +1,14 @@
-// Resolving a node's inputs by walking the pipeline backwards.
+// Resolving a step's input from the step in front of it.
 //
-// The runtime never needs a "run the pipeline" pass: a step asks for its
-// inputs when it is opened, that request walks back through the edges to
-// whatever produces them, and adapters convert along the way. Steps a user has
-// not opened cost nothing.
+// A pipeline is an ordered list and nobody can skip a step, so by the time
+// step x is on screen step x-1 has run and its output is what x reads. There
+// is no graph to search and no "run the pipeline" pass: a step asks for its
+// input, and the answer is the previous step's output, adapted if the types
+// differ but are compatible.
 
-import { adapt } from "../adapters";
+import { adapt, canAdapt } from "../adapters";
 import type { Kind, Pipeline, Registry } from "../types";
-import { inputPort, outputPort, configWithDefaults } from "../types";
+import { inputPort, configWithDefaults } from "../types";
 import { bindingFor, type BindingContext } from "./bindings";
 
 export interface ResolveEnv {
@@ -33,6 +34,11 @@ export interface ResolveEnv {
    */
   datasetName?: string;
   refresh(): void;
+  /**
+   * Told when a step has produced its output, so a pipeline can move on to the
+   * step that reads it without waiting to be clicked.
+   */
+  produced(nodeId: string): void;
 }
 
 /**
@@ -49,30 +55,37 @@ export async function produce(env: ResolveEnv, nodeId: string, portName: string)
 }
 
 /**
- * Resolves the value arriving on `nodeId`'s input port, converting it if the
- * upstream port carries a different — but adaptable — type.
+ * Resolves the value arriving on `nodeId`'s input port: whatever the step
+ * before it produces, converted if that port carries a different — but
+ * adaptable — type.
  */
 export async function resolveInput(
   env: ResolveEnv,
   nodeId: string,
   portName: string,
 ): Promise<unknown> {
-  const edge = env.pipeline.edges.find((e) => e.to.node === nodeId && e.to.port === portName);
-  if (!edge) {
-    throw new Error(`nothing is connected to "${portName}" on step "${nodeId}"`);
+  const index = env.pipeline.nodes.findIndex((n) => n.id === nodeId);
+  if (index < 0) throw new Error(`unknown node "${nodeId}"`);
+
+  const previous = env.pipeline.nodes[index - 1];
+  if (!previous) {
+    throw new Error(`step "${nodeId}" is first, so there is nothing in front of it to read`);
   }
 
-  const value = await produce(env, edge.from.node, edge.from.port);
-
-  const fromNode = env.pipeline.nodes.find((n) => n.id === edge.from.node)!;
-  const toNode = env.pipeline.nodes.find((n) => n.id === nodeId)!;
-  const fromType = outputPort(env.registry.modules[fromNode.module], edge.from.port)?.type;
-  const toType = inputPort(env.registry.modules[toNode.module], portName)?.type;
-  if (!fromType || !toType) {
-    throw new Error(`pipeline connects a port that does not exist (${edge.from.node} -> ${nodeId})`);
+  const toType = inputPort(env.registry.modules[env.pipeline.nodes[index]!.module], portName)?.type;
+  // The first output whose type this input can take. Validation has already
+  // established there is one, in the composer and again when the platform read
+  // its pipeline.json, so reaching the throw means a hand-edited file.
+  const from = toType
+    ? env.registry.modules[previous.module]?.outputs?.find((out) => canAdapt(out.type, toType))
+    : undefined;
+  if (!from || !toType) {
+    throw new Error(
+      `step "${previous.id}" produces nothing that step "${nodeId}" can read on "${portName}"`,
+    );
   }
 
-  return adapt(fromType, toType, value);
+  return adapt(from.type, toType, await produce(env, previous.id, from.name));
 }
 
 /** The context handed to a binding for one node. */
@@ -88,5 +101,6 @@ export function contextFor(env: ResolveEnv, nodeId: string): BindingContext {
     datasetName: env.datasetName,
     input: (portName) => resolveInput(env, nodeId, portName),
     refresh: env.refresh,
+    produced: () => env.produced(nodeId),
   };
 }
