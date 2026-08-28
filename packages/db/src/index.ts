@@ -4,5 +4,7 @@ export * from "./users.js";
 export * from "./tasks.js";
 export * from "./assignments.js";
 export * from "./metrics.js";
-export * from "./resources.js";
+export * from "./resources/labelsets.js";
+export * from "./resources/datasets.js";
+export * from "./resources/tasks.js";
 export * from "./task-export.js";
