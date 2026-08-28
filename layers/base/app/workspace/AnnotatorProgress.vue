@@ -196,15 +196,11 @@ header {
   font: inherit;
   font-size: 0.78rem;
   padding: 0.12rem 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #1e4e79;
   border-radius: 4px;
   background: #fff;
-  cursor: pointer;
-}
-
-.open {
-  border-color: #1e4e79;
   color: #1e4e79;
+  cursor: pointer;
 }
 
 .muted {
