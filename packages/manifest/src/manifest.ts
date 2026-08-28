@@ -141,6 +141,20 @@ export interface Manifest {
   config?: ConfigField[];
 
   /**
+   * Which picture stands for this module, as a name from a small shared
+   * vocabulary — "upload", "search", "annotate", "chart", "graph".
+   *
+   * A name rather than an image so the manifest stays readable and the drawing
+   * stays with whoever is drawing. Absent is fine: the composer falls back to a
+   * neutral mark, which is better than a wrong one.
+   *
+   * This is the way round it has to be. The composer knowing "the annotation
+   * module gets the highlighter" would be a module name in composer code,
+   * which is the one thing neither program is allowed to hold.
+   */
+  icon?: string;
+
+  /**
    * Who this module is for. Absent means everybody.
    *
    * The workspace reads it to decide which of a task's steps to offer: an

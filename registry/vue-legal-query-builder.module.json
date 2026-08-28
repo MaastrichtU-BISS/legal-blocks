@@ -2,6 +2,7 @@
   "id": "vue-legal-query-builder",
   "name": "Search documents",
   "description": "Search Rechtspraak and ECHR case law. Uses the hosted Case Law Explorer service, which needs an access token you create yourself \u2014 the platform keeps it on the server and never shows it to the people using it.",
+  "icon": "search",
   "version": "1.0.6",
   "kind": "source",
   "runtime": "web",

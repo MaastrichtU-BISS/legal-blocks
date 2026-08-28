@@ -2,6 +2,7 @@
   "id": "vue-iaa-metrics",
   "name": "Agreement metrics",
   "description": "Browse annotations and compute inter-annotator agreement. The match criterion and coverage granularity are chosen by whoever computes them, not fixed when the export is built.",
+  "icon": "chart",
   "version": "1.0.2",
   "kind": "ui",
   "runtime": "web",

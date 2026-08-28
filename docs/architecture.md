@@ -212,6 +212,21 @@ Do not confuse it with the module's own `kind`:
 | `Manifest.kind`    | `source`, `ui`, `service`  | what the **module** is |
 | `Manifest.runtime` | `web`, `node`, `container` | how it is **executed** |
 
+**How the kind gets chosen is a UI decision, not a model one.** The composer
+used to open on a screen asking which of two things you were building, before
+you had seen a single module. It does not any more: storage is one capability,
+so it is offered the way every other capability is — a card called **Workspace**
+at the top of the palette. Adding it makes a workspace; leaving it makes a
+pipeline, which is the simpler thing and the right default for somebody who has
+not decided yet.
+
+That card is deliberately **not** a registry module. It has no package, nothing
+to mount and no ports — it is the one capability the platform itself provides,
+so a manifest in `registry/` for it would describe a dependency that does not
+exist. There was such a module once, `results-download`, whose "package" lived
+in this repository; it was removed for exactly this reason. **The registry is
+for things that are really somebody else's package.**
+
 Once an export declares its kind, four things follow mechanically:
 
 1. **Storage.** A workspace opens SQLite; a pipeline opens nothing.

@@ -2,6 +2,7 @@
   "id": "vue-legal-docs-visualizer",
   "name": "Explore documents",
   "description": "Table and citation-graph views over a set of legal documents. Passes its input through, so it can sit anywhere in a chain.",
+  "icon": "graph",
   "version": "1.1.0",
   "kind": "ui",
   "runtime": "web",

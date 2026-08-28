@@ -66,6 +66,8 @@ export interface Manifest {
   services?: string[];
   upstream?: Upstream;
   config?: ConfigField[];
+  /** A name from the shared icon vocabulary. See packages/manifest. */
+  icon?: string;
   requiredRole?: string;
 }
 

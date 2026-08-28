@@ -2,6 +2,7 @@
   "id": "legal-annotation-kit",
   "name": "Annotate",
   "description": "Span and document-level annotation. In a workspace, annotators work through durable queues on tasks somebody created. In a pipeline, one pass over whatever the previous step produced, kept in the browser.",
+  "icon": "annotate",
   "version": "1.0.0",
   "kind": "ui",
   "runtime": "web",

@@ -2,6 +2,7 @@
   "id": "vue-legal-docs-import",
   "name": "Import documents",
   "description": "Upload documents from your own machine \u2014 text, PDF, Word or HTML. The export reads them and keeps the text.",
+  "icon": "upload",
   "version": "1.0.0",
   "kind": "source",
   "runtime": "web",
