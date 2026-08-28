@@ -5,3 +5,4 @@ export * from "./tasks.js";
 export * from "./assignments.js";
 export * from "./metrics.js";
 export * from "./resources.js";
+export * from "./task-export.js";

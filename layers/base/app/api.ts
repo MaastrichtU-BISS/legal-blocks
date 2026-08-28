@@ -167,15 +167,16 @@ export async function getTaskProgress(taskId: number): Promise<TaskProgress> {
 }
 
 /**
- * Saves the whole task as JSON, in the shape the agreement service is given.
+ * Saves the whole task as JSON, in Lawnotation's task-export shape.
  *
- * That shape rather than a new one: it is what Lawnotation exchanges, it is
- * already what this platform produces for its own metrics, and a second export
- * format is a second thing to keep in step with the schema.
+ * Not the agreement service's input, which is what this used to send: that is
+ * a subset built for a service that only compares labels, so the file arrived
+ * with the annotations but not the task name, the guidelines, the level they
+ * were made at, or any counts to check them against.
  */
 export async function downloadTask(taskId: number, name: string): Promise<void> {
   const data = await json<unknown>(
-    await fetch(`/api/tasks/${taskId}/iaa-input`),
+    await fetch(`/api/tasks/${taskId}/export`),
     "preparing the download",
   );
   const url = URL.createObjectURL(

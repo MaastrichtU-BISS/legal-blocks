@@ -14,6 +14,7 @@ import {
   queue,
   saveAssignment,
   syncTask,
+  taskExport,
   taskProgress,
   users,
   usersByEmail,
@@ -346,5 +347,88 @@ describe("task progress", () => {
     // And the other annotator's copy of the same document is neither.
     const other = p.byAnnotator.find((r) => r.name === "bram@example.org")!;
     expect([other.done, other.finished]).toEqual([0, 0]);
+  });
+});
+
+describe("exporting a task", () => {
+  // The download is the thing somebody keeps. It has to carry what the task
+  // WAS, not only what was marked on it — the IAA input carried the second
+  // without the first, which is what this replaces.
+  it("carries the task itself, not just its annotations", () => {
+    const { taskId, people } = seed();
+    const q = queue(db, taskId, people[0]!.id);
+    const b = bundle(db, q[0]!.assignment_id);
+    b.assignment.annotations = [
+      { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 4, relations: [] },
+    ];
+    saveAssignment(db, q[0]!.assignment_id, b.assignment);
+
+    const out = taskExport(db, taskId);
+
+    expect(out.name).toBe("Obligations");
+    expect(out.annotation_level).toBe("word");
+    expect(out.labelset.labels.map((l) => l.name)).toEqual(["Obligation", "Right"]);
+    expect(out).toHaveProperty("desc");
+    expect(out).toHaveProperty("ann_guidelines");
+
+    // Two annotators over two documents, one annotation made.
+    expect(out.counts).toEqual({
+      documents: 2,
+      assignments: 4,
+      annotators: 2,
+      annotations: 1,
+      relations: 0,
+    });
+  });
+
+  // The counts are what a reader checks the file against, so they have to
+  // describe the file rather than the database.
+  it("counts what it actually wrote", () => {
+    const { taskId } = seed();
+    const out = taskExport(db, taskId);
+
+    expect(out.counts.documents).toBe(out.documents.length);
+    expect(out.counts.assignments).toBe(
+      out.documents.reduce((n, d) => n + d.assignments.length, 0),
+    );
+    expect(out.counts.annotations).toBe(
+      out.documents.reduce((n, d) => n + d.assignments.reduce((m, a) => m + a.annotations.length, 0), 0),
+    );
+  });
+
+  // Annotators are numbered, not named: an export gets sent on, and who
+  // annotated what is not usually part of the result.
+  it("numbers annotators from one instead of naming them", () => {
+    const { taskId } = seed();
+    const numbers = taskExport(db, taskId)
+      .documents.flatMap((d) => d.assignments.map((a) => a.annotator))
+      .sort();
+    expect([...new Set(numbers)]).toEqual([1, 2]);
+    expect(JSON.stringify(taskExport(db, taskId))).not.toContain("@example.org");
+  });
+
+  // Relations point at row ids in storage, which mean nothing in a file. They
+  // have to come out as positions or they are unreadable anywhere else.
+  it("rewrites relations as positions within the assignment", () => {
+    const { taskId, people } = seed();
+    const q = queue(db, taskId, people[0]!.id);
+    const b = bundle(db, q[0]!.assignment_id);
+    b.assignment.annotations = [
+      { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 0,
+        relations: [{ to: -2, direction: "right", labels: ["Part of"] }] },
+      { id: -2, start: 4, end: 10, text: "tenant", label: "Right", confidence: 0, relations: [] },
+    ];
+    saveAssignment(db, q[0]!.assignment_id, b.assignment);
+
+    const out = taskExport(db, taskId);
+    const withRel = out.documents
+      .flatMap((d) => d.assignments)
+      .flatMap((a) => a.annotations)
+      .find((a) => a.relations.length > 0);
+
+    expect(withRel, "no relation survived the export").toBeDefined();
+    // A position, not a row id: the second annotation of the same assignment.
+    expect(withRel!.relations[0]!.to).toBe(1);
+    expect(out.counts.relations).toBe(1);
   });
 });
