@@ -11,11 +11,11 @@
 // not offer a free jump to any row. It offers:
 //
 //   * carry on from where you stopped, which is the ordinary path
-//   * go back to anything you have already reached
+//   * go back to anything already reached
 //
-// and nothing beyond the frontier. Going back is deliberately behind a small
-// latch: re-opening finished work is a real thing to want, and also an easy
-// thing to do by accident on a list of a hundred rows.
+// and nothing beyond that. Reaching document n is what opens 1..n-1: what has
+// been seen can be revisited, what has not been reached yet cannot be jumped
+// to.
 
 import { computed, ref, watch } from "vue";
 import { getQueue, type QueueEntry } from "../api";
@@ -32,7 +32,6 @@ const emit = defineEmits<{ open: [position: number] }>();
 
 const entries = ref<QueueEntry[]>([]);
 const error = ref("");
-const unlocked = ref<Set<number>>(new Set());
 
 watch(
   () => [props.taskId, props.annotator, props.revision],
@@ -40,8 +39,6 @@ watch(
     try {
       entries.value = await getQueue(props.taskId, props.annotator);
       error.value = "";
-      // A latch is about this glance at the list, not a lasting permission.
-      unlocked.value = new Set();
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e);
     }
@@ -76,13 +73,6 @@ function isReachable(index: number): boolean {
   return index <= frontier.value;
 }
 
-function toggle(index: number) {
-  const next = new Set(unlocked.value);
-  if (next.has(index)) next.delete(index);
-  else next.add(index);
-  unlocked.value = next;
-}
-
 function label(entry: QueueEntry, index: number): { text: string; cls: string } {
   if (entry.status === "done") return { text: "Done", cls: "all" };
   if (index === frontier.value) return { text: "Up next", cls: "some" };
@@ -115,24 +105,11 @@ function label(entry: QueueEntry, index: number): { text: string; cls: string } 
         <span class="who">{{ entry.name }}</span>
         <span :class="['badge', label(entry, i).cls]">{{ label(entry, i).text }}</span>
 
-        <!-- Reachable rows open, behind a latch. The rest say why not. -->
-        <template v-if="isReachable(i)">
-          <button
-            class="latch"
-            :aria-pressed="unlocked.has(i)"
-            :title="unlocked.has(i) ? 'Lock again' : 'Unlock to open this document'"
-            @click="toggle(i)"
-          >
-            {{ unlocked.has(i) ? "🔓" : "🔒" }}
-          </button>
-          <button class="open" :disabled="!unlocked.has(i)" @click="emit('open', i + 1)">
-            Annotate
-          </button>
-        </template>
-        <template v-else>
-          <span />
-          <span class="muted small">after the ones above</span>
-        </template>
+        <!-- Anything reached opens. The rest say why not. -->
+        <button v-if="isReachable(i)" class="open" @click="emit('open', i + 1)">
+          {{ entry.status === "done" ? "Review" : "Annotate" }}
+        </button>
+        <span v-else class="muted small">after the ones above</span>
       </p>
     </div>
   </section>
@@ -177,7 +154,7 @@ header {
 
 .row {
   display: grid;
-  grid-template-columns: 1.5rem 1fr auto auto auto;
+  grid-template-columns: 1.5rem 1fr auto auto;
   align-items: center;
   gap: 0.5rem;
   margin: 0.2rem 0;
@@ -215,7 +192,6 @@ header {
   color: #9ca3af;
 }
 
-.latch,
 .open {
   font: inherit;
   font-size: 0.78rem;
@@ -226,16 +202,7 @@ header {
   cursor: pointer;
 }
 
-.latch {
-  padding: 0.12rem 0.35rem;
-}
-
-.open:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.open:not(:disabled) {
+.open {
   border-color: #1e4e79;
   color: #1e4e79;
 }

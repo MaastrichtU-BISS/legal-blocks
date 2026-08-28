@@ -8,6 +8,7 @@
 // The cost is real and worth stating: the recipient needs Docker, and needs a
 // network on first run to pull. Nothing else.
 
+import { randomUUID } from "node:crypto";
 import { zipSync, strToU8 } from "fflate";
 import {
   exportKind,
@@ -33,6 +34,11 @@ export interface ExportOptions {
   iaaImage: string;
   /** Port the platform is published on. 0 or absent means the default. */
   port?: number;
+  /**
+   * Overrides the identifier that keeps this export's storage separate from
+   * every other one. Only for tests — leave it unset and a fresh one is made.
+   */
+  id?: string;
 }
 
 /** The zip, as bytes. */
@@ -41,7 +47,7 @@ export function buildExport(opts: ExportOptions): Uint8Array {
   const hasCredentials = Object.keys(secrets).length > 0;
 
   const files: Record<string, Uint8Array> = {
-    "docker-compose.yml": strToU8(compose(opts, hasCredentials)),
+    "docker-compose.yml": strToU8(compose(opts, hasCredentials, opts.id ?? newId())),
     "pipeline.json": strToU8(JSON.stringify(clean, null, 2) + "\n"),
     "README.txt": strToU8(readme(opts, hasCredentials)),
   };
@@ -76,6 +82,24 @@ function slug(name: string): string {
 }
 
 /**
+ * What tells two exports apart.
+ *
+ * Compose derives a volume's real name from the project name, and the project
+ * name used to be the platform's own — so two exports of a tool called the
+ * same thing got the same volume and, silently, the same database. That was
+ * not a problem while data lived in ./data next to the compose file, because
+ * two folders could not be the same folder. A named volume has no folder, so
+ * the export has to carry the distinction itself.
+ *
+ * Made once, at export time, and written into the file: `docker compose down`
+ * and `up` in the same folder must come back to the same work, and only a new
+ * export should start empty.
+ */
+function newId(): string {
+  return randomUUID().replace(/-/g, "").slice(0, 8);
+}
+
+/**
  * The file the recipient runs.
  *
  * Four choices in here are deliberate and easy to get wrong later.
@@ -86,10 +110,10 @@ function slug(name: string): string {
  * that is the only way the mapping can reach it, so this line is the entire
  * access boundary.
  *
- * Data is a bind mount to ./data rather than a named volume. "Where is my
- * work" has to be answerable by looking in a folder — a named volume puts it
- * somewhere a legal researcher will never find, and makes "copy the data
- * folder to back it up" untrue.
+ * Data is a named volume, and the project name carries a unique id so that two
+ * exports of a platform with the same name cannot end up sharing it. Both
+ * halves were learned the hard way — see the named-volume note below and
+ * newId above.
  *
  * credentials.json is mounted only when there is one. Compose creates a
  * *directory* where a bind mount source is missing, so an unconditional line
@@ -100,7 +124,7 @@ function slug(name: string): string {
  * already exist and work; the platform reaches it over the compose network, so
  * it is never published on the host at all.
  */
-function compose(opts: ExportOptions, hasCredentials: boolean): string {
+function compose(opts: ExportOptions, hasCredentials: boolean, id: string): string {
   const port = opts.port || DEFAULT_PORT;
   const needsIaa = serviceIds(opts.pipeline, opts.registry).includes("lawnotation-iaa");
 
@@ -114,7 +138,9 @@ function compose(opts: ExportOptions, hasCredentials: boolean): string {
     "# The image tags are the version of Legal Blocks this platform was built",
     "# with. Changing them upgrades the platform; your data is not touched.",
     "",
-    `name: ${slug(opts.pipeline.name)}`,
+    // The id is what keeps this export's containers and its database apart
+    // from another export of a platform with the same name. See newId.
+    `name: ${slug(opts.pipeline.name)}-${id}`,
     "",
     "services:",
     "  platform:",

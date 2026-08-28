@@ -70,7 +70,24 @@ describe("what an export contains", () => {
     expect(compose.match(/ports:/g)).toHaveLength(1);
   });
 
-  // "Copy the data folder to back up your work" has to be true.
+  // Two exports of a platform with the same name are two platforms. Compose
+  // derives the volume's real name from the project name, so if that is just
+  // the platform's name they get one volume between them and, silently, one
+  // database — which is what happened, and what a folder-per-export could not
+  // do back when data lived in ./data.
+  it("gives two exports of the same platform separate storage", () => {
+    const first = build(workspace)["docker-compose.yml"] ?? "";
+    const second = build(workspace)["docker-compose.yml"] ?? "";
+
+    const project = (compose: string) => /\nname: (\S+)/.exec(compose)?.[1];
+    expect(project(first)).toBeDefined();
+    expect(project(first)).not.toBe(project(second));
+
+    // And the name still says which platform it is, because the recipient
+    // reads it in `docker ps`.
+    expect(project(first)).toMatch(/^my-workspace-/);
+  });
+
   // A named volume, not a bind mount. Docker gives a fresh volume the
   // ownership of /app/data in the image; a bind mount is created root-owned by
   // the daemon on Linux and the platform cannot write its database into it.

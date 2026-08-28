@@ -45,6 +45,7 @@ const pipeline = ref<Pipeline>({
 const chosen = computed(() => pipeline.value.kind !== undefined);
 
 function start(next: Kind) {
+  draft.value = null;
   pipeline.value = {
     version: 1,
     name: next === "pipeline" ? "My tool" : "My workspace",
@@ -71,15 +72,34 @@ const selected = ref<string | null>(null);
 const status = ref("");
 const problem = ref("");
 
-// Restore a half-built pipeline after a closed tab.
+/**
+ * A draft from last time, held rather than opened.
+ *
+ * Restoring it straight into the editor made the composer open on whatever was
+ * half-built weeks ago, with no sign of how it got there and no way back to
+ * the question that starts everything. What is being built is the first
+ * decision, so it is the first screen — and the draft is offered there, which
+ * is the only place somebody can weigh carrying on against starting again.
+ */
+const draft = ref<Pipeline | null>(null);
 try {
   const saved = localStorage.getItem(DRAFT_KEY);
   if (saved) {
     const parsed = JSON.parse(saved) as Pipeline;
-    if (Array.isArray(parsed.nodes)) pipeline.value = parsed;
+    if (Array.isArray(parsed.nodes) && parsed.nodes.length > 0 && parsed.kind) {
+      draft.value = parsed;
+    }
   }
 } catch {
   // A corrupt draft is not worth failing over; start from a blank one.
+}
+
+/** Picks the saved draft back up, exactly as it was left. */
+function resume() {
+  if (!draft.value) return;
+  pipeline.value = draft.value;
+  draft.value = null;
+  selected.value = pipeline.value.nodes.at(-1)?.id ?? null;
 }
 watch(
   pipeline,
@@ -231,6 +251,19 @@ async function doExport() {
         <span class="muted small">Like an annotation platform: upload, define a task, hand it out.</span>
       </button>
     </div>
+
+    <!-- Offered, not assumed. Somebody arriving at this screen may well have
+         come back to build something else. -->
+    <p v-if="draft" class="resume">
+      <button @click="resume">
+        Continue “{{ draft.name || "your last platform" }}”
+      </button>
+      <span class="muted small">
+        {{ draft.nodes.length }}
+        {{ draft.nodes.length === 1 ? "step" : "steps" }},
+        {{ draft.kind === "pipeline" ? "a pipeline" : "a workspace" }}
+      </span>
+    </p>
   </div>
 
   <div v-else class="app lb-ui">
@@ -358,6 +391,15 @@ header {
 
 .start h1 {
   font-size: 1.3rem;
+  margin: 0;
+}
+
+/* Below the two choices and quieter than them: carrying on is a convenience,
+   not the question this screen is asking. */
+.resume {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   margin: 0;
 }
 
