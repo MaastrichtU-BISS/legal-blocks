@@ -138,9 +138,6 @@ export function canConnect(registry: Registry, from: string, to: string): boolea
   return registry.adapters.some((a) => a.from === from && a.to === to);
 }
 
-export function outputPort(m: Manifest, name: string): Port | undefined {
-  return m.outputs?.find((p) => p.name === name);
-}
 
 export function inputPort(m: Manifest, name: string): Port | undefined {
   return m.inputs?.find((p) => p.name === name);

@@ -54,10 +54,6 @@ export async function getUsers(): Promise<User[]> {
   return json(await fetch("/api/users"), "loading users");
 }
 
-/** Creates users up to `count` if they do not exist, and returns them all. */
-export async function ensureUsers(count: number): Promise<User[]> {
-  return post("/api/users", { count }, "creating users");
-}
 
 // --- datasets and tasks -----------------------------------------------------
 

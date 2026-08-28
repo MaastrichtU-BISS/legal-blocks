@@ -66,7 +66,7 @@ export async function produce(env: ResolveEnv, nodeId: string, portName: string)
  * before it produces, converted if that port carries a different — but
  * adaptable — type.
  */
-export async function resolveInput(
+async function resolveInput(
   env: ResolveEnv,
   nodeId: string,
   portName: string,

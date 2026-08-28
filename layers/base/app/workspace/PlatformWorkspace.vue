@@ -15,20 +15,18 @@
 // decide which tasks. Neither knows about the other, and this file is where
 // they meet.
 
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { LegalWorkspace } from "vue-legal-workspace";
 import type { Row, WorkspaceTab } from "vue-legal-workspace";
 import "vue-legal-workspace/style.css";
 
 import ModuleHost from "../runtime/ModuleHost.vue";
 import type { ResolveEnv } from "../runtime/resolve";
-import { allowsRole } from "../types";
 import type { Manifest, Pipeline, Registry } from "../types";
 import type { DatasetSummary, LabelsetSummary, TaskSummary } from "../api";
 import { getDatasets, getLabelsets, getTasks } from "../api";
 import NewLabelsetForm from "./NewLabelsetForm.vue";
-import TaskProgressPanel from "./TaskProgressPanel.vue";
-import AnnotatorProgress from "./AnnotatorProgress.vue";
+import OpenTask from "./OpenTask.vue";
 import NewTaskForm from "./NewTaskForm.vue";
 
 const props = defineProps<{
@@ -68,62 +66,6 @@ const taskModules = computed(() =>
       );
     }),
 );
-
-/** Somebody with documents of their own to work through in this task. */
-function isAssigned(task: TaskSummary): boolean {
-  return task.annotators.some((a) => a.id === props.env.annotator);
-}
-
-/**
- * What an open task offers, which depends on who opened it.
- *
- * Two different jobs, so two different screens rather than one screen with
- * parts missing:
- *
- *   an annotator came to work      -> their queue, and nothing else
- *   whoever runs it came to look   -> where it stands, then the agreement
- *
- * The two rules are different on purpose. Agreement is a question of
- * authority — it reports on everybody — so the manifest declares the role, and
- * it is `requiredRole` that hides it. Annotating is a question of having work:
- * the owner is not assigned any documents, so there is no queue to show them.
- * Withholding it by role would be the wrong reason, and would also hide it from
- * somebody who runs the task and annotates in it too.
- */
-type TaskView = { id: string; label: string; step?: (typeof taskModules.value)[number] };
-
-function viewsFor(task: TaskSummary): TaskView[] {
-  const views: TaskView[] = [];
-
-  // Both identities start on Progress; what it shows is what differs. For
-  // whoever runs the task it is everyone's; for an annotator it is their own
-  // queue, and the way into the work.
-  views.push({ id: "progress", label: "Progress" });
-
-  for (const step of taskModules.value) {
-    const manifest = step.manifest!;
-    if (!allowsRole(manifest, props.role)) continue;
-    // Whether this module is where annotations get *made*, which is what
-    // needs a queue and therefore an assignment.
-    //
-    // Not simply "outputs annotated-task@1": the metrics module outputs one
-    // too, because it passes its input along so it can sit mid-chain. The
-    // module that makes them is the one that does not take one to begin with —
-    // it turns a corpus into an annotated task. Everything downstream is a
-    // view over work that already exists.
-    const consumes = (manifest.inputs ?? []).some((p) => p.type === "annotated-task@1");
-    const makes =
-      !consumes && (manifest.outputs ?? []).some((p) => p.type === "annotated-task@1");
-    if (makes && !isAssigned(task)) continue;
-    views.push({
-      id: step.node.id,
-      label: step.node.label || manifest.name || step.node.module,
-      step,
-    });
-  }
-
-  return views;
-}
 
 // Kept here as well as fetched by their tabs, because the Tasks tab has to
 // know whether there is anything to make a task from before either of the
@@ -211,16 +153,6 @@ const tabs = computed<WorkspaceTab[]>(() => {
   return out;
 });
 
-const step = ref(0);
-const revision = ref(0);
-
-// Back to the first view whenever who is looking changes. The two identities
-// are offered different screens, so an index carried across from the other one
-// means nothing — and past the end it renders nothing at all.
-watch([() => props.role, () => props.env.annotator], () => {
-  step.value = 0;
-});
-
 /**
  * What the documents about to be uploaded will be called.
  *
@@ -232,46 +164,13 @@ watch([() => props.role, () => props.env.annotator], () => {
 const datasetName = ref("");
 const defaultName = () => `Documents ${new Date().toISOString().slice(0, 10)}`;
 
+// Remounts the upload module after a dataset is made, so the drop zone comes
+// back empty rather than still showing the files that were just stored.
+const uploadRevision = ref(0);
+
 /** The source module's context, with the name the person just typed. */
 function sourceEnv(): ResolveEnv {
   return { ...props.env, datasetName: datasetName.value.trim() || defaultName() };
-}
-
-/**
- * The environment a task's steps run in, told which task is open — and where
- * in the queue to start, when somebody picked a document rather than carrying
- * on from the top.
- */
-function taskEnv(taskId: number): ResolveEnv {
-  return {
-    ...props.env,
-    taskId,
-    startPosition: startPosition.value,
-    refresh: () => revision.value++,
-    // The annotator saved their last document. Put them back where they can
-    // see what they have done rather than leaving them on a finished queue.
-    // Progress is always the first view, for both identities.
-    finished: () => {
-      step.value = 0;
-      startPosition.value = undefined;
-      revision.value++;
-    },
-  };
-}
-
-/**
- * Where the annotate step should open. Reset whenever the task view changes,
- * so a position chosen once does not silently apply the next time.
- */
-const startPosition = ref<number | undefined>(undefined);
-
-/** Opens the annotate view at a given queue position. */
-function annotateAt(views: TaskView[], position: number) {
-  const target = views.findIndex((v) => v.step);
-  if (target < 0) return;
-  startPosition.value = position;
-  step.value = target;
-  revision.value++;
 }
 
 function progress(row: Row): string {
@@ -283,6 +182,7 @@ function progress(row: Row): string {
 
 function created() {
   datasetName.value = "";
+  uploadRevision.value++;
   void listDatasets();
   void listLabelsets();
   emit("changed");
@@ -305,7 +205,7 @@ function created() {
           :env="sourceEnv()"
           :node="s.node"
           :manifest="s.manifest as Manifest"
-          :revision="revision"
+          :revision="uploadRevision"
           @mounted="void 0"
         />
       </div>
@@ -352,64 +252,15 @@ function created() {
       {{ progress(item) }}
     </template>
 
-    <!-- A task, open. What it offers depends on who opened it — see viewsFor.
-         `views` is bound once here so the nav and the panel below cannot be
-         computed from different lists. -->
+    <!-- A task, open. What it offers depends on who opened it — see OpenTask. -->
     <template #open-tasks="{ item }">
-      <!-- v-for over one element is how a template names a local. The nav and
-           the panel under it must come from the same list, and calling
-           viewsFor in each of the three places invites them to diverge. -->
-      <template v-for="views in [viewsFor(item as TaskSummary)]" :key="item.id">
-        <nav v-if="views.length > 1" class="steps">
-          <button
-            v-for="(v, i) in views"
-            :key="v.id"
-            :class="{ 'lw-primary': i === step }"
-            @click="
-              step = i;
-              revision++;
-            "
-          >
-            {{ v.label }}
-          </button>
-        </nav>
-
-        <!-- The Progress view, which is the same tab showing two different
-             things: everyone's work to whoever runs the task, your own queue
-             and the way into it if you are annotating. -->
-        <template v-if="views[step] && !views[step].step">
-          <TaskProgressPanel
-            v-if="role === 'admin'"
-            :task-id="Number(item.id)"
-            :task-name="(item as TaskSummary).name"
-            :revision="revision"
-          />
-          <AnnotatorProgress
-            v-else
-            :task-id="Number(item.id)"
-            :annotator="env.annotator"
-            :revision="revision"
-            @open="(position) => annotateAt(views, position)"
-          />
-        </template>
-
-        <ModuleHost
-          v-else-if="views[step]"
-          :env="taskEnv(Number(item.id))"
-          :node="views[step].step!.node"
-          :manifest="views[step].step!.manifest as Manifest"
-          :revision="revision"
-          :instance-key="`${views[step].id}:${startPosition ?? 'resume'}`"
-          @mounted="void 0"
-        />
-
-        <!-- An annotator opening a task nobody assigned them. Better said than
-             shown as an empty screen with a step bar above it. -->
-        <p v-else class="lw-muted">
-          You have nothing to do in this task — nobody has assigned you any
-          documents in it.
-        </p>
-      </template>
+      <OpenTask
+        :task="item as TaskSummary"
+        :modules="taskModules"
+        :env="env"
+        :role="role"
+        @changed="emit('changed')"
+      />
     </template>
   </LegalWorkspace>
 </template>

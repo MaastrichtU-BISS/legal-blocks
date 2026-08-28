@@ -118,7 +118,7 @@ export function documentTags(db: Handle, assignmentId: number): DocumentAnnotati
  * Resolves the stored assignment-to-assignment links back into the "target
  * document name" form the annotation kit works in.
  */
-export function documentRelations(db: Handle, assignmentId: number): DocumentRelation[] {
+function documentRelations(db: Handle, assignmentId: number): DocumentRelation[] {
   const rows = db
     .prepare(
       `SELECT d.name, r.labels

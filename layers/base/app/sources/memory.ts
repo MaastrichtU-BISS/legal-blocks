@@ -150,14 +150,6 @@ export function collectTask(nodeId: string, task: TaskData): TaskData {
   return collected;
 }
 
-/** Discards a session's work — what "start over" means with nothing stored. */
-export function clearSession(nodeId: string, task: TaskData): void {
-  for (const doc of task.documents) {
-    for (const a of doc.assignments) {
-      localStorage.removeItem(bundlesKey(nodeId, a.annotator));
-    }
-  }
-}
 
 // --- metrics over an in-memory task ----------------------------------------
 
@@ -167,7 +159,7 @@ export function clearSession(nodeId: string, task: TaskData): void {
  * The same mapping the database side does, and for the same reason: the two
  * schemas differ only in a field name and whether annotator ids are strings.
  */
-export function toIaaInput(task: TaskData): IaaInputData {
+function toIaaInput(task: TaskData): IaaInputData {
   const documentLevel = task.annotation_level === "document";
   return {
     labelset: { labels: task.labelset.labels.map((l) => ({ name: l.name })) },

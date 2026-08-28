@@ -22,7 +22,7 @@ let cache: Map<string, ResolvedUpstream> | null = null;
  * An environment variable wins over anything shipped in the export, so a
  * deployment can supply its own key without editing a file it received.
  */
-export function upstreamFor(service: string): ResolvedUpstream | undefined {
+function upstreamFor(service: string): ResolvedUpstream | undefined {
   if (!cache) {
     cache = new Map();
     for (const up of upstreams(usePipeline(), registry, readSecrets())) {

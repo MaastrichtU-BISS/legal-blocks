@@ -111,7 +111,7 @@ function migrate(p: Pipeline): Pipeline {
  * next, so an exported pipeline cannot be one the composer would have refused
  * to build.
  */
-export function validatePipeline(p: Pipeline, reg: Registry): void {
+function validatePipeline(p: Pipeline, reg: Registry): void {
   if (!p || !Array.isArray(p.nodes) || p.nodes.length === 0) {
     throw new Error("pipeline has no nodes");
   }
