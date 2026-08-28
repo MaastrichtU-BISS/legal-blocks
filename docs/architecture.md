@@ -304,7 +304,7 @@ It never names a module.
 
 ## Host contracts
 
-`layers/base/app/runtime/bindings.ts` maps a contract name to **two**
+`layers/base/app/runtime/bindings/` maps a contract name to **two**
 implementations, one per kind. This is the single place where "the same
 component, fed differently" is expressed.
 
@@ -561,18 +561,27 @@ LEGAL_BLOCKS_IAA_URL=http://localhost:8080 npm run dev:platform
 
 ```
   packages/manifest/     the contract: Kind, ports, validation, secrets
-  packages/db/           schema, queries, resources
-  packages/export/       the zip an export is
+  packages/db/           schema, queries; resources/ is one file per noun
+  packages/export/       the zip an export is — compose, readme, options
   layers/base/app/
-    runtime/             resolve, bindings, ModuleHost — the engine
-    workspace/           the tabbed shell's host-side content
+    runtime/
+      resolve.ts         a step's input is the step before it
+      ModuleHost.vue     mounts one module, names none
+      bindings/          one file per host contract, + index
+    workspace/           the tabbed shell; OpenTask is a task, open
     sources/             adapters onto packages' own source interfaces
-    modules/             the import map and builtin modules
-    api.ts               every call the frontend makes
-  apps/composer/         design platforms, export zips
+    modules/             the import map
+    api/                 every call the frontend makes, by subject
+  apps/composer/
+    components/          palette, flow, ring, card, settings
+    composables/         usePlatformDraft — every rule about what may go in
   apps/platform/         run one; server/api is the data API
   registry/              module manifests + index.ts
 ```
+
+Nothing here is over ~300 lines and most is well under a hundred. That is not
+tidiness for its own sake: the rule "a module name never appears in composer or
+runtime code" is only checkable if you can read the file that would break it.
 
 ## Two rules that have bitten us
 
@@ -605,7 +614,7 @@ docker inspect <container> --format '{{.Config.Image}}'
 3. Write `registry/<id>.module.json`.
 4. Add one line to `registry/index.ts`.
 5. Add one line to the import map in `layers/base/app/modules/loaders.ts`.
-6. Add a host contract to `layers/base/app/runtime/bindings.ts` — **two**
+6. Add a host contract under `layers/base/app/runtime/bindings/` — **two**
    implementations, one per kind, unless the manifest declares only one.
 
 Steps 4–6 are the only code a new module touches. If you find yourself editing
@@ -634,7 +643,7 @@ Three things to check while you are there:
 - **Did its manifest need to change?** New config fields, new ports, a renamed
   component export — all live in `registry/<id>.module.json`, not in the package.
 - **Did its host contract change?** If it now wants a prop the binding does not
-  supply, `bindings.ts` is where that is fixed.
+  supply, `runtime/bindings/` is where that is fixed.
 - **Does its stylesheet still resolve?** `legal-annotation-kit` builds a CSS file
   its exports map does not name, and needs an alias in
   `layers/base/nuxt.config.ts`. Drop the alias if a version fixes it; add one if
@@ -672,7 +681,7 @@ export default defineEventHandler((event) => {
 and `tasks` deserve a visible source.
 
 Errors: `throw fail(event, 400, "...")`. `server/error.ts` reshapes everything
-into `{"error": "..."}`, which is what `layers/base/app/api.ts` reads and shows
+into `{"error": "..."}`, which is what `layers/base/app/api/http.ts` reads and shows
 the user. Never throw a bare `createError` without a `statusMessage` — the
 message is the entire value.
 

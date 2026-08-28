@@ -4,44 +4,45 @@ Compose platforms out of existing packages. Pick modules, chain them, export a
 zip; the recipient runs `docker compose up` and has a working platform.
 
 ```
-Import documents →  Annotate  →  Agreement metrics     a workspace, stored
-Search           →  Explore                            a pipeline, kept nowhere
-Search  →  Annotate  →  Agreement  →  Download         a pipeline, kept nowhere
+Search → Explore                              a pipeline: runs once, keeps nothing
+
+            Import documents
+                   ↕                          a workspace: everything is stored,
+  Annotate  ↔  [ database ]  ↔  Agreement     several people share it
 ```
+
+New here? **[docs/overview.md](docs/overview.md)** is the fifteen-minute version.
 
 ---
 
 ## Status
 
-The Nuxt rewrite is functional end to end: design a platform in the composer,
-export it, run it with Docker. The Go implementation it replaced is at the tag
-**`go-final`**.
-
-```bash
-git show go-final:internal/host/data.go     # if you ever need to compare
-```
-
-### What exists
+Working end to end: design a platform in the composer, export it, run it with
+Docker. A proof of concept — enough to prototype against, not yet a product.
+There is no login (see the gaps in the architecture note).
 
 | | | |
 |---|---|---|
-| `packages/manifest` | module contract, pipeline validation, secrets | ✅ ported, 26 tests |
-| `packages/db` | schema and queries over better-sqlite3 | ✅ ported, 10 tests |
-| `node-legal-docs-import` | text · HTML · Word · PDF, server-only | ✅ its own repo, 16 tests |
-| `packages/export` | the zip: compose file, pipeline, credentials, README | ✅ 9 tests |
-| `layers/base` | the runtime: resolve, bindings, ModuleHost, workspace | ✅ wired |
-| `apps/composer` | composer UI + `/api/export` | ✅ builds, exports |
-| `apps/platform` | the platform: 25 routes over the database | ✅ builds, runs |
+| `packages/manifest` | module contract, pipeline validation, secrets | 27 tests |
+| `packages/db` | schema and queries over better-sqlite3 | 17 tests |
+| `packages/export` | the zip: compose file, pipeline, credentials, README | 10 tests |
+| `node-legal-docs-import` | text · HTML · Word · PDF, server-only | its own repo, 19 tests |
+| `layers/base` | the runtime: resolve, bindings, ModuleHost, workspace | — |
+| `apps/composer` | composer UI + `/api/export` | — |
+| `apps/platform` | the platform: 28 routes over the database | — |
+
+The Go implementation this replaced is at the tag **`go-final`**, if you ever
+need to compare.
 
 ### Published
 
-`0.3.0` is on GHCR and public, so an exported platform runs on a machine that
+`0.5.0` is on GHCR and public, so an exported platform runs on a machine that
 has never seen this repository:
 
 ```
-ghcr.io/maastrichtu-biss/legal-blocks-composer:0.3.0
-ghcr.io/maastrichtu-biss/legal-blocks-platform:0.3.0
-ghcr.io/maastrichtu-biss/lawnotation-iaa:0.3.0
+ghcr.io/maastrichtu-biss/legal-blocks-composer:0.5.0
+ghcr.io/maastrichtu-biss/legal-blocks-platform:0.5.0
+ghcr.io/maastrichtu-biss/lawnotation-iaa:0.5.0
 ```
 
 Cut the next one with `./script/docker-build.sh <version> push`. All three
@@ -59,10 +60,10 @@ reads nothing but its own bundle, so there is no volume to mount and nothing to
 configure — one command is the whole setup:
 
 ```bash
-docker run --rm -p 7788:7788 ghcr.io/maastrichtu-biss/legal-blocks-composer:0.3.0
+docker run --rm -p 127.0.0.1:7788:7788 ghcr.io/maastrichtu-biss/legal-blocks-composer:0.5.0
 ```
 
-Then open <http://localhost:7788>. Its exports name the public `0.3.0` images,
+Then open <http://localhost:7788>. Its exports name the public `0.5.0` images,
 so the zip it gives you runs on any machine with Docker.
 
 That is the command to hand a colleague. Everything below is for working *on*
@@ -115,7 +116,8 @@ npm run dev:composer
 
 Then open <http://localhost:7788>.
 
-Add modules, connect them, and press **Export platform**. You get a ~2 kB zip:
+Add modules from the left — **Workspace** first if the platform should keep
+anything — and press **Export platform**. You get a ~2 kB zip:
 a `docker-compose.yml`, your `pipeline.json`, a `credentials.json` when the
 design carries a token, and a README written for someone who has never used a
 terminal.
@@ -151,6 +153,7 @@ packages/export/      the zip an export is
 layers/base/          shared Nuxt layer — resolve, bindings, ModuleHost, workspace
 apps/composer/        design platforms, export zips
 apps/platform/        run one exported platform
+docs/overview.md      the short version — start here
 registry/*.json       the module catalogue — start here
 docs/architecture.md  why things are the way they are
 Dockerfile            both images, two targets
