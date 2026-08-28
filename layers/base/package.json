@@ -11,6 +11,6 @@
     "vue-legal-docs-import": "^1.1.0",
     "vue-legal-docs-visualizer": "^1.2.0",
     "vue-legal-query-builder": "^2.0.0",
-    "vue-legal-workspace": "^1.1.0"
+    "vue-legal-workspace": "^1.2.0"
   }
 }

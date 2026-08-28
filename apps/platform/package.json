@@ -14,7 +14,7 @@
     "@legal-blocks/db": "*",
     "@legal-blocks/manifest": "*",
     "node-legal-docs-client": "^1.0.0",
-    "node-legal-docs-import": "^1.0.2",
+    "node-legal-docs-import": "^1.1.0",
     "nuxt": "^4.5.0",
     "vue": "^3.5.0"
   }
