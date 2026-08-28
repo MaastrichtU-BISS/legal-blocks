@@ -21,6 +21,20 @@ const props = defineProps<{
   manifest: Manifest;
   /** Bumped by the parent to force a reload after upstream data changes. */
   revision: number;
+  /**
+   * Changes when the module must start over rather than update in place.
+   *
+   * Re-resolving props is not always enough. A module reads some props once,
+   * in setup — legal-annotation-kit takes its opening queue position that way —
+   * and Vue patches an existing instance rather than building a new one, so a
+   * changed value is simply ignored. Keying the component on this is what makes
+   * "open at document 8" mean anything after "open at document 1".
+   *
+   * Deliberately not `revision`: that is bumped after every save, and
+   * remounting the annotator mid-document would throw away what they were
+   * doing.
+   */
+  instanceKey?: string | number;
 }>();
 
 const component = ref<Component | null>(null);
@@ -66,7 +80,12 @@ watch(
       <p class="error"><strong>This step could not be opened.</strong></p>
       <p class="error">{{ error }}</p>
     </div>
-    <component :is="component" v-else-if="component" v-bind="componentProps" />
+    <component
+      :is="component"
+      v-else-if="component"
+      :key="instanceKey"
+      v-bind="componentProps"
+    />
   </div>
 </template>
 

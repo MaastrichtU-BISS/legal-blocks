@@ -28,6 +28,7 @@ import type { DatasetSummary, LabelsetSummary, TaskSummary } from "../api";
 import { getDatasets, getLabelsets, getTasks } from "../api";
 import NewLabelsetForm from "./NewLabelsetForm.vue";
 import TaskProgressPanel from "./TaskProgressPanel.vue";
+import AnnotatorProgress from "./AnnotatorProgress.vue";
 import NewTaskForm from "./NewTaskForm.vue";
 
 const props = defineProps<{
@@ -91,12 +92,13 @@ function isAssigned(task: TaskSummary): boolean {
  */
 type TaskView = { id: string; label: string; step?: (typeof taskModules.value)[number] };
 
-const taskViews = computed<(task: TaskSummary) => TaskView[]>(() => (task) => {
+function viewsFor(task: TaskSummary): TaskView[] {
   const views: TaskView[] = [];
 
-  if (props.role === "admin") {
-    views.push({ id: "progress", label: "Progress" });
-  }
+  // Both identities start on Progress; what it shows is what differs. For
+  // whoever runs the task it is everyone's; for an annotator it is their own
+  // queue, and the way into the work.
+  views.push({ id: "progress", label: "Progress" });
 
   for (const step of taskModules.value) {
     const manifest = step.manifest!;
@@ -121,7 +123,7 @@ const taskViews = computed<(task: TaskSummary) => TaskView[]>(() => (task) => {
   }
 
   return views;
-});
+}
 
 // Kept here as well as fetched by their tabs, because the Tasks tab has to
 // know whether there is anything to make a task from before either of the
@@ -201,6 +203,7 @@ const tabs = computed<WorkspaceTab[]>(() => {
       createTitle: "New task",
       createBlocked: taskBlocked.value,
       openable: true,
+      openLabel: "See",
       empty: "No tasks yet. Make one and give it to somebody.",
     },
   );
@@ -234,9 +237,41 @@ function sourceEnv(): ResolveEnv {
   return { ...props.env, datasetName: datasetName.value.trim() || defaultName() };
 }
 
-/** The environment a task's steps run in, told which task is open. */
+/**
+ * The environment a task's steps run in, told which task is open — and where
+ * in the queue to start, when somebody picked a document rather than carrying
+ * on from the top.
+ */
 function taskEnv(taskId: number): ResolveEnv {
-  return { ...props.env, taskId, refresh: () => revision.value++ };
+  return {
+    ...props.env,
+    taskId,
+    startPosition: startPosition.value,
+    refresh: () => revision.value++,
+    // The annotator saved their last document. Put them back where they can
+    // see what they have done rather than leaving them on a finished queue.
+    // Progress is always the first view, for both identities.
+    finished: () => {
+      step.value = 0;
+      startPosition.value = undefined;
+      revision.value++;
+    },
+  };
+}
+
+/**
+ * Where the annotate step should open. Reset whenever the task view changes,
+ * so a position chosen once does not silently apply the next time.
+ */
+const startPosition = ref<number | undefined>(undefined);
+
+/** Opens the annotate view at a given queue position. */
+function annotateAt(views: TaskView[], position: number) {
+  const target = views.findIndex((v) => v.step);
+  if (target < 0) return;
+  startPosition.value = position;
+  step.value = target;
+  revision.value++;
 }
 
 function progress(row: Row): string {
@@ -317,14 +352,14 @@ function created() {
       {{ progress(item) }}
     </template>
 
-    <!-- A task, open. What it offers depends on who opened it — see taskViews.
+    <!-- A task, open. What it offers depends on who opened it — see viewsFor.
          `views` is bound once here so the nav and the panel below cannot be
          computed from different lists. -->
     <template #open-tasks="{ item }">
       <!-- v-for over one element is how a template names a local. The nav and
            the panel under it must come from the same list, and calling
-           taskViews in each of the three places invites them to diverge. -->
-      <template v-for="views in [taskViews(item as TaskSummary)]" :key="item.id">
+           viewsFor in each of the three places invites them to diverge. -->
+      <template v-for="views in [viewsFor(item as TaskSummary)]" :key="item.id">
         <nav v-if="views.length > 1" class="steps">
           <button
             v-for="(v, i) in views"
@@ -339,11 +374,24 @@ function created() {
           </button>
         </nav>
 
-        <TaskProgressPanel
-          v-if="views[step] && !views[step].step"
-          :task-id="Number(item.id)"
-          :revision="revision"
-        />
+        <!-- The Progress view, which is the same tab showing two different
+             things: everyone's work to whoever runs the task, your own queue
+             and the way into it if you are annotating. -->
+        <template v-if="views[step] && !views[step].step">
+          <TaskProgressPanel
+            v-if="role === 'admin'"
+            :task-id="Number(item.id)"
+            :task-name="(item as TaskSummary).name"
+            :revision="revision"
+          />
+          <AnnotatorProgress
+            v-else
+            :task-id="Number(item.id)"
+            :annotator="env.annotator"
+            :revision="revision"
+            @open="(position) => annotateAt(views, position)"
+          />
+        </template>
 
         <ModuleHost
           v-else-if="views[step]"
@@ -351,6 +399,7 @@ function created() {
           :node="views[step].step!.node"
           :manifest="views[step].step!.manifest as Manifest"
           :revision="revision"
+          :instance-key="`${views[step].id}:${startPosition ?? 'resume'}`"
           @mounted="void 0"
         />
 

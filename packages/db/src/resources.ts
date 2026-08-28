@@ -236,11 +236,20 @@ export function tasks(db: Handle): TaskSummary[] {
   return rows.map((r) => ({ ...r, annotators: byTask.get(r.id) ?? [] }));
 }
 
-/** How far along one annotator, or one document, is. */
+/**
+ * How far along one annotator, or one document, is.
+ *
+ * Two counts because there are two questions, and one number cannot answer
+ * both. `done` is assignments with anything on them at all — what has been
+ * picked up. `finished` is assignments somebody marked done — what can be
+ * measured. A document three annotators have opened and none has finished is
+ * 3 done, 0 finished, and reporting either alone hides half of that.
+ */
 export interface ProgressRow {
   id: number;
   name: string;
   done: number;
+  finished: number;
   total: number;
 }
 
@@ -255,6 +264,7 @@ export interface ProgressRow {
  */
 export interface TaskProgress {
   done: number;
+  finished: number;
   total: number;
   byAnnotator: ProgressRow[];
   byDocument: ProgressRow[];
@@ -276,7 +286,8 @@ export function taskProgress(db: Handle, taskId: number): TaskProgress {
     SELECT a.id, a.user_id, a.document_id,
            CASE WHEN EXISTS (SELECT 1 FROM span_annotations s WHERE s.assignment_id = a.id)
                   OR EXISTS (SELECT 1 FROM document_annotations d WHERE d.assignment_id = a.id)
-                THEN 1 ELSE 0 END AS done
+                THEN 1 ELSE 0 END AS done,
+           CASE WHEN a.status = 'done' THEN 1 ELSE 0 END AS finished
       FROM assignments a
      WHERE a.task_id = ?`;
 
@@ -286,6 +297,7 @@ export function taskProgress(db: Handle, taskId: number): TaskProgress {
        SELECT u.id AS id,
               COALESCE(NULLIF(u.email, ''), u.name) AS name,
               SUM(t.done) AS done,
+              SUM(t.finished) AS finished,
               COUNT(*) AS total
          FROM t JOIN users u ON u.id = t.user_id
         GROUP BY u.id
@@ -296,7 +308,8 @@ export function taskProgress(db: Handle, taskId: number): TaskProgress {
   const byDocument = db
     .prepare(
       `WITH t AS (${touched})
-       SELECT d.id AS id, d.name AS name, SUM(t.done) AS done, COUNT(*) AS total
+       SELECT d.id AS id, d.name AS name,
+              SUM(t.done) AS done, SUM(t.finished) AS finished, COUNT(*) AS total
          FROM t JOIN documents d ON d.id = t.document_id
         GROUP BY d.id
         ORDER BY d.name`,
@@ -305,7 +318,8 @@ export function taskProgress(db: Handle, taskId: number): TaskProgress {
 
   const total = byAnnotator.reduce((n, r) => n + r.total, 0);
   const done = byAnnotator.reduce((n, r) => n + r.done, 0);
-  return { done, total, byAnnotator, byDocument };
+  const finished = byAnnotator.reduce((n, r) => n + r.finished, 0);
+  return { done, finished, total, byAnnotator, byDocument };
 }
 
 /**

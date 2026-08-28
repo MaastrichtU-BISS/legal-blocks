@@ -35,13 +35,13 @@ git show go-final:internal/host/data.go     # if you ever need to compare
 
 ### Published
 
-`0.1.0` is on GHCR and public, so an exported platform runs on a machine that
+`0.3.0` is on GHCR and public, so an exported platform runs on a machine that
 has never seen this repository:
 
 ```
-ghcr.io/maastrichtu-biss/legal-blocks-composer:0.1.0
-ghcr.io/maastrichtu-biss/legal-blocks-platform:0.1.0
-ghcr.io/maastrichtu-biss/lawnotation-iaa:0.1.0
+ghcr.io/maastrichtu-biss/legal-blocks-composer:0.3.0
+ghcr.io/maastrichtu-biss/legal-blocks-platform:0.3.0
+ghcr.io/maastrichtu-biss/lawnotation-iaa:0.3.0
 ```
 
 Cut the next one with `./script/docker-build.sh <version> push`. All three
@@ -59,10 +59,10 @@ reads nothing but its own bundle, so there is no volume to mount and nothing to
 configure — one command is the whole setup:
 
 ```bash
-docker run --rm -p 7788:7788 ghcr.io/maastrichtu-biss/legal-blocks-composer:0.1.0
+docker run --rm -p 7788:7788 ghcr.io/maastrichtu-biss/legal-blocks-composer:0.3.0
 ```
 
-Then open <http://localhost:7788>. Its exports name the public `0.1.0` images,
+Then open <http://localhost:7788>. Its exports name the public `0.3.0` images,
 so the zip it gives you runs on any machine with Docker.
 
 That is the command to hand a colleague. Everything below is for working *on*

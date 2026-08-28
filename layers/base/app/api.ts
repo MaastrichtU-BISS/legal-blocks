@@ -142,16 +142,21 @@ export async function getIncomingRelations(assignmentId: number): Promise<unknow
   );
 }
 
-/** How far along one annotator, or one document, is. */
+/**
+ * How far along one annotator, or one document, is. `done` is picked up at
+ * all, `finished` is marked done — see packages/db for why both.
+ */
 export interface ProgressRow {
   id: number;
   name: string;
   done: number;
+  finished: number;
   total: number;
 }
 
 export interface TaskProgress {
   done: number;
+  finished: number;
   total: number;
   byAnnotator: ProgressRow[];
   byDocument: ProgressRow[];
@@ -159,6 +164,28 @@ export interface TaskProgress {
 
 export async function getTaskProgress(taskId: number): Promise<TaskProgress> {
   return json(await fetch(`/api/tasks/${taskId}/progress`), "loading progress");
+}
+
+/**
+ * Saves the whole task as JSON, in the shape the agreement service is given.
+ *
+ * That shape rather than a new one: it is what Lawnotation exchanges, it is
+ * already what this platform produces for its own metrics, and a second export
+ * format is a second thing to keep in step with the schema.
+ */
+export async function downloadTask(taskId: number, name: string): Promise<void> {
+  const data = await json<unknown>(
+    await fetch(`/api/tasks/${taskId}/iaa-input`),
+    "preparing the download",
+  );
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+  );
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${(name || "task").replace(/[^a-zA-Z0-9-_]+/g, "-").replace(/^-|-$/g, "") || "task"}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // --- metrics ----------------------------------------------------------------

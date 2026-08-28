@@ -288,15 +288,19 @@ describe("task progress", () => {
 
     expect(p.total).toBe(4);
     expect(p.done).toBe(2);
+    // Both saves left the assignment pending, so nothing is finished. The two
+    // counts moving together would mean the badge can never say "working on
+    // it", which is the state most of a task spends its life in.
+    expect(p.finished).toBe(0);
 
-    expect(p.byAnnotator.map((r) => [r.name, r.done, r.total])).toEqual([
-      ["anna@example.org", 1, 2],
-      ["bram@example.org", 1, 2],
+    expect(p.byAnnotator.map((r) => [r.name, r.done, r.finished, r.total])).toEqual([
+      ["anna@example.org", 1, 0, 2],
+      ["bram@example.org", 1, 0, 2],
     ]);
 
-    expect(p.byDocument.map((r) => [r.name, r.done, r.total])).toEqual([
-      ["doc-a", 2, 2],
-      ["doc-b", 0, 2],
+    expect(p.byDocument.map((r) => [r.name, r.done, r.finished, r.total])).toEqual([
+      ["doc-a", 2, 0, 2],
+      ["doc-b", 0, 0, 2],
     ]);
 
     // The cuts are two groupings of one set, so both must sum to the whole.
@@ -320,5 +324,27 @@ describe("task progress", () => {
     saveAssignment(db, q[0]!.assignment_id, b.assignment);
 
     expect(taskProgress(db, taskId).done).toBe(1);
+  });
+
+  // Started and finished are different questions and the badge depends on the
+  // difference: a document every annotator has opened and none has submitted
+  // must not read as ready to measure.
+  it("counts finished separately from started", () => {
+    const { taskId, people } = seed();
+    const q = queue(db, taskId, people[0]!.id);
+    const b = bundle(db, q[0]!.assignment_id);
+    b.assignment.annotations = [
+      { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 4, relations: [] },
+    ];
+    b.assignment.status = "done";
+    saveAssignment(db, q[0]!.assignment_id, b.assignment);
+
+    const p = taskProgress(db, taskId);
+    expect(p.done).toBe(1);
+    expect(p.finished).toBe(1);
+
+    // And the other annotator's copy of the same document is neither.
+    const other = p.byAnnotator.find((r) => r.name === "bram@example.org")!;
+    expect([other.done, other.finished]).toEqual([0, 0]);
   });
 });

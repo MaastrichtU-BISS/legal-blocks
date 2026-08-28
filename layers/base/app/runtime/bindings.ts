@@ -85,6 +85,10 @@ export interface BindingContext {
   taskId?: number;
   /** What a dataset being created should be called. */
   datasetName?: string;
+  /** Where in an annotator's queue to open, when not from the top. */
+  startPosition?: number;
+  /** Called when a module reports it has nothing left to do. */
+  finished?: () => void;
   /** Resolves the value arriving on one of this node's input ports. */
   input(portName: string): Promise<unknown>;
   /** Re-runs the current step, after something changes its inputs. */
@@ -142,15 +146,24 @@ const contracts: Record<string, KindBindings> = {
     workspace: {
       async props(ctx) {
         const taskId = requireTask(ctx);
-        const [source, task] = await Promise.all([
+        const [queue, task] = await Promise.all([
           createAnnotationSource(taskId, ctx.annotator),
           loadMetricsTask(taskId),
         ]);
         return {
-          source,
+          source: queue.source,
           labelset: task.labelset,
           annotationLevel: task.annotation_level,
           guidelinesUrl: task.ann_guidelines || undefined,
+          // Opening the annotate step with nothing chosen means "carry on",
+          // not "start again at document one" — the queue is long and the
+          // first document is the least likely one somebody wants.
+          startPosition: ctx.startPosition ?? queue.resumeAt,
+          // AnnotatorQueue emits `complete` when the last document is saved.
+          // v-bind turns an onX prop into a listener, which is how a binding
+          // gets to hand the host a callback without ModuleHost knowing any
+          // module's events.
+          onComplete: () => ctx.finished?.(),
         };
       },
       async output(ctx): Promise<TaskValue> {

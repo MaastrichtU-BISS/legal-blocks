@@ -33,6 +33,13 @@ export interface ResolveEnv {
    * dataset, let alone what to name it.
    */
   datasetName?: string;
+  /**
+   * Where in an annotator's queue to open. Set by the workspace when somebody
+   * picks a document rather than carrying on from the top.
+   */
+  startPosition?: number;
+  /** Called when a module reports it has nothing left to do. */
+  finished?: () => void;
   refresh(): void;
   /**
    * Told when a step has produced its output, so a pipeline can move on to the
@@ -99,6 +106,8 @@ export function contextFor(env: ResolveEnv, nodeId: string): BindingContext {
     annotator: env.annotator,
     taskId: env.taskId,
     datasetName: env.datasetName,
+    startPosition: env.startPosition,
+    finished: env.finished,
     input: (portName) => resolveInput(env, nodeId, portName),
     refresh: env.refresh,
     produced: () => env.produced(nodeId),

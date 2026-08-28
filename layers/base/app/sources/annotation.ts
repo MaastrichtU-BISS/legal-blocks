@@ -23,15 +23,27 @@ import {
 } from "../api";
 
 /**
- * Builds a source over one user's queue for a task.
+ * Builds a source over one user's queue for a task, and says where to resume.
  *
  * The queue is fetched once so `total` can be a plain number, which is what
  * the package's interface asks for. Everything else is loaded on demand.
+ *
+ * `resumeAt` comes back with it because this is the only place the queue is
+ * read, and answering "which document were they on" from anywhere else would
+ * mean fetching it twice. Positions are 1-based throughout: that is what the
+ * package's load(position) means, and translating at one boundary is better
+ * than two conventions in one file.
  */
+export interface QueueSource {
+  source: AnnotationSource;
+  /** The first document not marked done, or 1 when they all are. */
+  resumeAt: number;
+}
+
 export async function createAnnotationSource(
   taskId: number,
   userId: number,
-): Promise<AnnotationSource> {
+): Promise<QueueSource> {
   const queue: QueueEntry[] = await getQueue(taskId, userId);
 
   const at = (position: number): QueueEntry => {
@@ -48,7 +60,9 @@ export async function createAnnotationSource(
     return entry;
   };
 
-  return {
+  const unfinished = queue.findIndex((e) => e.status !== "done");
+
+  const source: AnnotationSource = {
     total: queue.length,
 
     async load(position: number): Promise<AssignmentBundle> {
@@ -78,4 +92,6 @@ export async function createAnnotationSource(
       return incoming.map((r) => ({ from: r.to, labels: r.labels }));
     },
   };
+
+  return { source, resumeAt: unfinished === -1 ? 1 : unfinished + 1 };
 }
