@@ -220,19 +220,6 @@ const contracts: Record<string, KindBindings> = {
     },
   },
 
-  // The exit a platform with no storage needs: with a database the work is
-  // already kept, without one it has to be taken out.
-  ResultsDownload: {
-    pipeline: {
-      async props(ctx) {
-        return { task: await sessionTaskFrom(ctx) };
-      },
-      async output(ctx): Promise<TaskValue> {
-        return (await ctx.input("task")) as TaskValue;
-      },
-    },
-  },
-
   // vue-legal-docs-import. Files the user picks, read by this platform's own
   // parser and kept.
   DocumentImport: {

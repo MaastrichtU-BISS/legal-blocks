@@ -159,9 +159,10 @@ case law with structure a visualiser renders and an annotation step has no use
 for; collapsing them into `{name, full_text}` threw all of it away before the
 visualiser ever saw it.
 
-**`worksIn`** — which kinds of export the module belongs in. Empty means both.
-`results-download` is `["pipeline"]` only: "take your results and go" is
-meaningless where results are already stored.
+**`worksIn`** — which kinds of export the module belongs in. Empty means both,
+which is what every module in the registry says today. The field earns its keep
+anyway: a module that only makes sense with storage, or only without it, has
+somewhere to say so, and the composer will not offer it in the wrong kind.
 
 **`services`** — backend operations this module calls. See §7.
 
@@ -299,7 +300,6 @@ component, fed differently" is expressed.
 | `DocumentImport`      | vue-legal-docs-import     | saves a dataset              | holds documents for the session |
 | `DocumentSearch`      | vue-legal-query-builder   | results held per node        | results held per node           |
 | `DocumentPassthrough` | vue-legal-docs-visualizer | renders and passes through   | same                            |
-| `ResultsDownload`     | builtin                   | n/a — pipeline only          | serialises the task to JSON     |
 
 Modules never learn the difference between the two columns.
 

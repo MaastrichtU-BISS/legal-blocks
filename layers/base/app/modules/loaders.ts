@@ -12,7 +12,6 @@ import type { Entry } from "../types";
 type Loader = () => Promise<Record<string, unknown>>;
 
 const packages: Record<string, Loader> = {
-  "@legal-blocks/builtin": () => import("./builtin"),
   "legal-annotation-kit": () => import("legal-annotation-kit"),
   "vue-iaa-metrics": () => import("vue-iaa-metrics"),
   "vue-legal-query-builder": () => import("vue-legal-query-builder"),

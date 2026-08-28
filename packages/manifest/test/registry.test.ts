@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileURLToPath } from "node:url";
-import { canConnect, moduleIds, supportsKind, appliesIn } from "../src/index.js";
+import { buildRegistry, canConnect, moduleIds, supportsKind, appliesIn } from "../src/index.js";
 import { loadRegistry } from "../src/registry-fs.js";
 
 // The real registry, so these tests break when a manifest does — which is the
@@ -30,13 +30,35 @@ describe("the registry", () => {
     expect(canConnect(reg, "document-set@1", "corpus@1")).toBe(false);
   });
 
-  it("knows which kinds each module belongs in", async () => {
-    const reg = await loadRegistry(REGISTRY_DIR);
-    const download = reg.modules["results-download"]!;
-    expect(supportsKind(download, "pipeline")).toBe(true);
-    // Nothing to download from a platform that already stored the work.
-    expect(supportsKind(download, "workspace")).toBe(false);
+  // Every module in the registry happens to work in both kinds today, so the
+  // restriction is checked against a manifest made here. Testing it through
+  // whichever module is currently narrow would mean the rule quietly stops
+  // being covered the day that module changes — which is what happened when
+  // results-download was removed.
+  it("keeps a module out of a kind it does not declare", () => {
+    const reg = buildRegistry(
+      [
+        {
+          id: "stored-only",
+          name: "Stored only",
+          kind: "ui",
+          runtime: "web",
+          worksIn: ["workspace"],
+          entry: { package: "x", component: "X" },
+        },
+      ],
+      [],
+    );
 
+    const m = reg.modules["stored-only"]!;
+    expect(supportsKind(m, "workspace")).toBe(true);
+    expect(supportsKind(m, "pipeline")).toBe(false);
+  });
+
+  // An empty or absent worksIn means "anywhere", which is what every module in
+  // the registry relies on.
+  it("lets a module that names no kinds run in both", async () => {
+    const reg = await loadRegistry(REGISTRY_DIR);
     const kit = reg.modules["legal-annotation-kit"]!;
     expect(supportsKind(kit, "pipeline")).toBe(true);
     expect(supportsKind(kit, "workspace")).toBe(true);

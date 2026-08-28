@@ -132,15 +132,6 @@ describe("validation", () => {
       json: `{"kind":"sometimes","nodes":[{"id":"d","module":"vue-legal-docs-import"}]}`,
       wantError: "expected pipeline or workspace",
     },
-    // results-download only makes sense when nothing is stored, so an export
-    // can never promise a screen that will not function.
-    "download step in a workspace": {
-      json: `{"kind":"workspace","nodes":[
-        {"id":"docs","module":"vue-legal-docs-import"},
-        {"id":"annotate","module":"legal-annotation-kit"},
-        {"id":"save","module":"results-download"}]}`,
-      wantError: "does not belong in a workspace",
-    },
   };
 
   for (const [name, { json, wantError }] of Object.entries(cases)) {
