@@ -5,15 +5,9 @@
 // its neighbours, whether storage can be switched off — all of that is the
 // composer's actual subject, and none of it needs to know how anything looks.
 
-import { computed, ref, watch, type Ref } from "vue";
+import { computed, ref, type Ref } from "vue";
 import type { Kind, Manifest, Node, Pipeline, Registry } from "@base/types";
 import { canConnect, configWithDefaults, exportKind, supportsKind } from "@base/types";
-
-// The draft lives in the browser, not the platform database. It is composer
-// state — a pipeline that does not exist yet — and never travels into an
-// exported platform, so giving it a table would put a design-time concern into
-// the runtime's data model.
-const DRAFT_KEY = "legal-blocks:composer-draft";
 
 const blank = (): Pipeline => ({ version: 1, name: "My tool", kind: "pipeline", nodes: [] });
 
@@ -42,20 +36,6 @@ export function usePlatformDraft(registry: Ref<Registry>) {
   const steps = computed<Step[]>(() =>
     pipeline.value.nodes.map((node) => ({ node, manifest: registry.value.modules[node.module] })),
   );
-
-  // Restore a half-built platform after a closed tab.
-  try {
-    const saved = localStorage.getItem(DRAFT_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as Pipeline;
-      if (Array.isArray(parsed.nodes)) pipeline.value = parsed;
-    }
-  } catch {
-    // A corrupt draft is not worth failing over; start from a blank one.
-  }
-  watch(pipeline, (value) => localStorage.setItem(DRAFT_KEY, JSON.stringify(value)), {
-    deep: true,
-  });
 
   /** The type flowing out of the end of the chain, or null when it is empty. */
   const tailType = computed(() => steps.value.at(-1)?.manifest?.outputs?.[0]?.type ?? null);
@@ -158,56 +138,24 @@ export function usePlatformDraft(registry: Ref<Registry>) {
   }
 
   /**
-   * Why these modules could not run as a chain, or nothing if they could.
+   * Turning storage on and off, which starts the board again.
    *
-   * Only asked when storage is being turned off. In a workspace nothing flows
-   * between the tools, so any set in any order is fine; a pipeline is a line,
-   * and the same set may be a line that does not join up.
-   */
-  function chainProblem(): string {
-    for (const [i, node] of pipeline.value.nodes.entries()) {
-      const m = registry.value.modules[node.module];
-      if (!m) continue;
-
-      if (!supportsKind(m, "pipeline")) {
-        return `${m.name} only works in a platform that stores its work.`;
-      }
-
-      const required = m.inputs?.find((p) => p.required);
-      if (!required) continue;
-
-      const before = pipeline.value.nodes[i - 1];
-      const producing = before
-        ? registry.value.modules[before.module]?.outputs?.[0]?.type
-        : undefined;
-      if (!producing || !canConnect(registry.value, producing, required.type)) {
-        return before
-          ? `${node.label} reads ${required.type}, and ${before.label} before it does not produce that.`
-          : `${node.label} needs ${required.type} to work on, and it is first.`;
-      }
-    }
-    return "";
-  }
-
-  /**
-   * Turning storage on and off.
-   *
-   * Off is refused when what is on screen would not run as a chain, rather than
-   * silently dropping the steps that do not fit. Which modules are there is the
-   * user's work, and a toggle is not allowed to throw it away — nor to leave
-   * behind a platform the composer would refuse to export.
+   * The two kinds are not two settings on one design — they are two different
+   * things to build. A chain of steps that feed each other is not a set of
+   * tools around a database, and carrying one over into the other leaves an
+   * arrangement that means nothing in the kind it now claims to be. So the
+   * modules go, and the confirmation is there because that is somebody's work.
    */
   function toggleStorage() {
-    if (stored.value) {
-      const why = chainProblem();
-      if (why) {
-        problem.value = `This cannot run without storage. ${why}`;
-        return;
-      }
-      pipeline.value.kind = "pipeline";
-    } else {
-      pipeline.value.kind = "workspace";
+    if (
+      pipeline.value.nodes.length > 0 &&
+      !confirm("Switching clears the modules you have added. Continue?")
+    ) {
+      return;
     }
+    const next: Kind = stored.value ? "pipeline" : "workspace";
+    pipeline.value = { ...blank(), name: pipeline.value.name, kind: next };
+    selected.value = null;
     problem.value = "";
   }
 

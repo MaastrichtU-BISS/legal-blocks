@@ -132,8 +132,8 @@ async function doExport() {
           <!-- ConfigForm says so itself when there is nothing to show. -->
           <ConfigForm
             :fields="settingsFields"
-            :config="selectedStep.node.config ?? {}"
-            @update="selectedStep.node.config = $event"
+            :model-value="selectedStep.node.config ?? {}"
+            @update:model-value="selectedStep.node.config = $event"
           />
         </template>
         <p v-else class="muted small">Select a step to configure it.</p>
