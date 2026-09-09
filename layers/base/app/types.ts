@@ -25,7 +25,7 @@ export interface Port {
 export interface ConfigField {
   key: string;
   label: string;
-  type: "text" | "number" | "select" | "labelset" | "secret";
+  type: "text" | "number" | "select" | "labelset" | "secret" | "json";
   default?: unknown;
   options?: string[];
   help?: string;

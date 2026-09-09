@@ -42,7 +42,7 @@ export interface ConfigField {
    * platform keeps it server-side, so a platform can call an API on its users'
    * behalf without handing them the key.
    */
-  type: "text" | "number" | "select" | "labelset" | "secret";
+  type: "text" | "number" | "select" | "labelset" | "secret" | "json";
   default?: unknown;
   options?: string[];
   help?: string;

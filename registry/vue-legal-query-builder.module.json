@@ -1,9 +1,9 @@
 {
   "id": "vue-legal-query-builder",
   "name": "Search documents",
-  "description": "Search Rechtspraak and ECHR case law. Uses the hosted Case Law Explorer service, which needs an access token you create yourself \u2014 the platform keeps it on the server and never shows it to the people using it.",
+  "description": "Search Rechtspraak and ECHR case law. Uses the hosted Case Law Explorer service, which needs an access token you create yourself — the platform keeps it on the server and never shows it to the people using it.",
   "icon": "search",
-  "version": "1.0.6",
+  "version": "2.1.0",
   "kind": "source",
   "runtime": "web",
   "entry": {
@@ -33,11 +33,39 @@
       "default": "Find documents"
     },
     {
+      "key": "mode",
+      "label": "Form mode",
+      "type": "select",
+      "options": [
+        "free-form",
+        "guided"
+      ],
+      "default": "free-form",
+      "help": "Free-form puts every filter on one page, for someone who already knows what they are looking for. Guided walks them through a few short steps instead, and needs a structure — a template, or one of your own below."
+    },
+    {
+      "key": "guided_template",
+      "label": "Guided template",
+      "type": "select",
+      "options": [
+        "caselaw-search"
+      ],
+      "default": "caselaw-search",
+      "help": "Guided mode only. One of the structures the form ships with: caselaw-search offers similarity, authority and traditional keyword search. Ignored when a structure is pasted below."
+    },
+    {
+      "key": "guided_structure",
+      "label": "Custom guided structure",
+      "type": "json",
+      "default": "",
+      "help": "Guided mode only, and optional. Paste a guided structure as JSON — the goals, steps and blocks to walk through — to use instead of the template. Leave it empty to use the template. Invalid JSON stops the step rather than being ignored."
+    },
+    {
       "key": "api_token",
       "label": "Case Law Explorer access token",
       "type": "secret",
       "default": "",
-      "help": "Required. Sign in, generate a key, and paste it here. It is written to the exported platform's credentials.json rather than into the pipeline, and every request is made by the platform itself \u2014 so the people using it never see the token. Anyone holding the exported folder does, so pass that folder on as carefully as the token itself. A deployment can leave this blank and set CITATIONS_API_KEY instead.",
+      "help": "Required. Sign in, generate a key, and paste it here. It is written to the exported platform's credentials.json rather than into the pipeline, and every request is made by the platform itself — so the people using it never see the token. Anyone holding the exported folder does, so pass that folder on as carefully as the token itself. A deployment can leave this blank and set CITATIONS_API_KEY instead.",
       "link": "https://api.caselawexplorer.tech/login.html?next=/account.html",
       "linkText": "Create a token"
     },

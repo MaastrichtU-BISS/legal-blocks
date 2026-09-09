@@ -146,6 +146,13 @@ async function searchProps(
   return {
     title: ctx.config.title ?? "Find documents",
 
+    // Guided mode needs a structure. The composer offers a template by name and
+    // a place to paste one instead; the form itself falls back to its default
+    // template when it gets neither, so an unconfigured guided step still works.
+    type: ctx.config.mode === "guided" ? "guided" : "free",
+    guidedTemplate: ctx.config.guided_template,
+    guidedStructure: parseGuidedStructure(ctx.config.guided_structure),
+
     onSubmit: async (query: unknown) => {
       const result = await searchDocuments(query);
       await keep({
@@ -160,6 +167,26 @@ async function searchProps(
     // callback the block says so, rather than appearing to find nothing.
     onSearchLaws: searchLaws,
   };
+}
+
+/**
+ * A guided structure pasted into the composer, or undefined when the step is
+ * using a template instead.
+ *
+ * Bad JSON stops the step with the parser's complaint rather than quietly
+ * falling back to the template: someone who pasted a structure wants that
+ * structure, and a form that silently shows a different one is worse than one
+ * that says what is wrong with what they pasted.
+ */
+function parseGuidedStructure(value: unknown): unknown {
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    throw new Error(
+      `the guided structure is not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
 }
 
 // --- drawing them ------------------------------------------------------------

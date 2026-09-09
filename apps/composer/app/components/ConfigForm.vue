@@ -44,6 +44,16 @@ function set(current: Record<string, unknown>, key: string, value: unknown) {
       @input="set(modelValue, field.key, ($event.target as HTMLTextAreaElement).value)"
     ></textarea>
 
+    <textarea
+      v-else-if="field.type === 'json'"
+      :id="field.key"
+      rows="8"
+      class="code"
+      spellcheck="false"
+      :value="String(modelValue[field.key] ?? '')"
+      @input="set(modelValue, field.key, ($event.target as HTMLTextAreaElement).value)"
+    ></textarea>
+
     <input
       v-else-if="field.type === 'secret'"
       :id="field.key"
@@ -80,6 +90,15 @@ label {
   display: block;
   margin-bottom: 0.25rem;
   font-weight: 500;
+}
+
+/* A pasted structure is read as code, so it is shown as code. */
+.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
 }
 
 .help {
