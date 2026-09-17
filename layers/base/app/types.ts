@@ -28,9 +28,13 @@ export interface ConfigField {
   type: "text" | "number" | "select" | "labelset" | "secret" | "json";
   default?: unknown;
   options?: string[];
+  /** What a select shows for each option value. */
+  optionLabels?: Record<string, string>;
   help?: string;
   /** Kinds of export this setting applies in. Absent means both. */
   worksIn?: Kind[];
+  /** Shown only while other settings hold these values. See packages/manifest. */
+  showWhen?: Record<string, string | string[]>;
   /** Where the value is obtained — an account page for a token, say. */
   link?: string;
   linkText?: string;
@@ -46,6 +50,7 @@ export interface Entry {
 export interface Upstream {
   service: string;
   baseUrlKey: string;
+  baseUrl?: string;
   tokenKey?: string;
   envVar?: string;
 }

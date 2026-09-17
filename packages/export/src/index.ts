@@ -9,7 +9,7 @@
 // network on first run to pull. Nothing else.
 
 import { zipSync, strToU8 } from "fflate";
-import { splitSecrets } from "@legal-blocks/manifest";
+import { dropHiddenSettings, splitSecrets } from "@legal-blocks/manifest";
 import { compose } from "./compose.js";
 import { readme } from "./readme.js";
 import { slug, type ExportOptions } from "./options.js";
@@ -18,13 +18,18 @@ export { DEFAULT_PORT, type ExportOptions } from "./options.js";
 
 /** The zip, as bytes. */
 export function buildExport(opts: ExportOptions): Uint8Array {
-  const { clean, secrets } = splitSecrets(opts.pipeline, opts.registry);
+  // Settings the composer had hidden go before anything else reads the
+  // pipeline, so a structure uploaded and then swapped for a template is not
+  // shipped and used anyway.
+  const pipeline = dropHiddenSettings(opts.pipeline, opts.registry);
+  const shown = { ...opts, pipeline };
+  const { clean, secrets } = splitSecrets(pipeline, opts.registry);
   const hasCredentials = Object.keys(secrets).length > 0;
 
   const files: Record<string, Uint8Array> = {
-    "docker-compose.yml": strToU8(compose(opts, hasCredentials)),
+    "docker-compose.yml": strToU8(compose(shown, hasCredentials)),
     "pipeline.json": strToU8(JSON.stringify(clean, null, 2) + "\n"),
-    "README.txt": strToU8(readme(opts, hasCredentials)),
+    "README.txt": strToU8(readme(shown, hasCredentials)),
   };
   if (hasCredentials) {
     files["credentials.json"] = strToU8(JSON.stringify(secrets, null, 2) + "\n");

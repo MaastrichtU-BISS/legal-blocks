@@ -15,6 +15,7 @@ import { usePlatformDraft } from "../composables/usePlatformDraft";
 import { exportPipeline } from "@base/api";
 import type { Registry } from "@base/types";
 import { fieldAppliesIn } from "@base/types";
+import { fieldShown } from "@legal-blocks/manifest";
 
 const props = defineProps<{ registry: Registry }>();
 
@@ -43,10 +44,18 @@ const modules = computed(() =>
 
 const selectedStep = computed(() => steps.value.find((s) => s.node.id === selected.value));
 
-/** Settings the composer owns in this mode; the rest belong to runtime users. */
-const settingsFields = computed(() =>
-  (selectedStep.value?.manifest?.config ?? []).filter((f) => fieldAppliesIn(f, kind.value)),
-);
+/**
+ * Settings the composer owns in this mode; the rest belong to runtime users.
+ * Of those, only the ones the step's other choices have not ruled out — the
+ * template picker only in guided mode, say.
+ */
+const settingsFields = computed(() => {
+  const all = (selectedStep.value?.manifest?.config ?? []).filter((f) =>
+    fieldAppliesIn(f, kind.value),
+  );
+  const config = selectedStep.value?.node.config ?? {};
+  return all.filter((f) => fieldShown(f, all, config));
+});
 
 async function doExport() {
   problem.value = "";

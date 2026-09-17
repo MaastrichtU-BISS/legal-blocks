@@ -1,7 +1,12 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { fileURLToPath } from "node:url";
 import type { Pipeline, Registry } from "../src/index.js";
-import { parsePipeline, splitSecrets, upstreams } from "../src/index.js";
+import {
+  dropHiddenSettings,
+  parsePipeline,
+  splitSecrets,
+  upstreams,
+} from "../src/index.js";
 import { loadRegistry } from "../src/registry-fs.js";
 
 const REGISTRY_DIR = fileURLToPath(new URL("../../../registry", import.meta.url));
@@ -11,8 +16,12 @@ beforeAll(async () => {
   reg = await loadRegistry(REGISTRY_DIR);
 });
 
-function searching(token: string, baseUrl?: string): Pipeline {
-  const config: Record<string, unknown> = { title: "Find documents", api_token: token };
+function searching(
+  token: string,
+  baseUrl?: string,
+  extra: Record<string, unknown> = {},
+): Pipeline {
+  const config: Record<string, unknown> = { title: "Find documents", api_token: token, ...extra };
   if (baseUrl !== undefined) config["api_base_url"] = baseUrl;
   return parsePipeline(
     JSON.stringify({
@@ -91,5 +100,49 @@ describe("resolving upstreams", () => {
       reg,
     );
     expect(upstreams(p, reg, {})).toEqual([]);
+  });
+});
+
+describe("dropping hidden settings", () => {
+  it("hides what depends on a hidden setting", () => {
+    const p = dropHiddenSettings(
+      searching("", undefined, {
+        mode: "free-form",
+        guided_source: "upload",
+        guided_structure: '{"goals":[]}',
+        guided_template: "caselaw-search",
+      }),
+      reg,
+    );
+    const config = p.nodes[0]?.config ?? {};
+    expect(config).not.toHaveProperty("guided_source");
+    expect(config).not.toHaveProperty("guided_structure");
+    expect(config).not.toHaveProperty("guided_template");
+    expect(config["mode"]).toBe("free-form");
+  });
+
+  it("keeps the uploaded structure and drops the template when uploading", () => {
+    const p = dropHiddenSettings(
+      searching("", undefined, {
+        mode: "guided",
+        guided_source: "upload",
+        guided_structure: '{"goals":[]}',
+        guided_template: "caselaw-search",
+      }),
+      reg,
+    );
+    const config = p.nodes[0]?.config ?? {};
+    expect(config["guided_structure"]).toBe('{"goals":[]}');
+    expect(config).not.toHaveProperty("guided_template");
+  });
+
+  // Written before there was a structure source to choose: whatever it held
+  // was in use, and an upgrade must not quietly drop it.
+  it("keeps settings whose condition was never recorded", () => {
+    const p = dropHiddenSettings(
+      searching("secret-value", undefined, { mode: "guided", guided_structure: '{"goals":[]}' }),
+      reg,
+    );
+    expect(p.nodes[0]?.config?.["guided_structure"]).toBe('{"goals":[]}');
   });
 });

@@ -1,4 +1,4 @@
-import type { H3Event } from "h3";
+import { isError, type H3Event } from "h3";
 
 /**
  * A failure the frontend can show.
@@ -36,7 +36,14 @@ export function idParam(event: H3Event, name: string): number {
  * fix that and should not be sent looking for a token they were never given.
  */
 export function asUpstreamFailure(event: H3Event, e: unknown) {
-  const status = (e as { response?: { status?: number } })?.response?.status;
+  // Already worded for the person searching — a refusal raised before any
+  // request was made, such as a dataset this platform cannot search.
+  if (isError(e)) return e;
+
+  // node-legal-docs-client throws ApiError, which carries the status itself;
+  // a bare axios error carries it on its response.
+  const failure = e as { status?: number; response?: { status?: number } };
+  const status = failure?.status ?? failure?.response?.status;
   const detail = e instanceof Error ? e.message : String(e);
 
   if (status === 401 || status === 403) {

@@ -1,5 +1,7 @@
 // What an export needs to know, and how a platform's name becomes a filename.
 
+import type { Pipeline, Registry } from "@legal-blocks/manifest";
+
 /** Where an exported platform is published on the host. */
 export const DEFAULT_PORT = 7777;
 

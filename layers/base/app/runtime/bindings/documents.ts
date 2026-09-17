@@ -146,9 +146,11 @@ async function searchProps(
   return {
     title: ctx.config.title ?? "Find documents",
 
-    // Guided mode needs a structure. The composer offers a template by name and
-    // a place to paste one instead; the form itself falls back to its default
-    // template when it gets neither, so an unconfigured guided step still works.
+    // Guided mode needs a structure. The composer offers a template by name or
+    // an uploaded file instead, and the export drops whichever of the two was
+    // not chosen — so a structure present here is one somebody meant to use.
+    // The form falls back to its default template when it gets neither, so an
+    // unconfigured guided step still works.
     type: ctx.config.mode === "guided" ? "guided" : "free",
     guidedTemplate: ctx.config.guided_template,
     guidedStructure: parseGuidedStructure(ctx.config.guided_structure),
@@ -170,13 +172,13 @@ async function searchProps(
 }
 
 /**
- * A guided structure pasted into the composer, or undefined when the step is
+ * A guided structure uploaded in the composer, or undefined when the step is
  * using a template instead.
  *
  * Bad JSON stops the step with the parser's complaint rather than quietly
- * falling back to the template: someone who pasted a structure wants that
+ * falling back to the template: someone who uploaded a structure wants that
  * structure, and a form that silently shows a different one is worse than one
- * that says what is wrong with what they pasted.
+ * that says what is wrong with what they uploaded.
  */
 function parseGuidedStructure(value: unknown): unknown {
   if (typeof value !== "string" || value.trim() === "") return undefined;

@@ -3,7 +3,7 @@
   "name": "Search documents",
   "description": "Search Rechtspraak and ECHR case law. Uses the hosted Case Law Explorer service, which needs an access token you create yourself — the platform keeps it on the server and never shows it to the people using it.",
   "icon": "search",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "kind": "source",
   "runtime": "web",
   "entry": {
@@ -27,40 +27,6 @@
   ],
   "config": [
     {
-      "key": "title",
-      "label": "Form title",
-      "type": "text",
-      "default": "Find documents"
-    },
-    {
-      "key": "mode",
-      "label": "Form mode",
-      "type": "select",
-      "options": [
-        "free-form",
-        "guided"
-      ],
-      "default": "free-form",
-      "help": "Free-form puts every filter on one page, for someone who already knows what they are looking for. Guided walks them through a few short steps instead, and needs a structure — a template, or one of your own below."
-    },
-    {
-      "key": "guided_template",
-      "label": "Guided template",
-      "type": "select",
-      "options": [
-        "caselaw-search"
-      ],
-      "default": "caselaw-search",
-      "help": "Guided mode only. One of the structures the form ships with: caselaw-search offers similarity, authority and traditional keyword search. Ignored when a structure is pasted below."
-    },
-    {
-      "key": "guided_structure",
-      "label": "Custom guided structure",
-      "type": "json",
-      "default": "",
-      "help": "Guided mode only, and optional. Paste a guided structure as JSON — the goals, steps and blocks to walk through — to use instead of the template. Leave it empty to use the template. Invalid JSON stops the step rather than being ignored."
-    },
-    {
       "key": "api_token",
       "label": "Case Law Explorer access token",
       "type": "secret",
@@ -70,16 +36,77 @@
       "linkText": "Create a token"
     },
     {
-      "key": "api_base_url",
-      "label": "Service address",
+      "key": "mode",
+      "label": "Form",
+      "type": "select",
+      "options": [
+        "guided",
+        "free-form"
+      ],
+      "optionLabels": {
+        "guided": "Guided form",
+        "free-form": "Free form"
+      },
+      "default": "guided",
+      "help": "Guided walks people through a few short steps. Free form puts every filter on one page, for someone who already knows what they are looking for."
+    },
+    {
+      "key": "guided_source",
+      "label": "Guided structure",
+      "type": "select",
+      "options": [
+        "template",
+        "upload"
+      ],
+      "optionLabels": {
+        "template": "Use a template",
+        "upload": "Upload a JSON file"
+      },
+      "default": "template",
+      "showWhen": {
+        "mode": "guided"
+      },
+      "help": "The goals, steps and blocks the guided form walks through."
+    },
+    {
+      "key": "guided_template",
+      "label": "Template",
+      "type": "select",
+      "options": [
+        "caselaw-search"
+      ],
+      "optionLabels": {
+        "caselaw-search": "Case law search"
+      },
+      "default": "caselaw-search",
+      "showWhen": {
+        "guided_source": "template"
+      },
+      "help": "Offers similarity, authority and traditional keyword search."
+    },
+    {
+      "key": "guided_structure",
+      "label": "Structure file",
+      "type": "json",
+      "default": "",
+      "showWhen": {
+        "guided_source": "upload"
+      },
+      "help": "A .json file with the goals, steps and blocks to walk through. Leave it empty and the form falls back to the default template.",
+      "link": "https://github.com/MaastrichtU-BISS/vue-legal-query-builder#guidedform",
+      "linkText": "See what a structure looks like"
+    },
+    {
+      "key": "title",
+      "label": "Form title",
       "type": "text",
-      "default": "https://api.caselawexplorer.tech/api",
-      "help": "The hosted service. Change this only to point at your own deployment."
+      "default": "Find documents"
     }
   ],
   "upstream": {
     "service": "legal-docs",
     "baseUrlKey": "api_base_url",
+    "baseUrl": "https://api.caselawexplorer.tech/api",
     "tokenKey": "api_token",
     "envVar": "CITATIONS_API_KEY"
   }

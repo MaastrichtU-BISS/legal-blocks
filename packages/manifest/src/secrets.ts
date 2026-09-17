@@ -6,11 +6,33 @@
 // could be treated simply.
 
 import type { Registry } from "./manifest.js";
-import { isSecret } from "./manifest.js";
+import { fieldShown, isSecret } from "./manifest.js";
 import type { Pipeline } from "./pipeline.js";
 
 /** Credentials a platform needs, keyed by node id and then by config key. */
 export type Secrets = Record<string, Record<string, string>>;
+
+/**
+ * The pipeline without the settings its own choices have hidden.
+ *
+ * A structure uploaded and then swapped for a template is still in the
+ * composer's draft; left in, the platform would find it and use it anyway.
+ * A hidden secret is dropped the same way, so it never reaches
+ * credentials.json.
+ */
+export function dropHiddenSettings(p: Pipeline, reg: Registry): Pipeline {
+  const nodes = p.nodes.map((node) => {
+    const fields = reg.modules[node.module]?.config ?? [];
+    if (!node.config) return node;
+    const config = node.config;
+    const hidden = fields.filter((f) => f.key in config && !fieldShown(f, fields, config));
+    if (hidden.length === 0) return node;
+    const kept = { ...config };
+    for (const f of hidden) delete kept[f.key];
+    return { ...node, config: kept };
+  });
+  return { ...p, nodes };
+}
 
 /**
  * The pipeline with every secret config value removed, and those values
@@ -76,10 +98,11 @@ export function upstreams(p: Pipeline, reg: Registry, secrets: Secrets): Resolve
     const configured = node.config?.[m.upstream.baseUrlKey];
     if (typeof configured === "string") baseUrl = configured;
     if (baseUrl === "") {
-      // Fall back to the manifest's default, so a node that never had its
+      // Fall back to the manifest's defaults, so a node that never had its
       // address edited still reaches the hosted service.
       const field = m.config?.find((f) => f.key === m.upstream?.baseUrlKey);
       if (typeof field?.default === "string") baseUrl = field.default;
+      else if (m.upstream.baseUrl) baseUrl = m.upstream.baseUrl;
     }
 
     const token = m.upstream.tokenKey ? (secrets[node.id]?.[m.upstream.tokenKey] ?? "") : "";

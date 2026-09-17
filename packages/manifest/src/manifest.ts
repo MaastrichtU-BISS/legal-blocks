@@ -45,8 +45,20 @@ export interface ConfigField {
   type: "text" | "number" | "select" | "labelset" | "secret" | "json";
   default?: unknown;
   options?: string[];
+  /**
+   * What a select shows for each option, by option value. The value is what
+   * pipeline.json stores and code compares against; the label is for whoever
+   * is choosing. An option without one shows its value.
+   */
+  optionLabels?: Record<string, string>;
   help?: string;
   worksIn?: Kind[];
+  /**
+   * Shows the field only while other settings on the same node have one of
+   * the given values — the template picker only in guided mode, the upload
+   * only when uploading. See fieldShown for how a hidden setting is treated.
+   */
+  showWhen?: Record<string, string | string[]>;
   /**
    * Where the value is obtained — an account page for a token, say. The
    * composer renders it next to the field, because a setting nobody knows how
@@ -58,6 +70,35 @@ export interface ConfigField {
 
 export function isSecret(field: ConfigField): boolean {
   return field.type === "secret";
+}
+
+/**
+ * Whether a field is in play for a node's config, given its showWhen.
+ *
+ * Transitive: a field depending on a setting that is itself hidden is hidden
+ * too, so choosing free-form hides the template picker even though the
+ * template source it depends on still holds "template".
+ *
+ * A condition on a setting the node never recorded hides nothing. That is a
+ * pipeline written before the setting existed, and it should keep behaving as
+ * it did.
+ */
+export function fieldShown(
+  field: ConfigField,
+  fields: ConfigField[],
+  config: Record<string, unknown>,
+  seen: Set<string> = new Set(),
+): boolean {
+  if (!field.showWhen || seen.has(field.key)) return true;
+  seen.add(field.key);
+  for (const [key, wanted] of Object.entries(field.showWhen)) {
+    if (!(key in config)) continue;
+    const allowed = Array.isArray(wanted) ? wanted : [wanted];
+    if (!allowed.includes(String(config[key]))) return false;
+    const parent = fields.find((f) => f.key === key);
+    if (parent && !fieldShown(parent, fields, config, seen)) return false;
+  }
+  return true;
 }
 
 /** Whether a config field is offered for the given kind of export. */
@@ -82,8 +123,13 @@ export interface Upstream {
    * `services`.
    */
   service: string;
-  /** The config field holding the API's address. */
+  /**
+   * The config field holding the API's address. A node without one — the
+   * usual case — calls `baseUrl`.
+   */
   baseUrlKey: string;
+  /** The address to call when the node does not set one. */
+  baseUrl?: string;
   /** The secret config field holding the credential. */
   tokenKey?: string;
   /**
