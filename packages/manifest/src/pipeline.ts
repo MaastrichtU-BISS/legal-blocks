@@ -38,6 +38,12 @@ export interface Pipeline {
    * the behaviour it had.
    */
   kind?: Kind;
+  /**
+   * Whether people have to sign in with an email and password. Separate from
+   * kind: a pipeline that keeps no work can still be one only some people may
+   * use, and then it keeps its accounts and nothing else.
+   */
+  login?: boolean;
   /** The steps, in the order they run. */
   nodes: Node[];
 }
@@ -45,6 +51,11 @@ export interface Pipeline {
 /** What this is, defaulting to a workspace. */
 export function exportKind(p: Pipeline): Kind {
   return p.kind ?? "workspace";
+}
+
+/** Whether this platform asks people to sign in. Absent means it does not. */
+export function requiresLogin(p: Pipeline): boolean {
+  return p.login === true;
 }
 
 const ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
@@ -119,6 +130,9 @@ function validatePipeline(p: Pipeline, reg: Registry): void {
   const kind = exportKind(p);
   if (kind !== "pipeline" && kind !== "workspace") {
     throw new Error(`unknown kind "${kind}" — expected pipeline or workspace`);
+  }
+  if (p.login !== undefined && typeof p.login !== "boolean") {
+    throw new Error(`login must be true or false, not ${JSON.stringify(p.login)}`);
   }
 
   const byId = new Map<string, Node>();

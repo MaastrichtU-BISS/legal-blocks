@@ -99,6 +99,8 @@ export interface Pipeline {
   name: string;
   /** Absent means workspace, matching files written before this field existed. */
   kind?: Kind;
+  /** Whether people sign in. See packages/manifest. */
+  login?: boolean;
   /** The steps, in the order they run. The order is the wiring. */
   nodes: Node[];
 }

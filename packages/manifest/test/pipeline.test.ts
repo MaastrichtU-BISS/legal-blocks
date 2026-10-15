@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { fileURLToPath } from "node:url";
 import type { Registry } from "../src/index.js";
-import { exportKind, order, parsePipeline, serviceIds } from "../src/index.js";
+import { exportKind, order, parsePipeline, requiresLogin, serviceIds } from "../src/index.js";
 import { loadRegistry } from "../src/registry-fs.js";
 
 const REGISTRY_DIR = fileURLToPath(new URL("../../../registry", import.meta.url));
@@ -44,6 +44,12 @@ describe("a valid pipeline", () => {
   // A file written before the kind field existed must keep behaving as it did.
   it("defaults to a workspace when no kind is given", () => {
     expect(exportKind(parsePipeline(flagship, reg))).toBe("workspace");
+  });
+
+  it("asks nobody to sign in unless login is set", () => {
+    expect(requiresLogin(parsePipeline(flagship, reg))).toBe(false);
+    const p = parsePipeline({ ...JSON.parse(explorer), login: true }, reg);
+    expect(requiresLogin(p)).toBe(true);
   });
 
   // Storing nothing does not mean running nothing: searching happens on the
@@ -131,6 +137,10 @@ describe("validation", () => {
     "unknown kind": {
       json: `{"kind":"sometimes","nodes":[{"id":"d","module":"vue-legal-docs-import"}]}`,
       wantError: "expected pipeline or workspace",
+    },
+    "a login that is not a boolean": {
+      json: `{"login":"yes","nodes":[{"id":"d","module":"vue-legal-docs-import"}]}`,
+      wantError: "login must be true or false",
     },
   };
 
