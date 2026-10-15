@@ -60,8 +60,9 @@ function describeJson(value: unknown): string {
   <div v-for="field in fields" :key="field.key" class="field">
     <label :for="field.key">
       {{ field.label }}<span v-if="field.required" class="required" title="Required">*</span>
-      <span v-if="field.help" class="info" :title="field.help" tabindex="0">
+      <span v-if="field.help" class="info" tabindex="0" :aria-label="field.help">
         <ModuleIcon name="info" :size="14" />
+        <span class="tip" role="tooltip">{{ field.help }}</span>
       </span>
     </label>
 
@@ -157,10 +158,35 @@ label {
   color: var(--danger);
 }
 
+/* Shown at once on hover or keyboard focus. A title attribute waits a second
+   or so before showing, which reads as no tooltip at all. */
 .info {
+  position: relative;
   display: inline-flex;
   color: var(--muted);
-  cursor: help;
+}
+
+.tip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: -0.5rem;
+  z-index: 20;
+  width: max-content;
+  max-width: 16rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  background: #18181b;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.info:hover .tip,
+.info:focus-visible .tip {
+  display: block;
 }
 
 .upload input[type="file"] {
