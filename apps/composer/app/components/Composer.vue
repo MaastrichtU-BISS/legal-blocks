@@ -77,10 +77,6 @@ async function doExport() {
 
       <div class="row modes">
         <span class="muted">{{ stored ? "Workspace" : "Pipeline" }}</span>
-        <label class="muted toggle">
-          <input v-model="pipeline.login" type="checkbox" />
-          Require sign-in
-        </label>
         <button @click="startOver">Start over</button>
       </div>
 
@@ -98,14 +94,16 @@ async function doExport() {
       <ModulePalette
         :modules="modules"
         :stored="stored"
+        :login="!!pipeline.login"
         :can-append="canAppend"
         :why-not="whyNot"
         @add="append"
         @toggle-storage="toggleStorage"
+        @toggle-login="pipeline.login = !pipeline.login"
       />
 
       <section class="board">
-        <p v-if="steps.length === 0" class="muted empty">
+        <p v-if="steps.length === 0 && !pipeline.login" class="muted empty">
           <template v-if="stored">
             Add the tools this workspace should have. They do not connect to each other —
             everything reaches the same database.
@@ -120,8 +118,10 @@ async function doExport() {
           v-else-if="stored"
           :steps="steps"
           :selected="selected"
+          :login="!!pipeline.login"
           @select="selected = $event"
           @remove="remove"
+          @remove-login="pipeline.login = false"
         />
 
         <PipelineFlow
@@ -130,8 +130,10 @@ async function doExport() {
           :selected="selected"
           :can-remove="canRemove"
           :why-not-remove="whyNotRemove"
+          :login="!!pipeline.login"
           @select="selected = $event"
           @remove="remove"
+          @remove-login="pipeline.login = false"
         />
       </section>
 
@@ -179,17 +181,6 @@ header {
 
 .modes {
   margin-left: auto;
-}
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  white-space: nowrap;
-}
-
-.toggle input {
-  width: auto;
 }
 
 .modes button {

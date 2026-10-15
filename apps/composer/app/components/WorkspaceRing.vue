@@ -8,10 +8,11 @@
 
 import ModuleIcon from "./ModuleIcon.vue";
 import StepCard from "./StepCard.vue";
+import SignInCard from "./SignInCard.vue";
 import type { Step } from "../composables/usePlatformDraft";
 
-defineProps<{ steps: Step[]; selected: string | null }>();
-const emit = defineEmits<{ select: [id: string]; remove: [i: number] }>();
+defineProps<{ steps: Step[]; selected: string | null; login: boolean }>();
+const emit = defineEmits<{ select: [id: string]; remove: [i: number]; removeLogin: [] }>();
 
 /** How far out the cards sit, as a percentage of the board. */
 const RING = 34;
@@ -72,6 +73,10 @@ function spoke(index: number, total: number): Record<string, number> {
       <span class="small">Database</span>
     </div>
 
+    <!-- Accounts are kept in the same store, so sign-in hangs off it rather
+         than taking a place on the ring among the tools. -->
+    <SignInCard v-if="login" class="on-store" compact @remove="emit('removeLogin')" />
+
     <StepCard
       v-for="(step, i) in steps"
       :key="step.node.id"
@@ -127,6 +132,14 @@ function spoke(index: number, total: number): Record<string, number> {
   border-radius: 50%;
   background: #fff;
   color: var(--accent);
+}
+
+.on-store {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 3.5rem);
+  transform: translate(-50%, -50%);
+  z-index: 1;
 }
 
 .on-ring {

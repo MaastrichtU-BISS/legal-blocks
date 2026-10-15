@@ -4,20 +4,27 @@
 // on a laptop is not one row.
 
 import StepCard from "./StepCard.vue";
+import SignInCard from "./SignInCard.vue";
 import type { Step } from "../composables/usePlatformDraft";
 
 defineProps<{
   steps: Step[];
   selected: string | null;
+  /** Sign-in is always the first thing anyone meets, so it leads the line. */
+  login: boolean;
   canRemove: (i: number) => boolean;
   whyNotRemove: (i: number) => string;
 }>();
 
-const emit = defineEmits<{ select: [id: string]; remove: [i: number] }>();
+const emit = defineEmits<{ select: [id: string]; remove: [i: number]; removeLogin: [] }>();
 </script>
 
 <template>
   <div class="flow">
+    <template v-if="login">
+      <SignInCard @remove="emit('removeLogin')" />
+      <span v-if="steps.length" class="arrow">→</span>
+    </template>
     <template v-for="(step, i) in steps" :key="step.node.id">
       <StepCard
         :step="step"
