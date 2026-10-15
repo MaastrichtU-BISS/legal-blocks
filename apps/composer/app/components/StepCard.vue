@@ -5,13 +5,18 @@
 import ModuleIcon from "./ModuleIcon.vue";
 import type { Step } from "../composables/usePlatformDraft";
 
-defineProps<{
-  step: Step;
-  selected: boolean;
-  /** False when closing this one would break what is left. */
-  removable?: boolean;
-  removeTitle?: string;
-}>();
+// removable defaults to true explicitly: Vue turns an omitted boolean prop into
+// false, which left every card on the workspace ring with a disabled ×.
+withDefaults(
+  defineProps<{
+    step: Step;
+    selected: boolean;
+    /** False when closing this one would break what is left. */
+    removable?: boolean;
+    removeTitle?: string;
+  }>(),
+  { removable: true },
+);
 
 const emit = defineEmits<{ select: []; remove: [] }>();
 </script>
@@ -20,7 +25,7 @@ const emit = defineEmits<{ select: []; remove: [] }>();
   <div class="card" :class="{ selected }" @click="emit('select')">
     <button
       class="close"
-      :disabled="removable === false"
+      :disabled="!removable"
       :title="removeTitle ?? 'Remove'"
       @click.stop="emit('remove')"
     >
