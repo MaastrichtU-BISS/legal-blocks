@@ -403,30 +403,36 @@ a naive test.
 
 ## Signing in
 
-`"login": true` in `pipeline.json` makes everyone sign in with an email and
-password. It is independent of kind: a pipeline that keeps no work still opens
-`platform.db` for its accounts and leaves the other tables empty.
+Adding **Sign-in** in the composer writes `"login": true` into `pipeline.json`,
+and everyone then signs in with an email and password. It is independent of
+kind: a pipeline that keeps no work still opens `platform.db` for its accounts
+and leaves the other tables empty.
 
 `nuxt-auth-utils` does the two parts worth not writing ourselves — scrypt
 password hashes and an encrypted session cookie. The cookie holds only the
 user's id. `server/middleware/auth.ts` reads that person's row on every API
-request, so a role change or a removed password takes effect at once rather
-than when the cookie expires. The cookie's secret is generated into
-`data/session-secret` on first use, so an export carries no secret of its own;
-`NUXT_SESSION_PASSWORD` overrides it.
+request, so a removed password takes effect at once rather than when the
+cookie expires. The cookie's secret is generated into `data/session-secret` on
+first use, so an export carries no secret of its own; `NUXT_SESSION_PASSWORD`
+overrides it. The cookie is marked Secure only when the request came over
+https, because browsers drop a Secure cookie sent over plain http.
 
-The first person to open a platform nobody can sign in to creates its admin.
-After that only an admin adds people or sets their passwords, from the People
-panel. Annotators named on a task already have a row, so they appear there
-waiting for a password — the same address-is-identity rule as before.
+Anybody may create an account. The first one created owns the platform: it is
+the only stored role, `admin`, and it sees everything. Somebody named on a task
+before they had an account already has a row, and creating the account with
+that address makes the row theirs.
 
-Roles, enforced by the routes through `requireRole` and `server/utils/access.ts`:
+Nobody is an editor or an annotator in general. You edit what you created —
+a dataset, a labelset, a task — and you annotate in a task where you were given
+documents; making a task and adding yourself makes you both. The routes check
+this through `server/utils/access.ts`, and the workspace works out the same
+thing per task in `OpenTask.vue` to decide what to show.
 
-| | annotator | editor | admin |
+| | annotator in a task | made it | admin |
 |---|---|---|---|
-| the tasks they have documents in, and their own queue | ✓ | ✓ | ✓ |
-| documents, labels, every task, progress, agreement | | ✓ | ✓ |
-| people and their roles | | | ✓ |
+| the task, and their own queue and documents in it | ✓ | ✓ | ✓ |
+| everybody's progress, agreement, the export | | ✓ | ✓ |
+| datasets and labelsets | | their own | all |
 
 Without a login none of this applies: every request is the platform's own
 admin account, and the "Working as" dropdown chooses only what is shown.
@@ -800,8 +806,9 @@ chunk and every platform downloads it, including ones with no annotate step.
 
 **Sign-in stops at localhost.** There is no HTTPS, so an export still binds to
 `127.0.0.1`; a public address needs a reverse proxy with a certificate in front
-of it first. Failed sign-ins are not rate-limited, and a forgotten password is
-reset by an admin, since the platform sends no email.
+of it first. Failed sign-ins are not rate-limited, and there is no way to reset
+a forgotten password, since the platform sends no email. Anybody who knows an
+invited annotator's address can create that account before they do.
 
 **An unwritable data directory is still a bare 500.** The named volume removed
 the common cause — see §8 — but a read-only mount, SELinux or NFS all still

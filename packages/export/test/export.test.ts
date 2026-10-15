@@ -128,7 +128,7 @@ describe("what an export contains", () => {
   it("explains signing in only when the platform asks for it", () => {
     expect(build(workspace)["README.txt"]).not.toContain("SIGNING IN");
     const withLogin = workspace.replace('"kind":"workspace"', '"kind":"workspace","login":true');
-    expect(build(withLogin)["README.txt"]).toContain("create the\n  admin account");
+    expect(build(withLogin)["README.txt"]).toContain("owns the platform");
   });
 
   it("lists the steps in the order they run", () => {
