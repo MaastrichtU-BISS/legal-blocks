@@ -51,7 +51,10 @@ export interface ConfigField {
    * is choosing. An option without one shows its value.
    */
   optionLabels?: Record<string, string>;
+  /** Shown behind an info icon next to the label. */
   help?: string;
+  /** Marked with an asterisk. The composer shows it; nothing enforces it. */
+  required?: boolean;
   worksIn?: Kind[];
   /**
    * Shows the field only while other settings on the same node have one of

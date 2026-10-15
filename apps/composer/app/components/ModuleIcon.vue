@@ -70,6 +70,19 @@ defineProps<{ name?: string; size?: number }>();
       <path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3" />
     </template>
 
+    <!-- A person signing in. -->
+    <template v-else-if="name === 'user'">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+    </template>
+
+    <!-- More about a setting, on hover. -->
+    <template v-else-if="name === 'info'">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v6" />
+      <path d="M12 7.5v.01" />
+    </template>
+
     <!-- Something the composer has no picture for. A shape, not a guess. -->
     <template v-else>
       <rect x="4" y="4" width="16" height="16" rx="3" />

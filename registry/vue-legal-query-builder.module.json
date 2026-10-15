@@ -31,7 +31,7 @@
       "label": "Case Law Explorer access token",
       "type": "secret",
       "default": "",
-      "help": "Required. Sign in, generate a key, and paste it here. It is written to the exported platform's credentials.json rather than into the pipeline, and every request is made by the platform itself — so the people using it never see the token. Anyone holding the exported folder does, so pass that folder on as carefully as the token itself. A deployment can leave this blank and set CITATIONS_API_KEY instead.",
+      "required": true,
       "link": "https://api.caselawexplorer.tech/login.html?next=/account.html",
       "linkText": "Create a token"
     },

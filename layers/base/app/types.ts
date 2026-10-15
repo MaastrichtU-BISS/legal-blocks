@@ -31,6 +31,7 @@ export interface ConfigField {
   /** What a select shows for each option value. */
   optionLabels?: Record<string, string>;
   help?: string;
+  required?: boolean;
   /** Kinds of export this setting applies in. Absent means both. */
   worksIn?: Kind[];
   /** Shown only while other settings hold these values. See packages/manifest. */

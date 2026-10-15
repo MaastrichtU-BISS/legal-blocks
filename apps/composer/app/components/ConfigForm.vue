@@ -4,6 +4,7 @@
 
 import { reactive } from "vue";
 import type { ConfigField } from "@base/types";
+import ModuleIcon from "./ModuleIcon.vue";
 
 defineProps<{ fields: ConfigField[]; modelValue: Record<string, unknown> }>();
 const emit = defineEmits<{ "update:modelValue": [Record<string, unknown>] }>();
@@ -57,7 +58,12 @@ function describeJson(value: unknown): string {
   <p v-if="fields.length === 0" class="muted">This step has nothing to configure.</p>
 
   <div v-for="field in fields" :key="field.key" class="field">
-    <label :for="field.key">{{ field.label }}</label>
+    <label :for="field.key">
+      {{ field.label }}<span v-if="field.required" class="required" title="Required">*</span>
+      <span v-if="field.help" class="info" :title="field.help" tabindex="0">
+        <ModuleIcon name="info" :size="14" />
+      </span>
+    </label>
 
     <select
       v-if="field.type === 'select'"
@@ -131,7 +137,6 @@ function describeJson(value: unknown): string {
         {{ field.linkText || "Where to get this" }} ↗
       </a>
     </p>
-    <p v-if="field.help" class="muted help">{{ field.help }}</p>
   </div>
 </template>
 
@@ -141,9 +146,21 @@ function describeJson(value: unknown): string {
 }
 
 label {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
   margin-bottom: 0.25rem;
   font-weight: 500;
+}
+
+.required {
+  color: var(--danger);
+}
+
+.info {
+  display: inline-flex;
+  color: var(--muted);
+  cursor: help;
 }
 
 .upload input[type="file"] {
