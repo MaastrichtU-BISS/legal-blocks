@@ -1,7 +1,7 @@
 // The only part of an export written for somebody who has never used a
 // terminal. Everything else in the zip is for a machine.
 
-import { exportKind, order, type Pipeline } from "@legal-blocks/manifest";
+import { exportKind, order, requiresLogin, type Pipeline } from "@legal-blocks/manifest";
 import { DEFAULT_PORT, type ExportOptions } from "./options.js";
 
 /**
@@ -33,6 +33,27 @@ function storageSection(pipeline: Pipeline): string {
   running:
 
     docker compose cp platform:/app/data ./backup
+`;
+}
+
+/** How the first person in becomes its admin, and how everyone else gets in. */
+function signInSection(port: number): string {
+  return `SIGNING IN
+
+  This platform asks everyone to sign in with an email address and password.
+
+  The first time you open http://localhost:${port} it asks you to create the
+  admin account. Do that straight away: whoever fills that form in first
+  becomes the admin.
+
+  To let somebody else in, press "People" at the top right, add their email
+  address with a password, and tell them both. People you named as annotators
+  on a task are already listed there; give them a password the same way.
+  Everyone can change their own password once they are in.
+
+  Accounts are kept in the platform's own storage, so  docker compose down -v
+  deletes them along with everything else.
+
 `;
 }
 
@@ -127,5 +148,5 @@ IF SOMETHING GOES WRONG
       Check the terminal for a line mentioning pipeline.json. That file has to
       stay in this folder next to docker-compose.yml.
 
-${storageSection(opts.pipeline)}${hasCredentials ? "\n" + credentialsSection() : ""}`;
+${storageSection(opts.pipeline)}${requiresLogin(opts.pipeline) ? "\n" + signInSection(port) : ""}${hasCredentials ? "\n" + credentialsSection() : ""}`;
 }

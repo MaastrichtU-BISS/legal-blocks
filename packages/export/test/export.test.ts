@@ -125,6 +125,12 @@ describe("what an export contains", () => {
     expect(build(searching)["README.txt"]).toContain("does not save anything");
   });
 
+  it("explains signing in only when the platform asks for it", () => {
+    expect(build(workspace)["README.txt"]).not.toContain("SIGNING IN");
+    const withLogin = workspace.replace('"kind":"workspace"', '"kind":"workspace","login":true');
+    expect(build(withLogin)["README.txt"]).toContain("create the\n  admin account");
+  });
+
   it("lists the steps in the order they run", () => {
     expect(build(searching)["README.txt"]).toMatch(/1\. .*\n\s*2\. /);
   });
