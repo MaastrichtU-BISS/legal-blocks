@@ -154,7 +154,7 @@ export function usePlatformDraft(registry: Ref<Registry>) {
       return;
     }
     const next: Kind = stored.value ? "pipeline" : "workspace";
-    pipeline.value = { ...blank(), name: pipeline.value.name, kind: next };
+    pipeline.value = { ...blank(), name: pipeline.value.name, kind: next, login: pipeline.value.login };
     selected.value = null;
     problem.value = "";
   }

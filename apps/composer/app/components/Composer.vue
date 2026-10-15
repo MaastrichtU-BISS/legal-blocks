@@ -77,6 +77,10 @@ async function doExport() {
 
       <div class="row modes">
         <span class="muted">{{ stored ? "Workspace" : "Pipeline" }}</span>
+        <label class="muted">
+          <input v-model="pipeline.login" type="checkbox" />
+          Require sign-in
+        </label>
         <button @click="startOver">Start over</button>
       </div>
 
