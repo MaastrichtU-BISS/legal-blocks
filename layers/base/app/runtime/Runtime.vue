@@ -13,7 +13,12 @@ import type { Pipeline, Registry } from "../types";
 import { exportKind } from "../types";
 import { getUsers, type User } from "../api";
 
-const props = defineProps<{ pipeline: Pipeline; registry: Registry }>();
+const props = defineProps<{
+  pipeline: Pipeline;
+  registry: Registry;
+  /** Whoever signed in, when the platform asks people to. Replaces the selector. */
+  account?: User;
+}>();
 
 const kind = computed(() => exportKind(props.pipeline));
 
@@ -22,11 +27,11 @@ const kind = computed(() => exportKind(props.pipeline));
  *
  * These are real rows in the users table, not positions in a list, so the
  * dropdown selects an identity that everything downstream already keys off.
- * That is the seam a login replaces: the selector goes, the user id stays.
+ * With a login the selector goes and the signed-in account is the identity.
  */
 const ANNOTATOR_KEY = "legal-blocks:user";
 const users = ref<User[]>([]);
-const annotator = ref(Number(localStorage.getItem(ANNOTATOR_KEY)) || 0);
+const annotator = ref(props.account?.id ?? (Number(localStorage.getItem(ANNOTATOR_KEY)) || 0));
 watch(annotator, (value) => localStorage.setItem(ANNOTATOR_KEY, String(value)));
 
 // Steps must not mount before we know who is working: a queue is per-user, and
@@ -42,11 +47,11 @@ const identified = computed(() => kind.value === "workspace" || annotator.value 
  * it and there is nothing to withhold. In a workspace the platform's own
  * account is an admin and everybody added to a task is an annotator.
  */
-const role = computed(() =>
-  kind.value === "pipeline"
-    ? "admin"
-    : (users.value.find((u) => u.id === annotator.value)?.role ?? "annotator"),
-);
+const role = computed(() => {
+  if (kind.value === "pipeline") return "admin";
+  if (props.account) return props.account.role;
+  return users.value.find((u) => u.id === annotator.value)?.role ?? "annotator";
+});
 
 /**
  * Who can work here.
@@ -60,6 +65,7 @@ const role = computed(() =>
  * simply the positions the platform was composed for.
  */
 async function loadUsers() {
+  if (props.account && kind.value === "workspace") return;
   users.value = kind.value === "pipeline" ? sessionAnnotators() : await getUsers();
   if (!users.value.some((u) => u.id === annotator.value)) {
     annotator.value = users.value[0]?.id ?? 0;
@@ -168,6 +174,8 @@ function goTo(index: number) {
           </option>
         </select>
       </label>
+
+      <slot name="account" />
     </header>
 
     <p v-if="!identified" class="pad muted">Starting…</p>

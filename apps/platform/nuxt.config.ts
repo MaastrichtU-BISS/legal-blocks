@@ -10,6 +10,11 @@ export default defineNuxtConfig({
   // cookie. See server/middleware/auth.ts.
   modules: ["nuxt-auth-utils"],
 
+  // The app asks /api/auth/state instead of the module's own session
+  // endpoint, because that answers from the database: a role changed a moment
+  // ago shows at once rather than when the cookie is next written.
+  auth: { loadStrategy: "none" },
+
   // Deliberately no runtimeConfig for the two settings a compose file sets.
   //
   // A runtimeConfig default is evaluated when the image is *built*, so
