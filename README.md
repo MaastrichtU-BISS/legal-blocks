@@ -19,7 +19,8 @@ New here? **[docs/overview.md](docs/overview.md)** is the fifteen-minute version
 
 Working end to end: design a platform in the composer, export it, run it with
 Docker. A proof of concept — enough to prototype against, not yet a product.
-There is no login (see the gaps in the architecture note).
+Sign-in is optional per platform, and only on localhost for now (see the gaps
+in the architecture note).
 
 | | | |
 |---|---|---|

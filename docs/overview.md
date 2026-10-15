@@ -126,10 +126,10 @@ either shape. Exports run on a machine that has never seen this repository.
 
 **Not real yet.**
 
-- **No login.** Who you are is a dropdown. Anything that can reach the port can
-  read and write everyone's work, which is why an export publishes only to
-  `127.0.0.1`. This is the one gap to know about before showing it to anyone
-  outside the room.
+- **Sign-in is localhost-only.** A platform can ask people to sign in with an
+  email and password, and then annotators see only their own work. Without it,
+  who you are is a dropdown. Either way an export publishes only to
+  `127.0.0.1`: there is no HTTPS yet, so a password must not cross a network.
 - **One task shape.** Every annotator gets every document. Splitting a corpus
   between people is not built.
 - **Five modules.** The contract is the point, not the catalogue.

@@ -401,6 +401,36 @@ a naive test.
 
 ---
 
+## Signing in
+
+`"login": true` in `pipeline.json` makes everyone sign in with an email and
+password. It is independent of kind: a pipeline that keeps no work still opens
+`platform.db` for its accounts and leaves the other tables empty.
+
+`nuxt-auth-utils` does the two parts worth not writing ourselves — scrypt
+password hashes and an encrypted session cookie. The cookie holds only the
+user's id. `server/middleware/auth.ts` reads that person's row on every API
+request, so a role change or a removed password takes effect at once rather
+than when the cookie expires. The cookie's secret is generated into
+`data/session-secret` on first use, so an export carries no secret of its own;
+`NUXT_SESSION_PASSWORD` overrides it.
+
+The first person to open a platform nobody can sign in to creates its admin.
+After that only an admin adds people or sets their passwords, from the People
+panel. Annotators named on a task already have a row, so they appear there
+waiting for a password — the same address-is-identity rule as before.
+
+Roles, enforced by the routes through `requireRole` and `server/utils/access.ts`:
+
+| | annotator | editor | admin |
+|---|---|---|---|
+| the tasks they have documents in, and their own queue | ✓ | ✓ | ✓ |
+| documents, labels, every task, progress, agreement | | ✓ | ✓ |
+| people and their roles | | | ✓ |
+
+Without a login none of this applies: every request is the platform's own
+admin account, and the "Working as" dropdown chooses only what is shown.
+
 # 7. Backend services
 
 A module can declare `services`. The platform serves them at
@@ -480,8 +510,9 @@ key and sends whoever is searching after a token they were never given.
 Each has a test in `packages/export/test`, because each is easy to undo by
 accident and none fails loudly when wrong.
 
-**`ports: "127.0.0.1:7777:7777"`** — the platform has no login. Anything that
-can reach the port can read and write everyone's work. Inside the container it
+**`ports: "127.0.0.1:7777:7777"`** — a platform without sign-in lets anything
+that can reach the port read and write everyone's work, and one with sign-in
+sends passwords in plain HTTP. Inside the container it
 listens on every interface because that is the only way a published port can
 reach it, so this line is the entire access boundary.
 
@@ -767,10 +798,10 @@ it. It can now, and the duplicates should go.
 statically while `loaders.ts` imports it dynamically, so it stays in the entry
 chunk and every platform downloads it, including ones with no annotate step.
 
-**There is no login.** Everything is owned by one account, resolved in
-`server/utils/platform.ts`. `Manifest.requiredRole` exists and nothing reads it —
-the seam is there so that adding authentication later is enforcing a field that
-already exists rather than changing the format.
+**Sign-in stops at localhost.** There is no HTTPS, so an export still binds to
+`127.0.0.1`; a public address needs a reverse proxy with a certificate in front
+of it first. Failed sign-ins are not rate-limited, and a forgotten password is
+reset by an admin, since the platform sends no email.
 
 **An unwritable data directory is still a bare 500.** The named volume removed
 the common cause — see §8 — but a read-only mount, SELinux or NFS all still
