@@ -25,6 +25,14 @@ export function queue(db: Handle, taskId: number, userId: number): QueueEntry[] 
     .all(taskId, userId) as QueueEntry[];
 }
 
+/** Whose assignment this is, or undefined when there is no such assignment. */
+export function assignmentAnnotator(db: Handle, assignmentId: number): number | undefined {
+  const row = db.prepare(`SELECT user_id FROM assignments WHERE id = ?`).get(assignmentId) as
+    | { user_id: number }
+    | undefined;
+  return row?.user_id;
+}
+
 /** One queue position: the document and everything on it. */
 export function bundle(db: Handle, assignmentId: number): Bundle {
   const row = db

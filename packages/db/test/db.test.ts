@@ -5,6 +5,11 @@ import { join } from "node:path";
 import type { Handle } from "../src/index.js";
 import {
   addDocuments,
+  anyoneCanSignIn,
+  assignmentAnnotator,
+  passwordFor,
+  setPassword,
+  user,
   annotations,
   bundle,
   createDataset,
@@ -430,5 +435,33 @@ describe("exporting a task", () => {
     // A position, not a row id: the second annotation of the same assignment.
     expect(withRel!.relations[0]!.to).toBe(1);
     expect(out.counts.relations).toBe(1);
+  });
+});
+
+describe("passwords", () => {
+  it("lets only somebody with a password sign in, by any casing of their address", () => {
+    const [anna] = usersByEmail(db, ["anna@example.org"]);
+    expect(anyoneCanSignIn(db)).toBe(false);
+    expect(passwordFor(db, "anna@example.org")).toBeUndefined();
+
+    setPassword(db, anna!.id, "hash");
+    expect(anyoneCanSignIn(db)).toBe(true);
+    expect(passwordFor(db, " Anna@Example.org ")).toEqual({ id: anna!.id, hash: "hash" });
+    expect(user(db, anna!.id)?.can_sign_in).toBe(true);
+  });
+
+  it("never lists a hash with the users", () => {
+    const [anna] = usersByEmail(db, ["anna@example.org"]);
+    setPassword(db, anna!.id, "$scrypt$secret");
+    expect(JSON.stringify(users(db))).not.toContain("secret");
+  });
+});
+
+describe("assignment ownership", () => {
+  it("names the annotator an assignment belongs to", () => {
+    const { taskId, people } = seed();
+    const [first] = queue(db, taskId, people[1]!.id);
+    expect(assignmentAnnotator(db, first!.assignment_id)).toBe(people[1]!.id);
+    expect(assignmentAnnotator(db, 9999)).toBeUndefined();
   });
 });

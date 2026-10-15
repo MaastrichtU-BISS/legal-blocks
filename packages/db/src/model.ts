@@ -12,6 +12,8 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  /** Whether they have a password, so can sign in when the platform asks. */
+  can_sign_in: boolean;
 }
 
 /** One entry of a labelset. */

@@ -51,10 +51,10 @@ export const SCHEMA = `
 -- users
 -- ---------------------------------------------------------------------------
 
--- Everything is owned by a user. Today the runtime's "Working as" selector
--- picks one; external_id is where a real identity attaches when there is a
--- login, without the rest of the schema moving. role is recorded but nothing
--- enforces it yet.
+-- Everything is owned by a user. Without a login the runtime's "Working as"
+-- selector picks one; with one, the person signed in is the user and role
+-- decides what they may do. password_hash is null for somebody who cannot sign
+-- in yet — an annotator named on a task before an admin gave them a password.
 --
 -- email is the identity, because that is how annotators arrive: whoever sets
 -- up a task types the addresses of the people who should do it, and those
@@ -71,6 +71,7 @@ CREATE TABLE users (
     role        TEXT NOT NULL DEFAULT 'annotator'
         CHECK (role IN ('annotator', 'editor', 'admin')),
     external_id TEXT UNIQUE,
+    password_hash TEXT,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

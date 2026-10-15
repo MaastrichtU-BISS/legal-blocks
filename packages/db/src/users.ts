@@ -4,9 +4,19 @@ import type { User } from "./model.js";
 
 /** Everyone, in id order. */
 export function users(db: Handle): User[] {
-  return db
-    .prepare(`SELECT id, name, COALESCE(email, '') AS email, role FROM users ORDER BY id`)
-    .all() as User[];
+  const rows = db
+    .prepare(
+      `SELECT id, name, COALESCE(email, '') AS email, role,
+              password_hash IS NOT NULL AS can_sign_in
+         FROM users ORDER BY id`,
+    )
+    .all() as (Omit<User, "can_sign_in"> & { can_sign_in: number })[];
+  return rows.map((r) => ({ ...r, can_sign_in: r.can_sign_in === 1 }));
+}
+
+/** One person, or undefined when there is no such row. */
+export function user(db: Handle, userId: number): User | undefined {
+  return users(db).find((u) => u.id === userId);
 }
 
 /**
