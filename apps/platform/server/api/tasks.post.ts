@@ -3,7 +3,7 @@ import { createTask } from "@legal-blocks/db";
 import type { TaskSpec } from "@legal-blocks/db";
 
 export default defineEventHandler(async (event) => {
-  const me = requireRole(event, "editor");
+  const me = currentUser(event);
   const db = requireDb(event);
   const spec = await readBody<TaskSpec>(event);
   try {

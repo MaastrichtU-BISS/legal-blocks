@@ -2,7 +2,7 @@ import { annotations } from "@legal-blocks/db";
 
 /** The filtered annotation list. Filtering happens in SQL, not the browser. */
 export default defineEventHandler((event) => {
-  requireRole(event, "editor");
+  requireTaskEditor(event, idParam(event, "id"));
   const q = getQuery(event);
   const split = (v: unknown): string[] =>
     typeof v === "string" && v !== "" ? v.split(",").filter(Boolean) : [];

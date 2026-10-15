@@ -3,7 +3,7 @@ import { createLabelset } from "@legal-blocks/db";
 import type { Label } from "@legal-blocks/db";
 
 export default defineEventHandler(async (event) => {
-  const me = requireRole(event, "editor");
+  const me = currentUser(event);
   const db = requireDb(event);
   const body = await readBody<{ name?: string; desc?: string; labels?: Label[] }>(event);
   try {

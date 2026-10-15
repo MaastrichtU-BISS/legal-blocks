@@ -2,7 +2,7 @@ import { iaaInput, NotFoundError } from "@legal-blocks/db";
 
 /** The whole task in the shape the agreement service expects. */
 export default defineEventHandler((event) => {
-  requireRole(event, "editor");
+  requireTaskEditor(event, idParam(event, "id"));
   const id = idParam(event, "id");
   try {
     return iaaInput(requireDb(event), id);

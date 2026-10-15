@@ -1,8 +1,8 @@
 import { users } from "@legal-blocks/db";
 
-// The people who can work in this platform: the "Working as" selector when
-// nobody signs in, the admin's user list when they do.
+// The people in this platform, for the "Working as" selector when nobody signs
+// in. Everyone's address, so only the admin may list them.
 export default defineEventHandler((event) => {
-  requireRole(event, "editor");
+  requireAdmin(event);
   return users(useAccountsDb(event));
 });

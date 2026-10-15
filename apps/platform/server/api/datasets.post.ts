@@ -4,7 +4,7 @@ import type { NewDocument } from "@legal-blocks/db";
 
 /** Stores uploaded documents as a new dataset. */
 export default defineEventHandler(async (event) => {
-  const me = requireRole(event, "editor");
+  const me = currentUser(event);
   const db = requireDb(event);
   const body = await readBody<{ name?: string; desc?: string; documents?: NewDocument[] }>(event);
   try {

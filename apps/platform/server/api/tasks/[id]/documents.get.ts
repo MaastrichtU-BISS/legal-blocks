@@ -5,7 +5,7 @@ import { taskDocuments } from "@legal-blocks/db";
  * for their text, which can be megabytes.
  */
 export default defineEventHandler((event) => {
-  requireRole(event, "editor");
+  requireTaskEditor(event, idParam(event, "id"));
   return taskDocuments(requireDb(event), idParam(event, "id")).map((d) => ({
     value: d.name,
     label: d.name,
