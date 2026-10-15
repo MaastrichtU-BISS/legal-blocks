@@ -77,7 +77,7 @@ async function doExport() {
 
       <div class="row modes">
         <span class="muted">{{ stored ? "Workspace" : "Pipeline" }}</span>
-        <label class="muted">
+        <label class="muted toggle">
           <input v-model="pipeline.login" type="checkbox" />
           Require sign-in
         </label>
@@ -179,6 +179,17 @@ header {
 
 .modes {
   margin-left: auto;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.toggle input {
+  width: auto;
 }
 
 .modes button {
