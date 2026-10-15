@@ -33,8 +33,6 @@ const props = defineProps<{
   /** Every module in this platform that works on a task, unfiltered. */
   modules: TaskModule[];
   env: ResolveEnv;
-  /** "admin" for whoever created the platform; anyone else is a member. */
-  role: string;
 }>();
 
 const emit = defineEmits<{ changed: [] }>();
@@ -49,11 +47,11 @@ const revision = ref(0);
 const startPosition = ref<number | undefined>(undefined);
 
 /**
- * Whether this person edits this task — they made it, or they made the
- * platform. Nobody is an editor in general, only of what they created.
+ * Whether this person edits this task, which is whether they made it. Nobody
+ * is an editor in general, only of what they created.
  */
 const taskRole = computed(() =>
-  props.role === "admin" || props.task.user_id === props.env.annotator ? "editor" : "annotator",
+  props.task.user_id === props.env.annotator ? "editor" : "annotator",
 );
 
 /** Somebody with documents of their own to work through in this task. */

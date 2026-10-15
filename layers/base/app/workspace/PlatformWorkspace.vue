@@ -33,8 +33,6 @@ const props = defineProps<{
   env: ResolveEnv;
   pipeline: Pipeline;
   registry: Registry;
-  /** "admin" for whoever created the platform; anyone else is a member. */
-  role: string;
   /** The current person's address, for adding themselves to a task. */
   me?: string;
 }>();
@@ -265,7 +263,6 @@ function created() {
         :task="item as TaskSummary"
         :modules="taskModules"
         :env="env"
-        :role="role"
         @changed="emit('changed')"
       />
     </template>
