@@ -6,6 +6,10 @@
 export default defineNuxtConfig({
   extends: ["../../layers/base"],
 
+  // Sign-in, when a pipeline asks for it: password hashing and the session
+  // cookie. See server/middleware/auth.ts.
+  modules: ["nuxt-auth-utils"],
+
   // Deliberately no runtimeConfig for the two settings a compose file sets.
   //
   // A runtimeConfig default is evaluated when the image is *built*, so

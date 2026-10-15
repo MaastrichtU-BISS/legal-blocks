@@ -1,6 +1,8 @@
 import { users } from "@legal-blocks/db";
 
-// The people who can work in this platform. The runtime's "Working as"
-// selector reads this; a login replaces it without anything downstream
-// changing.
-export default defineEventHandler((event) => users(requireDb(event)));
+// The people who can work in this platform: the "Working as" selector when
+// nobody signs in, the admin's user list when they do.
+export default defineEventHandler((event) => {
+  requireRole(event, "editor");
+  return users(useAccountsDb(event));
+});

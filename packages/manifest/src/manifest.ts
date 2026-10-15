@@ -207,10 +207,9 @@ export interface Manifest {
    * annotator is given the document to work on, whoever set the task up also
    * gets the agreement figures over everyone's work.
    *
-   * Until there is a login this decides what is *shown*, not what can be
-   * reached — the current identity is a dropdown, and the server has no way to
-   * know who is asking. It is the seam that becomes enforcement, not
-   * enforcement yet.
+   * This decides what is *shown*. What can be reached is decided by the
+   * platform's routes, which check the signed-in person's role themselves
+   * when the platform asks people to sign in.
    */
   requiredRole?: string;
 }
@@ -223,9 +222,13 @@ export interface Manifest {
  * change in one place.
  */
 export function allowsRole(m: Manifest, role: string): boolean {
-  if (!m.requiredRole) return true;
+  return !m.requiredRole || roleAtLeast(role, m.requiredRole);
+}
+
+/** Whether `role` carries at least the rights of `minimum`. Unknown roles rank lowest. */
+export function roleAtLeast(role: string, minimum: string): boolean {
   const rank: Record<string, number> = { annotator: 0, editor: 1, admin: 2 };
-  return (rank[role] ?? 0) >= (rank[m.requiredRole] ?? 0);
+  return (rank[role] ?? 0) >= (rank[minimum] ?? 0);
 }
 
 /** Whether the module belongs in the given kind of export. */

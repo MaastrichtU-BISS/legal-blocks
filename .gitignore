@@ -24,3 +24,6 @@ node_modules/
 
 # The dev platform writes its database here.
 /apps/platform/dev/data/
+
+# nuxt-auth-utils writes a session secret here in dev
+.env

@@ -123,9 +123,13 @@ export function supportsKind(m: Manifest, kind: Kind): boolean {
  * one is the person who built it.
  */
 export function allowsRole(m: Manifest, role: string): boolean {
-  if (!m.requiredRole) return true;
+  return !m.requiredRole || roleAtLeast(role, m.requiredRole);
+}
+
+/** Whether `role` carries at least the rights of `minimum`. Unknown roles rank lowest. */
+export function roleAtLeast(role: string, minimum: string): boolean {
   const rank: Record<string, number> = { annotator: 0, editor: 1, admin: 2 };
-  return (rank[role] ?? 0) >= (rank[m.requiredRole] ?? 0);
+  return (rank[role] ?? 0) >= (rank[minimum] ?? 0);
 }
 
 /** Whether a setting is offered for the given kind. */

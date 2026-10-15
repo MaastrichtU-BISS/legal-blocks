@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { H3Event } from "h3";
-import { exportKind, parsePipeline, type Pipeline } from "@legal-blocks/manifest";
+import { exportKind, parsePipeline, requiresLogin, type Pipeline } from "@legal-blocks/manifest";
 import { open, setRole, usersByEmail, type Handle } from "@legal-blocks/db";
 import { registry } from "../../../../layers/base/server-registry";
 
@@ -71,19 +71,39 @@ export function usePipeline(): Pipeline {
  * exported case-law explorer the same shape as a hand-written demo.
  */
 export function useDb(): Handle | null {
-  if (dbCache) return dbCache;
-  if (exportKind(usePipeline()) !== "workspace") return null;
+  return exportKind(usePipeline()) === "workspace" ? openDb() : null;
+}
 
+/**
+ * The database the platform's accounts live in. The same file as the
+ * workspace's, so a pipeline that asks people to sign in gets one too and
+ * simply leaves its other tables empty. Without a login only a workspace has
+ * accounts, and a pipeline answers 501 as for any other stored data.
+ */
+export function useAccountsDb(event: H3Event): Handle {
+  return requiresLogin(usePipeline()) ? openDb() : requireDb(event);
+}
+
+/** The data folder, created on first use. Where the database and session secret live. */
+export function dataDir(): string {
   const data = join(dir(), "data");
   mkdirSync(data, { recursive: true });
-  dbCache = open(join(data, "platform.db"));
+  return data;
+}
+
+function openDb(): Handle {
+  if (dbCache) return dbCache;
+  dbCache = open(join(dataDir(), "platform.db"));
 
   // Settle the platform's own account now rather than on the first write.
   // Whether somebody is an admin decides what the workspace offers them, and
   // that question is asked by a read — so an account that only becomes an
   // admin once something has been saved is an account that looks like an
   // annotator to the first person who opens the platform.
-  owner(dbCache);
+  //
+  // A platform with a login has no such account: its first admin is whoever
+  // sets it up, and everything is owned by whoever is signed in.
+  if (!requiresLogin(usePipeline())) owner(dbCache);
   return dbCache;
 }
 
@@ -102,7 +122,7 @@ export function requireDb(event: H3Event): Handle {
 }
 
 /**
- * The address the platform's own account is created under until there is a
+ * The address the platform's own account is created under when there is no
  * login. Deliberately in a domain that can never receive mail: nothing should
  * send to it, and if a real person's address ended up here they would silently
  * own everything.
@@ -110,10 +130,10 @@ export function requireDb(event: H3Event): Handle {
 const OWNER_EMAIL = "owner@platform.invalid";
 
 /**
- * The user rows are created under.
+ * The user rows are created under when nobody signs in.
  *
- * Everything is owned by one account for now. This is the one place that
- * assumption lives, so a login replaces it here rather than in every query.
+ * Everything is owned by one account then. With a login, currentUser in
+ * current-user.ts answers instead.
  */
 export function owner(db: Handle): number {
   const [user] = usersByEmail(db, [OWNER_EMAIL]);
