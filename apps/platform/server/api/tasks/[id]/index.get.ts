@@ -3,6 +3,7 @@ import { NotFoundError, task } from "@legal-blocks/db";
 /** One task with its labelset resolved. */
 export default defineEventHandler((event) => {
   const id = idParam(event, "id");
+  requireTaskAccess(event, id);
   try {
     return task(requireDb(event), id);
   } catch (e) {

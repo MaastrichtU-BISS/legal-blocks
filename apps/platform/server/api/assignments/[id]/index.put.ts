@@ -9,6 +9,7 @@ import { NotFoundError, saveAssignment, type Assignment } from "@legal-blocks/db
  */
 export default defineEventHandler(async (event) => {
   const id = idParam(event, "id");
+  requireAssignmentAccess(event, id);
   const body = await readBody<Assignment>(event);
   try {
     saveAssignment(requireDb(event), id, body);

@@ -8,9 +8,10 @@ import type { TaskConfig } from "@legal-blocks/db";
  * annotator count takes effect without losing work.
  */
 export default defineEventHandler(async (event) => {
+  const me = requireRole(event, "editor");
   const db = requireDb(event);
   const body = await readBody<{ dataset_id?: number; config?: TaskConfig }>(event);
   if (!body.dataset_id) throw fail(event, 400, "dataset_id is required");
   if (!body.config) throw fail(event, 400, "config is required");
-  return { task_id: syncTask(db, owner(db), body.dataset_id, body.config) };
+  return { task_id: syncTask(db, me.id, body.dataset_id, body.config) };
 });

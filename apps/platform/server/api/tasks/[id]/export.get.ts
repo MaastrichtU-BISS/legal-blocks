@@ -8,6 +8,7 @@ import { NotFoundError, taskExport } from "@legal-blocks/db";
  * and has no name, no guidelines and no counts.
  */
 export default defineEventHandler((event) => {
+  requireRole(event, "editor");
   const id = idParam(event, "id");
   try {
     return taskExport(requireDb(event), id);

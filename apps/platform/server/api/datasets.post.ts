@@ -4,10 +4,11 @@ import type { NewDocument } from "@legal-blocks/db";
 
 /** Stores uploaded documents as a new dataset. */
 export default defineEventHandler(async (event) => {
+  const me = requireRole(event, "editor");
   const db = requireDb(event);
   const body = await readBody<{ name?: string; desc?: string; documents?: NewDocument[] }>(event);
   try {
-    return { id: createDataset(db, owner(db), body.name ?? "", body.desc ?? "", body.documents ?? []) };
+    return { id: createDataset(db, me.id, body.name ?? "", body.desc ?? "", body.documents ?? []) };
   } catch (e) {
     // These are things the person filling in the form can fix, so they carry
     // the reason rather than becoming a 500.
