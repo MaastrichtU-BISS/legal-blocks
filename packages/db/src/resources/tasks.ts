@@ -24,6 +24,8 @@ export interface TaskSpec {
 /** One row of the tasks tab. */
 export interface TaskSummary {
   id: number;
+  /** Who made it, and so who edits it. */
+  user_id: number;
   name: string;
   desc: string;
   annotation_level: string;
@@ -42,7 +44,7 @@ export interface TaskSummary {
 export function tasks(db: Handle): TaskSummary[] {
   const rows = db
     .prepare(
-      `SELECT t.id, t.name, t."desc", t.annotation_level,
+      `SELECT t.id, t.user_id, t.name, t."desc", t.annotation_level,
               COALESCE(t.dataset_id, 0) AS dataset_id, COALESCE(ds.name, '') AS dataset_name,
               COALESCE(t.labelset_id, 0) AS labelset_id, COALESCE(l.name, '') AS labelset_name,
               (SELECT COUNT(DISTINCT a.document_id) FROM assignments a WHERE a.task_id = t.id) AS documents,

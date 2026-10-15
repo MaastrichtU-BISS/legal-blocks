@@ -51,10 +51,11 @@ export const SCHEMA = `
 -- users
 -- ---------------------------------------------------------------------------
 
--- Everything is owned by a user. Without a login the runtime's "Working as"
--- selector picks one; with one, the person signed in is the user and role
--- decides what they may do. password_hash is null for somebody who cannot sign
--- in yet — an annotator named on a task before an admin gave them a password.
+-- Everything is owned by a user, and owning something is what makes you its
+-- editor; being assigned documents in a task is what makes you its annotator.
+-- Neither is stored as a role. The one role that is stored is admin: whoever
+-- created the platform, who can see everything. password_hash is null for
+-- somebody named on a task who has not created their account yet.
 --
 -- email is the identity, because that is how annotators arrive: whoever sets
 -- up a task types the addresses of the people who should do it, and those
@@ -68,8 +69,8 @@ CREATE TABLE users (
     id          INTEGER PRIMARY KEY,
     name        TEXT NOT NULL,
     email       TEXT UNIQUE,
-    role        TEXT NOT NULL DEFAULT 'annotator'
-        CHECK (role IN ('annotator', 'editor', 'admin')),
+    role        TEXT NOT NULL DEFAULT 'member'
+        CHECK (role IN ('member', 'admin')),
     external_id TEXT UNIQUE,
     password_hash TEXT,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))

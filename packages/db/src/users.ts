@@ -24,8 +24,8 @@ export function user(db: Handle, userId: number): Account | undefined {
  *
  * Separate from usersByEmail because the two answer different questions. That
  * one turns an address into a row and has no opinion about the person; this
- * says what the row is for. Today only the platform's own account uses it, to
- * become an admin rather than the annotator every created row starts as.
+ * says what the row is for. Only the platform's creator becomes an admin;
+ * every other row stays a member.
  */
 export function setRole(db: Handle, userId: number, role: string): void {
   db.prepare(`UPDATE users SET role = ? WHERE id = ?`).run(role, userId);
@@ -60,7 +60,7 @@ export function usersByEmail(db: Handle, emails: string[]): Account[] {
 
   transaction(db, () => {
     const insert = db.prepare(
-      `INSERT INTO users (name, email, role) VALUES (?, ?, 'annotator')
+      `INSERT INTO users (name, email) VALUES (?, ?)
        ON CONFLICT (email) DO NOTHING`,
     );
     for (const email of cleaned) {

@@ -25,6 +25,8 @@ const PALETTE = [
 /** One row of the labelsets tab. */
 export interface LabelsetSummary {
   id: number;
+  /** Who made it, and so who edits it. */
+  user_id: number;
   name: string;
   desc: string;
   labels: Label[];
@@ -36,14 +38,15 @@ export interface LabelsetSummary {
 export function labelsets(db: Handle): LabelsetSummary[] {
   const rows = db
     .prepare(
-      `SELECT l.id, l.name, l."desc", l.labels,
+      `SELECT l.id, l.user_id, l.name, l."desc", l.labels,
               (SELECT COUNT(*) FROM tasks t WHERE t.labelset_id = l.id) AS task_count
        FROM labelsets l ORDER BY l.id DESC`,
     )
-    .all() as { id: number; name: string; desc: string; labels: string; task_count: number }[];
+    .all() as { id: number; user_id: number; name: string; desc: string; labels: string; task_count: number }[];
 
   return rows.map((r) => ({
     id: r.id,
+    user_id: r.user_id,
     name: r.name,
     desc: r.desc,
     labels: parseJSON<Label[]>(r.labels, []),

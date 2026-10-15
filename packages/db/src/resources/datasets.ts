@@ -8,6 +8,8 @@ import type { Document } from "../model.js";
 /** One row of the datasets tab. */
 export interface DatasetSummary {
   id: number;
+  /** Who made it, and so who edits it. */
+  user_id: number;
   name: string;
   desc: string;
   documents: number;
@@ -18,7 +20,7 @@ export interface DatasetSummary {
 export function datasets(db: Handle): DatasetSummary[] {
   return db
     .prepare(
-      `SELECT ds.id, ds.name, ds."desc",
+      `SELECT ds.id, ds.user_id, ds.name, ds."desc",
               (SELECT COUNT(*) FROM documents doc WHERE doc.dataset_id = ds.id) AS documents,
               (SELECT COUNT(*) FROM tasks t WHERE t.dataset_id = ds.id) AS task_count
        FROM datasets ds ORDER BY ds.id DESC`,

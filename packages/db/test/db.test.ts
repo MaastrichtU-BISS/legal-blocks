@@ -6,7 +6,7 @@ import type { Handle } from "../src/index.js";
 import {
   addDocuments,
   anyoneCanSignIn,
-  assignmentAnnotator,
+  assignmentOwners,
   passwordFor,
   setPassword,
   user,
@@ -458,10 +458,12 @@ describe("passwords", () => {
 });
 
 describe("assignment ownership", () => {
-  it("names the annotator an assignment belongs to", () => {
+  it("names the annotator of an assignment and the editor of its task", () => {
     const { taskId, people } = seed();
     const [first] = queue(db, taskId, people[1]!.id);
-    expect(assignmentAnnotator(db, first!.assignment_id)).toBe(people[1]!.id);
-    expect(assignmentAnnotator(db, 9999)).toBeUndefined();
+    const owners = assignmentOwners(db, first!.assignment_id);
+    expect(owners?.annotator).toBe(people[1]!.id);
+    expect(owners?.editor).not.toBe(people[1]!.id);
+    expect(assignmentOwners(db, 9999)).toBeUndefined();
   });
 });

@@ -25,12 +25,21 @@ export function queue(db: Handle, taskId: number, userId: number): QueueEntry[] 
     .all(taskId, userId) as QueueEntry[];
 }
 
-/** Whose assignment this is, or undefined when there is no such assignment. */
-export function assignmentAnnotator(db: Handle, assignmentId: number): number | undefined {
-  const row = db.prepare(`SELECT user_id FROM assignments WHERE id = ?`).get(assignmentId) as
-    | { user_id: number }
-    | undefined;
-  return row?.user_id;
+/**
+ * Whose assignment this is and who made its task, or undefined when there is
+ * no such assignment.
+ */
+export function assignmentOwners(
+  db: Handle,
+  assignmentId: number,
+): { annotator: number; editor: number } | undefined {
+  return db
+    .prepare(
+      `SELECT a.user_id AS annotator, t.user_id AS editor
+         FROM assignments a JOIN tasks t ON t.id = a.task_id
+        WHERE a.id = ?`,
+    )
+    .get(assignmentId) as { annotator: number; editor: number } | undefined;
 }
 
 /** One queue position: the document and everything on it. */
