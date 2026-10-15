@@ -15,7 +15,7 @@
 // decide which tasks. Neither knows about the other, and this file is where
 // they meet.
 
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { LegalWorkspace } from "vue-legal-workspace";
 import type { Row, WorkspaceTab } from "vue-legal-workspace";
 import "vue-legal-workspace/style.css";
@@ -23,6 +23,7 @@ import "vue-legal-workspace/style.css";
 import ModuleHost from "../runtime/ModuleHost.vue";
 import type { ResolveEnv } from "../runtime/resolve";
 import type { Manifest, Pipeline, Registry } from "../types";
+import { roleAtLeast } from "../types";
 import type { DatasetSummary, LabelsetSummary, TaskSummary } from "../api";
 import { getDatasets, getLabelsets, getTasks } from "../api";
 import NewLabelsetForm from "./NewLabelsetForm.vue";
@@ -83,8 +84,22 @@ async function listLabelsets(): Promise<LabelsetSummary[]> {
   return labelsets.value;
 }
 
-void listDatasets();
-void listLabelsets();
+/**
+ * Whether this person makes things here or only works in what they were
+ * given. An annotator sees just the Tasks tab, holding their own tasks, and
+ * the platform refuses them the documents and labels lists anyway.
+ */
+const editor = computed(() => roleAtLeast(props.role, "editor"));
+
+watch(
+  editor,
+  (yes) => {
+    if (!yes) return;
+    void listDatasets();
+    void listLabelsets();
+  },
+  { immediate: true },
+);
 
 /** Why a task cannot be made yet, named precisely enough to act on. */
 const taskBlocked = computed(() => {
@@ -95,7 +110,31 @@ const taskBlocked = computed(() => {
   return `A task needs documents and labels — add ${missing.join(" and ")} first.`;
 });
 
+const tasksTab = computed<WorkspaceTab>(() => ({
+  id: "tasks",
+  label: "Tasks",
+  columns: [
+    { key: "name", label: "Name" },
+    { key: "dataset_name", label: "Documents" },
+    { key: "labelset_name", label: "Labels" },
+    { key: "annotation_level", label: "By" },
+    { key: "annotators", label: "Annotators", align: "end" },
+    { key: "progress", label: "Progress", align: "end" },
+  ],
+  list: getTasks,
+  createLabel: editor.value ? "New task" : undefined,
+  createTitle: "New task",
+  createBlocked: editor.value ? taskBlocked.value : undefined,
+  openable: true,
+  openLabel: "See",
+  empty: editor.value
+    ? "No tasks yet. Make one and give it to somebody."
+    : "Nobody has given you a task yet.",
+}));
+
 const tabs = computed<WorkspaceTab[]>(() => {
+  if (!editor.value) return taskModules.value.length ? [tasksTab.value] : [];
+
   const out: WorkspaceTab[] = [
     {
       id: "datasets",
@@ -129,25 +168,7 @@ const tabs = computed<WorkspaceTab[]>(() => {
       createTitle: "New labelset",
       empty: "No labelsets yet. A labelset is what annotators can apply.",
     },
-    {
-      id: "tasks",
-      label: "Tasks",
-      columns: [
-        { key: "name", label: "Name" },
-        { key: "dataset_name", label: "Documents" },
-        { key: "labelset_name", label: "Labels" },
-        { key: "annotation_level", label: "By" },
-        { key: "annotators", label: "Annotators", align: "end" },
-        { key: "progress", label: "Progress", align: "end" },
-      ],
-      list: getTasks,
-      createLabel: "New task",
-      createTitle: "New task",
-      createBlocked: taskBlocked.value,
-      openable: true,
-      openLabel: "See",
-      empty: "No tasks yet. Make one and give it to somebody.",
-    },
+    tasksTab.value,
   );
 
   return out;

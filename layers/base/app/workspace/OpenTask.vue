@@ -20,7 +20,7 @@ import type { ResolveEnv } from "../runtime/resolve";
 import AnnotatorProgress from "./AnnotatorProgress.vue";
 import TaskProgressPanel from "./TaskProgressPanel.vue";
 import type { Manifest, Node } from "../types";
-import { allowsRole } from "../types";
+import { allowsRole, roleAtLeast } from "../types";
 import type { TaskSummary } from "../api";
 
 export interface TaskModule {
@@ -133,7 +133,7 @@ function show(index: number) {
   <!-- The Progress view: the same tab showing two different things. -->
   <template v-if="current && !current.module">
     <TaskProgressPanel
-      v-if="role === 'admin'"
+      v-if="roleAtLeast(role, 'editor')"
       :task-id="Number(task.id)"
       :task-name="task.name"
       :revision="revision"
