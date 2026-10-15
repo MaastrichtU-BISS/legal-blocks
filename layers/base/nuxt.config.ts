@@ -21,21 +21,6 @@ export default defineNuxtConfig({
     // The module catalogue lives at the repo root, above both apps, so
     // neither app's own rootDir alias can reach it.
     "@registry": fileURLToPath(new URL("../../registry", import.meta.url)),
-
-    // legal-annotation-kit@1.0.0 builds a stylesheet and does not name it in
-    // its exports map, so "legal-annotation-kit/style.css" cannot be imported
-    // — and neither can the deep path, since an exports map blocks everything
-    // it does not list. Resolving to the file directly sidesteps it.
-    //
-    // The export has been added in the package's source; drop this once a
-    // version carrying it is published. Every other module in the registry
-    // exports its stylesheet properly, including vue-legal-workspace.
-    "legal-annotation-kit/style.css": fileURLToPath(
-      new URL(
-        "../../node_modules/legal-annotation-kit/dist/legal-annotation-kit.css",
-        import.meta.url,
-      ),
-    ),
   },
 
   css: ["@base/assets/style.css"],
