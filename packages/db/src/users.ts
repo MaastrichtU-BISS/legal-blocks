@@ -1,21 +1,21 @@
 import type { Handle } from "./db.js";
 import { transaction } from "./db.js";
-import type { User } from "./model.js";
+import type { Account, User } from "./model.js";
 
 /** Everyone, in id order. */
-export function users(db: Handle): User[] {
+export function users(db: Handle): Account[] {
   const rows = db
     .prepare(
       `SELECT id, name, COALESCE(email, '') AS email, role,
               password_hash IS NOT NULL AS can_sign_in
          FROM users ORDER BY id`,
     )
-    .all() as (Omit<User, "can_sign_in"> & { can_sign_in: number })[];
+    .all() as (User & { can_sign_in: number })[];
   return rows.map((r) => ({ ...r, can_sign_in: r.can_sign_in === 1 }));
 }
 
 /** One person, or undefined when there is no such row. */
-export function user(db: Handle, userId: number): User | undefined {
+export function user(db: Handle, userId: number): Account | undefined {
   return users(db).find((u) => u.id === userId);
 }
 
@@ -47,7 +47,7 @@ export function setRole(db: Handle, userId: number, role: string): void {
  * her own address in one case and her colleague typing it in another must not
  * produce two annotators with half the work each.
  */
-export function usersByEmail(db: Handle, emails: string[]): User[] {
+export function usersByEmail(db: Handle, emails: string[]): Account[] {
   const cleaned: string[] = [];
   const seen = new Set<string>();
   for (const raw of emails) {
@@ -73,5 +73,5 @@ export function usersByEmail(db: Handle, emails: string[]): User[] {
   });
 
   const byEmail = new Map(users(db).map((u) => [u.email, u]));
-  return cleaned.map((e) => byEmail.get(e)).filter((u): u is User => u !== undefined);
+  return cleaned.map((e) => byEmail.get(e)).filter((u): u is Account => u !== undefined);
 }

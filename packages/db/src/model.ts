@@ -12,6 +12,10 @@ export interface User {
   name: string;
   email: string;
   role: string;
+}
+
+/** A user as the platform's accounts see them. */
+export interface Account extends User {
   /** Whether they have a password, so can sign in when the platform asks. */
   can_sign_in: boolean;
 }
