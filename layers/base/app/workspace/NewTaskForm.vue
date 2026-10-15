@@ -20,6 +20,8 @@ const LEVELS = ["word", "sentence", "paragraph", "character", "document"];
 const props = defineProps<{
   datasets: DatasetSummary[];
   labelsets: LabelsetSummary[];
+  /** The current person's address, offered as an annotator. */
+  me?: string;
 }>();
 
 const emit = defineEmits<{ created: [id: number]; cancel: [] }>();
@@ -40,6 +42,11 @@ const annotators = computed(() =>
     .map((e) => e.trim())
     .filter(Boolean),
 );
+
+function addMyself() {
+  if (!props.me || annotators.value.includes(props.me)) return;
+  emails.value = [...annotators.value, props.me].join(", ");
+}
 
 const chosen = computed(() => props.datasets.find((d) => d.id === datasetId.value));
 const ready = computed(
@@ -111,9 +118,10 @@ async function submit() {
         rows="3"
         placeholder="anna@example.org, bram@example.org"
       ></textarea>
+      <button v-if="me" type="button" class="add-me" @click="addMyself">Add myself</button>
       <small class="lw-muted">
-        Email addresses, separated however you like. They do not need an account here
-        yet — but nothing is sent to them, so tell them yourself.
+        Email addresses, separated however you like. They create their account here with
+        that same address — nothing is sent to them, so tell them yourself.
       </small>
     </label>
 
@@ -133,3 +141,9 @@ async function submit() {
     </div>
   </form>
 </template>
+
+<style scoped>
+.add-me {
+  align-self: flex-start;
+}
+</style>

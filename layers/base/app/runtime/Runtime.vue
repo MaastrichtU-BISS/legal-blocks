@@ -41,17 +41,23 @@ watch(annotator, (value) => localStorage.setItem(ANNOTATOR_KEY, String(value)));
 const identified = computed(() => kind.value === "workspace" || annotator.value > 0);
 
 /**
- * What the current identity is allowed to see.
+ * Whether the current identity created the platform. That is the only role
+ * there is: editing a task comes from having made it, annotating from having
+ * documents in it — see OpenTask.
  *
  * A pipeline has no accounts, so everyone running one is the person who built
- * it and there is nothing to withhold. In a workspace the platform's own
- * account is an admin and everybody added to a task is an annotator.
+ * it and there is nothing to withhold.
  */
 const role = computed(() => {
   if (kind.value === "pipeline") return "admin";
   if (props.account) return props.account.role;
-  return users.value.find((u) => u.id === annotator.value)?.role ?? "annotator";
+  return users.value.find((u) => u.id === annotator.value)?.role ?? "member";
 });
+
+/** The current identity's address, so they can add themselves to a task. */
+const me = computed(
+  () => props.account?.email ?? users.value.find((u) => u.id === annotator.value)?.email,
+);
 
 /**
  * Who can work here.
@@ -185,6 +191,7 @@ function goTo(index: number) {
       :pipeline="pipeline"
       :registry="registry"
       :role="role"
+      :me="me"
       @changed="loadUsers()"
     />
     <ModuleHost

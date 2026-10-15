@@ -10,6 +10,8 @@ export interface Label {
 
 export interface LabelsetSummary {
   id: number;
+  /** Who made it, and so who edits it. */
+  user_id: number;
   name: string;
   desc: string;
   labels: Label[];
@@ -18,6 +20,8 @@ export interface LabelsetSummary {
 
 export interface DatasetSummary {
   id: number;
+  /** Who made it, and so who edits it. */
+  user_id: number;
   name: string;
   desc: string;
   documents: number;
@@ -26,6 +30,8 @@ export interface DatasetSummary {
 
 export interface TaskSummary {
   id: number;
+  /** Who made it, and so who edits it. */
+  user_id: number;
   name: string;
   desc: string;
   annotation_level: string;

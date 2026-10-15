@@ -20,7 +20,7 @@ import type { ResolveEnv } from "../runtime/resolve";
 import AnnotatorProgress from "./AnnotatorProgress.vue";
 import TaskProgressPanel from "./TaskProgressPanel.vue";
 import type { Manifest, Node } from "../types";
-import { allowsRole, roleAtLeast } from "../types";
+import { allowsRole } from "../types";
 import type { TaskSummary } from "../api";
 
 export interface TaskModule {
@@ -33,6 +33,7 @@ const props = defineProps<{
   /** Every module in this platform that works on a task, unfiltered. */
   modules: TaskModule[];
   env: ResolveEnv;
+  /** "admin" for whoever created the platform; anyone else is a member. */
   role: string;
 }>();
 
@@ -47,6 +48,14 @@ const revision = ref(0);
  */
 const startPosition = ref<number | undefined>(undefined);
 
+/**
+ * Whether this person edits this task — they made it, or they made the
+ * platform. Nobody is an editor in general, only of what they created.
+ */
+const taskRole = computed(() =>
+  props.role === "admin" || props.task.user_id === props.env.annotator ? "editor" : "annotator",
+);
+
 /** Somebody with documents of their own to work through in this task. */
 const assigned = computed(() => props.task.annotators.some((a) => a.id === props.env.annotator));
 
@@ -58,7 +67,7 @@ const views = computed(() => {
 
   for (const m of props.modules) {
     const manifest = m.manifest;
-    if (!manifest || !allowsRole(manifest, props.role)) continue;
+    if (!manifest || !allowsRole(manifest, taskRole.value)) continue;
 
     // Whether this module is where annotations get *made*, which is what needs
     // a queue and therefore an assignment.
@@ -80,7 +89,7 @@ const views = computed(() => {
 // Back to the first view whenever who is looking changes. The two identities
 // are offered different screens, so an index carried across from the other one
 // means nothing — and past the end it renders nothing at all.
-watch([() => props.role, () => props.env.annotator], () => {
+watch([taskRole, () => props.env.annotator], () => {
   step.value = 0;
   startPosition.value = undefined;
 });
@@ -133,7 +142,7 @@ function show(index: number) {
   <!-- The Progress view: the same tab showing two different things. -->
   <template v-if="current && !current.module">
     <TaskProgressPanel
-      v-if="roleAtLeast(role, 'editor')"
+      v-if="taskRole === 'editor'"
       :task-id="Number(task.id)"
       :task-name="task.name"
       :revision="revision"

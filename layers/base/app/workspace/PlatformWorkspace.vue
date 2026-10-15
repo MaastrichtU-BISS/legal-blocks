@@ -15,7 +15,7 @@
 // decide which tasks. Neither knows about the other, and this file is where
 // they meet.
 
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { LegalWorkspace } from "vue-legal-workspace";
 import type { Row, WorkspaceTab } from "vue-legal-workspace";
 import "vue-legal-workspace/style.css";
@@ -23,7 +23,6 @@ import "vue-legal-workspace/style.css";
 import ModuleHost from "../runtime/ModuleHost.vue";
 import type { ResolveEnv } from "../runtime/resolve";
 import type { Manifest, Pipeline, Registry } from "../types";
-import { roleAtLeast } from "../types";
 import type { DatasetSummary, LabelsetSummary, TaskSummary } from "../api";
 import { getDatasets, getLabelsets, getTasks } from "../api";
 import NewLabelsetForm from "./NewLabelsetForm.vue";
@@ -34,8 +33,10 @@ const props = defineProps<{
   env: ResolveEnv;
   pipeline: Pipeline;
   registry: Registry;
-  /** What the current identity may see. See Runtime.vue. */
+  /** "admin" for whoever created the platform; anyone else is a member. */
   role: string;
+  /** The current person's address, for adding themselves to a task. */
+  me?: string;
 }>();
 const emit = defineEmits<{ changed: [] }>();
 
@@ -84,22 +85,10 @@ async function listLabelsets(): Promise<LabelsetSummary[]> {
   return labelsets.value;
 }
 
-/**
- * Whether this person makes things here or only works in what they were
- * given. An annotator sees just the Tasks tab, holding their own tasks, and
- * the platform refuses them the documents and labels lists anyway.
- */
-const editor = computed(() => roleAtLeast(props.role, "editor"));
-
-watch(
-  editor,
-  (yes) => {
-    if (!yes) return;
-    void listDatasets();
-    void listLabelsets();
-  },
-  { immediate: true },
-);
+// Everybody may make documents, labels and tasks; the platform lists each
+// person only their own.
+void listDatasets();
+void listLabelsets();
 
 /** Why a task cannot be made yet, named precisely enough to act on. */
 const taskBlocked = computed(() => {
@@ -122,19 +111,15 @@ const tasksTab = computed<WorkspaceTab>(() => ({
     { key: "progress", label: "Progress", align: "end" },
   ],
   list: getTasks,
-  createLabel: editor.value ? "New task" : undefined,
+  createLabel: "New task",
   createTitle: "New task",
-  createBlocked: editor.value ? taskBlocked.value : undefined,
+  createBlocked: taskBlocked.value,
   openable: true,
   openLabel: "See",
-  empty: editor.value
-    ? "No tasks yet. Make one and give it to somebody."
-    : "Nobody has given you a task yet.",
+  empty: "No tasks yet. Make one and give it to somebody, or wait to be given one.",
 }));
 
 const tabs = computed<WorkspaceTab[]>(() => {
-  if (!editor.value) return taskModules.value.length ? [tasksTab.value] : [];
-
   const out: WorkspaceTab[] = [
     {
       id: "datasets",
@@ -246,6 +231,7 @@ function created() {
       <NewTaskForm
         :datasets="datasets"
         :labelsets="labelsets"
+        :me="me"
         @created="done"
         @cancel="close"
       />
