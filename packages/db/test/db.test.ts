@@ -6,6 +6,7 @@ import type { Handle } from "../src/index.js";
 import {
   addDocuments,
   anyoneCanSignIn,
+  assignmentLocked,
   assignmentOwners,
   passwordFor,
   setPassword,
@@ -454,6 +455,22 @@ describe("passwords", () => {
     const [anna] = usersByEmail(db, ["anna@example.org"]);
     setPassword(db, anna!.id, "$scrypt$secret");
     expect(JSON.stringify(users(db))).not.toContain("secret");
+  });
+});
+
+describe("queue order", () => {
+  it("opens a document only once every earlier one in the same queue is done", () => {
+    const { taskId, people } = seed();
+    const [first, second] = queue(db, taskId, people[0]!.id);
+    expect(assignmentLocked(db, first!.assignment_id)).toBe(false);
+    expect(assignmentLocked(db, second!.assignment_id)).toBe(true);
+
+    db.prepare(`UPDATE assignments SET status = 'done' WHERE id = ?`).run(first!.assignment_id);
+    expect(assignmentLocked(db, second!.assignment_id)).toBe(false);
+
+    // Somebody else's progress unlocks nothing in this queue.
+    const [, theirSecond] = queue(db, taskId, people[1]!.id);
+    expect(assignmentLocked(db, theirSecond!.assignment_id)).toBe(true);
   });
 });
 

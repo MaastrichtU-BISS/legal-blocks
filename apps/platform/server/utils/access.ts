@@ -3,7 +3,7 @@
 // Being the platform's admin gives no access to anybody else's work.
 
 import type { H3Event } from "h3";
-import { assignmentOwners, datasets, tasks, type Account } from "@legal-blocks/db";
+import { assignmentLocked, assignmentOwners, datasets, tasks, type Account } from "@legal-blocks/db";
 
 export function canEdit(me: Account, ownerId: number): boolean {
   return me.id === ownerId;
@@ -30,11 +30,22 @@ export function requireTaskAccess(event: H3Event, taskId: number): void {
   throw fail(event, 403, "you have no documents in this task");
 }
 
-/** The annotator it belongs to, or whoever made its task. */
+/**
+ * The annotator it belongs to, once every earlier document in their queue is
+ * done — a queue is worked in order — or whoever made its task.
+ */
 export function requireAssignmentAccess(event: H3Event, assignmentId: number): void {
   const me = currentUser(event);
-  const owners = assignmentOwners(requireDb(event), assignmentId);
-  if (!owners || owners.annotator === me.id || canEdit(me, owners.editor)) return;
+  const db = requireDb(event);
+  const owners = assignmentOwners(db, assignmentId);
+  if (!owners) return;
+  if (owners.annotator === me.id) {
+    if (assignmentLocked(db, assignmentId)) {
+      throw fail(event, 403, "finish the documents before this one first");
+    }
+    return;
+  }
+  if (canEdit(me, owners.editor)) return;
   throw fail(event, 403, "this document is somebody else's to annotate");
 }
 

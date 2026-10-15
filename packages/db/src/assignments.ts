@@ -26,6 +26,25 @@ export function queue(db: Handle, taskId: number, userId: number): QueueEntry[] 
 }
 
 /**
+ * Whether an earlier document in the same annotator's queue is not done yet.
+ * A queue is worked in order, so document n opens only once n-1 is finished.
+ */
+export function assignmentLocked(db: Handle, assignmentId: number): boolean {
+  return (
+    db
+      .prepare(
+        `SELECT 1 FROM assignments a
+           JOIN assignments earlier
+             ON earlier.task_id = a.task_id AND earlier.user_id = a.user_id
+            AND earlier."order" < a."order"
+          WHERE a.id = ? AND earlier.status != 'done'
+          LIMIT 1`,
+      )
+      .get(assignmentId) !== undefined
+  );
+}
+
+/**
  * Whose assignment this is and who made its task, or undefined when there is
  * no such assignment.
  */
