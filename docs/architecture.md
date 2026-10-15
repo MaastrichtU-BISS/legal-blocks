@@ -418,7 +418,9 @@ overrides it. The cookie is marked Secure only when the request came over
 https, because browsers drop a Secure cookie sent over plain http.
 
 Anybody may create an account. The first one created owns the platform: it is
-the only stored role, `admin`, and it sees everything. Somebody named on a task
+the only stored role, `admin`. It gives no access to anybody else's work — the
+admin edits what they made and annotates where they were assigned, like
+everyone — and is kept for what only the platform's owner should manage. Somebody named on a task
 before they had an account already has a row, and creating the account with
 that address makes the row theirs.
 
@@ -428,11 +430,11 @@ documents; making a task and adding yourself makes you both. The routes check
 this through `server/utils/access.ts`, and the workspace works out the same
 thing per task in `OpenTask.vue` to decide what to show.
 
-| | annotator in a task | made it | admin |
-|---|---|---|---|
-| the task, and their own queue and documents in it | ✓ | ✓ | ✓ |
-| everybody's progress, agreement, the export | | ✓ | ✓ |
-| datasets and labelsets | | their own | all |
+| | annotator in a task | made it |
+|---|---|---|
+| the task, and their own queue and documents in it | ✓ | ✓ |
+| everybody's progress, agreement, the export | | ✓ |
+| datasets and labelsets | | ✓ |
 
 Without a login none of this applies: every request is the platform's own
 admin account, and the "Working as" dropdown chooses only what is shown.
