@@ -24,6 +24,10 @@ export const AnnotationSource: KindBindings = {
         // "start again at document one" — the queue is long and the first
         // document is the least likely one somebody wants.
         startPosition: ctx.startPosition ?? queue.resumeAt,
+        // Where to start comes from the server, per person. A ?seq= the queue
+        // kept in the URL outlived the task and the person — the next account
+        // to sign in in the same tab started on the last one's document.
+        urlParam: false,
         // AnnotatorQueue emits `complete` when the last document is saved.
         // v-bind turns an onX prop into a listener, which is how a binding gets
         // to hand the host a callback without ModuleHost knowing any module's
