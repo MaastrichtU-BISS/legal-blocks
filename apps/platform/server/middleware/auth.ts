@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
 
   // Deleted, or had their password taken away, since they signed in.
   if (!me?.can_sign_in) {
-    await clearUserSession(event);
+    await clearUserSession(event, sessionCookie(event));
     throw fail(event, 401, "please sign in again");
   }
   event.context.user = me;

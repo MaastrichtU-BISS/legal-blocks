@@ -15,6 +15,6 @@ export default defineEventHandler(async (event) => {
 
   setRole(db, admin.id, "admin");
   setPassword(db, admin.id, await hashPassword(password));
-  await setUserSession(event, { user: { id: admin.id } });
+  await setUserSession(event, { user: { id: admin.id } }, sessionCookie(event));
   return user(db, admin.id);
 });

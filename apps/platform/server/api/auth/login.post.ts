@@ -9,6 +9,6 @@ export default defineEventHandler(async (event) => {
     throw fail(event, 401, "wrong email or password");
   }
 
-  await setUserSession(event, { user: { id: found.id } });
+  await setUserSession(event, { user: { id: found.id } }, sessionCookie(event));
   return user(db, found.id);
 });
