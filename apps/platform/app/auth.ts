@@ -1,5 +1,4 @@
-// Signing in and managing who can. The server side is server/api/auth and
-// server/api/users.
+// Signing in and creating accounts. The server side is server/api/auth.
 
 import { json, post } from "@base/api/http";
 import type { User } from "@base/api";
@@ -20,30 +19,19 @@ export function signIn(email: string, password: string): Promise<Account> {
   return post("/api/auth/login", { email, password }, "signing in");
 }
 
-export function setUp(email: string, password: string): Promise<Account> {
-  return post("/api/auth/setup", { email, password }, "creating the admin account");
+export function register(email: string, password: string): Promise<Account> {
+  return post("/api/auth/register", { email, password }, "creating the account");
 }
 
 export async function signOut(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST" });
 }
 
-export async function getAccounts(): Promise<Account[]> {
-  return json(await fetch("/api/users"), "loading people");
-}
-
-export function addAccount(email: string, role: string, password: string): Promise<Account> {
-  return post("/api/users", { email, role, password }, "adding the person");
-}
-
-export async function updateAccount(
-  id: number,
-  change: { role?: string; password?: string },
-): Promise<Account> {
-  const res = await fetch(`/api/users/${id}`, {
+export async function changePassword(password: string): Promise<void> {
+  const res = await fetch("/api/account/password", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(change),
+    body: JSON.stringify({ password }),
   });
-  return json(res, "saving the change");
+  if (!res.ok) await json(res, "changing the password");
 }

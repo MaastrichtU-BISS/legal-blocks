@@ -1,20 +1,20 @@
 <script setup lang="ts">
-// Who is signed in, a way out, and — for an admin — the people list.
+// Who is signed in. Clicking it opens what they can do about that.
 
 import { ref } from "vue";
-import { signOut, updateAccount, type Account } from "../auth";
-import UsersPanel from "./UsersPanel.vue";
+import { changePassword, signOut, type Account } from "../auth";
 
-const props = defineProps<{ account: Account }>();
+defineProps<{ account: Account }>();
 const emit = defineEmits<{ "signed-out": [] }>();
 
-const showUsers = ref(false);
+const open = ref(false);
 
-async function changePassword() {
+async function newPassword() {
+  open.value = false;
   const password = prompt("New password (at least 8 characters)");
   if (!password) return;
   try {
-    await updateAccount(props.account.id, { password });
+    await changePassword(password);
     alert("Password changed.");
   } catch (e) {
     alert(e instanceof Error ? e.message : String(e));
@@ -29,19 +29,52 @@ async function leave() {
 
 <template>
   <div class="account">
-    <span class="muted">{{ account.email }} · {{ account.role }}</span>
-    <button v-if="account.role === 'admin'" @click="showUsers = true">People</button>
-    <button @click="changePassword">Change password</button>
-    <button @click="leave">Sign out</button>
+    <button class="who" :aria-expanded="open" @click="open = !open">
+      {{ account.email }} ▾
+    </button>
+    <!-- Catches the click anywhere else that should close the menu. -->
+    <div v-if="open" class="backdrop" @click="open = false"></div>
+    <div v-if="open" class="menu">
+      <button @click="newPassword">Change password</button>
+      <button @click="leave">Sign out</button>
+    </div>
   </div>
-  <UsersPanel v-if="showUsers" :me="account.id" @close="showUsers = false" />
 </template>
 
 <style scoped>
 .account {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  position: relative;
   margin-left: auto;
+}
+
+.lb-ui .who {
+  border-color: transparent;
+  background: transparent;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  display: flex;
+  flex-direction: column;
+  min-width: 11rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+  z-index: 10;
+}
+
+.lb-ui .menu button {
+  border: 0;
+  text-align: left;
 }
 </style>

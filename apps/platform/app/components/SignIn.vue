@@ -1,13 +1,14 @@
 <script setup lang="ts">
-// The sign-in form, or — on a platform nobody can sign in to yet — the form
-// that makes its first admin.
+// Signing in, or creating an account — which anybody may. On a platform with
+// no accounts yet, the first one created owns it.
 
 import { ref } from "vue";
-import { setUp, signIn } from "../auth";
+import { register, signIn } from "../auth";
 
 const props = defineProps<{ setup: boolean }>();
 const emit = defineEmits<{ "signed-in": [] }>();
 
+const creating = ref(props.setup);
 const email = ref("");
 const password = ref("");
 const problem = ref("");
@@ -15,19 +16,24 @@ const problem = ref("");
 async function submit() {
   problem.value = "";
   try {
-    await (props.setup ? setUp : signIn)(email.value, password.value);
+    await (creating.value ? register : signIn)(email.value, password.value);
     emit("signed-in");
   } catch (e) {
     problem.value = e instanceof Error ? e.message : String(e);
   }
 }
+
+function toggle() {
+  creating.value = !creating.value;
+  problem.value = "";
+}
 </script>
 
 <template>
   <form class="lb-ui sign-in" @submit.prevent="submit">
-    <h1>{{ setup ? "Create the admin account" : "Sign in" }}</h1>
+    <h1>{{ creating ? "Create an account" : "Sign in" }}</h1>
     <p v-if="setup" class="muted">
-      Nobody can sign in to this platform yet. Whoever fills this in becomes its admin.
+      Nobody has an account here yet. Whoever creates the first one owns this platform.
     </p>
     <label>
       Email
@@ -38,13 +44,19 @@ async function submit() {
       <input
         v-model="password"
         type="password"
-        :autocomplete="setup ? 'new-password' : 'current-password'"
-        :minlength="setup ? 8 : undefined"
+        :autocomplete="creating ? 'new-password' : 'current-password'"
+        :minlength="creating ? 8 : undefined"
         required
       />
     </label>
     <p v-if="problem" class="error">{{ problem }}</p>
-    <button class="primary" type="submit">{{ setup ? "Create and sign in" : "Sign in" }}</button>
+    <button class="primary" type="submit">{{ creating ? "Create account" : "Sign in" }}</button>
+    <p v-if="!setup" class="muted">
+      {{ creating ? "Already have an account?" : "No account yet?" }}
+      <button type="button" class="link" @click="toggle">
+        {{ creating ? "Sign in" : "Create one" }}
+      </button>
+    </p>
   </form>
 </template>
 
@@ -67,5 +79,13 @@ label {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+.lb-ui .link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
 }
 </style>
