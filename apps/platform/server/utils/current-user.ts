@@ -13,7 +13,11 @@ export function currentUser(event: H3Event): Account {
   return user(db, owner(db))!;
 }
 
-/** Whoever created the platform. They see everything. */
+/**
+ * Whoever created the platform. It gives them no access to anybody's work —
+ * that comes from owning it, as for everyone. Kept for what only the platform's
+ * owner should manage.
+ */
 export function isAdmin(me: Account): boolean {
   return me.role === "admin";
 }

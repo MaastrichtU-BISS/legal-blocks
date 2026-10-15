@@ -1,12 +1,12 @@
 // What somebody may reach. Nobody is an editor or an annotator in general:
 // you edit what you made, and you annotate where you were given documents.
-// The admin — whoever created the platform — reaches everything.
+// Being the platform's admin gives no access to anybody else's work.
 
 import type { H3Event } from "h3";
 import { assignmentOwners, datasets, tasks, type Account } from "@legal-blocks/db";
 
 export function canEdit(me: Account, ownerId: number): boolean {
-  return isAdmin(me) || me.id === ownerId;
+  return me.id === ownerId;
 }
 
 function findTask(event: H3Event, taskId: number) {
