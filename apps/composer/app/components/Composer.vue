@@ -111,7 +111,7 @@ async function doExport() {
         <button class="nav-link" @click="emit('back')">Projects</button>
         <button class="nav-link" @click="emit('docs')">Docs</button>
       </nav>
-      <input v-model="pipeline.name" class="name" aria-label="Platform name" placeholder="Untitled platform" />
+      <span class="platform-name">{{ pipeline.name || "Untitled platform" }}</span>
 
       <div class="row modes">
         <span class="muted">{{ stored ? "With database" : "Without database" }}</span>
@@ -255,15 +255,11 @@ header strong {
   color: var(--ink);
 }
 
-.name {
-  width: auto;
-  min-width: 14rem;
-  font-weight: 600;
+.platform-name {
   font-family: var(--font-display);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm, 2px);
-  padding: 6px 8px;
-  background: var(--ground);
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--ink);
 }
 
 .modes {
