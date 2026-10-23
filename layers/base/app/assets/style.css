@@ -49,6 +49,33 @@
   color: var(--ink);
 }
 
+/* Dark theme: applied via .dark on <html> (see useTheme). */
+html.dark {
+  --ground: #0F1115;
+  --surface: #1A1D23;
+  --ink: #E5E7EB;
+  --muted: #9CA3AF;
+  --rule: #2A2F38;
+  --accent-live: #F06A5F;
+  --accent-interactive: #2DD4BF;
+  --accent-success: #34D399;
+  --success: #34D399;
+  --warning: #FBBF24;
+  --danger: #F06A5F;
+
+  --border: var(--rule);
+  --bg-soft: var(--surface);
+  --accent: var(--accent-interactive);
+
+  color-scheme: dark;
+  color: var(--ink);
+}
+
+html.dark body {
+  background: var(--ground);
+  color: var(--ink);
+}
+
 .lb-ui,
 .lb-ui * {
   box-sizing: border-box;

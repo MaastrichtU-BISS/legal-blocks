@@ -25,6 +25,18 @@ export default defineNuxtConfig({
 
   css: ["@base/assets/style.css"],
 
+  app: {
+    head: {
+      script: [
+        {
+          innerHTML:
+            "(function(){try{var p=localStorage.getItem('legal-blocks:theme')||'system';var d=p==='dark'||(p==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.classList.add('dark');document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.setAttribute('data-theme','light');document.documentElement.style.colorScheme='light';}}catch(e){}})();",
+          tagPosition: "head",
+        },
+      ],
+    },
+  },
+
   // Nothing here is public-facing or indexed, and both apps are single-page
   // tools behind a port on somebody's laptop.
   ssr: false,

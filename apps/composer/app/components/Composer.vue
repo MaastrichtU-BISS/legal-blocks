@@ -12,6 +12,7 @@ import ModulePalette from "./ModulePalette.vue";
 import PipelineFlow from "./PipelineFlow.vue";
 import WorkspaceRing from "./WorkspaceRing.vue";
 import { usePlatformDraft } from "../composables/usePlatformDraft";
+import ThemeToggle from "@base/components/ThemeToggle.vue";
 import { exportPipeline } from "@base/api";
 import type { Registry } from "@legal-blocks/manifest";
 import { appliesIn as fieldAppliesIn } from "@legal-blocks/manifest";
@@ -126,6 +127,7 @@ async function doExport() {
         <button class="primary" :disabled="steps.length === 0" @click="doExport">
           Export platform
         </button>
+        <ThemeToggle />
       </div>
     </header>
 

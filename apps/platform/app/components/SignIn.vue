@@ -4,6 +4,7 @@
 
 import { ref } from "vue";
 import { register, signIn } from "../auth";
+import ThemeToggle from "@base/components/ThemeToggle.vue";
 
 const props = defineProps<{ setup: boolean }>();
 const emit = defineEmits<{ "signed-in": [] }>();
@@ -30,7 +31,9 @@ function toggle() {
 </script>
 
 <template>
-  <form class="lb-ui sign-in" @submit.prevent="submit">
+  <div class="sign-in-wrap">
+    <div class="sign-in-toggle"><ThemeToggle /></div>
+    <form class="lb-ui sign-in" @submit.prevent="submit">
     <h1>{{ creating ? "Create an account" : "Sign in" }}</h1>
     <p v-if="setup" class="muted">
       Nobody has an account here yet. Whoever creates the first one owns this platform.
@@ -58,9 +61,20 @@ function toggle() {
       </button>
     </p>
   </form>
+  </div>
 </template>
 
 <style scoped>
+.sign-in-wrap {
+  position: relative;
+}
+
+.sign-in-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
 .sign-in {
   display: flex;
   flex-direction: column;

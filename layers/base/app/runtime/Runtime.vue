@@ -7,6 +7,7 @@
 
 import { computed, ref, watch } from "vue";
 import ModuleHost from "./ModuleHost.vue";
+import ThemeToggle from "@base/components/ThemeToggle.vue";
 import PlatformWorkspace from "../workspace/PlatformWorkspace.vue";
 import type { ResolveEnv } from "./resolve";
 import type { Pipeline, Registry } from "@legal-blocks/manifest";
@@ -167,6 +168,7 @@ function goTo(index: number) {
         </select>
       </label>
 
+      <ThemeToggle />
       <slot name="account" />
     </header>
 

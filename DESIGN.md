@@ -84,12 +84,14 @@ components:
 
 **Strategy:** Restrained two-accent — soft coral for primary actions, teal for interaction. Calm, friendly, not loud. High contrast without harshness.
 
-**Light or dark:** Light. Clean white ground, soft gray surfaces, warm coral CTAs, teal links.
+**Light or dark:** Light by default, with an optional dark mode (soft charcoal ground). Toggleable per surface.
 
 - `primary` / `accent-live` (#E85A4F) soft coral — primary CTAs and the "live flow" accent. Warm, inviting, not aggressive.
 - `accent-interactive` (#0D9488) teal — links, focus rings, secondary actions.
 - `accent-success` (#10B981) emerald — success, completed states.
 - Neutrals are soft grays; accents are muted but distinct. No yellow.
+
+**Dark mode:** optional. Dark uses soft charcoal surfaces (#0F1115 / #1A1D23) with off-white text; accents shift lighter for contrast (coral #F06A5F, teal #2DD4BF, emerald #34D399). Toggle is Light / Dark / System, persisted per browser. Modules keep their own styling.
 
 ## Typography
 

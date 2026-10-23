@@ -6,6 +6,7 @@
 // storage/auth lands, this becomes a server-backed list scoped to an account.
 
 import { onMounted, ref } from "vue";
+import ThemeToggle from "@base/components/ThemeToggle.vue";
 
 interface Project {
   id: string;
@@ -107,6 +108,7 @@ onMounted(load);
         Legal Blocks
       </span>
       <nav class="page-nav">
+        <ThemeToggle />
         <button class="nav-link" @click="emit('back')">Home</button>
         <button class="nav-link" @click="emit('docs')">Docs</button>
         <a class="github-link" href="https://github.com/MaastrichtU-BISS/legal-blocks" target="_blank" rel="noreferrer" aria-label="GitHub">

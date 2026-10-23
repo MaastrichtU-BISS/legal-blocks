@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ThemeToggle from "@base/components/ThemeToggle.vue";
+
 const emit = defineEmits<{ back: []; compose: [] }>();
 </script>
 
@@ -15,6 +17,7 @@ const emit = defineEmits<{ back: []; compose: [] }>();
         Legal Blocks
       </span>
       <nav class="page-nav">
+        <ThemeToggle />
         <button class="nav-link" @click="emit('back')">Home</button>
         <button class="nav-link active">Docs</button>
         <a class="github-link" href="https://github.com/MaastrichtU-BISS/legal-blocks" target="_blank" rel="noreferrer" aria-label="GitHub">
