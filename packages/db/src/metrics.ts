@@ -16,12 +16,26 @@ import type {
 import { documentTags, spans } from "./assignments.js";
 import { task } from "./tasks.js";
 
+/** One annotator surfaced for the metrics UI. */
+export interface TaskAnnotator {
+  user_id: number;
+  email: string;
+}
+
 /** The users with an assignment in a task. */
-export function taskAnnotators(db: Handle, taskId: number): string[] {
+export function taskAnnotators(db: Handle, taskId: number): TaskAnnotator[] {
   return db
-    .prepare(`SELECT DISTINCT user_id FROM assignments WHERE task_id = ? ORDER BY user_id`)
+    .prepare(
+      `SELECT DISTINCT a.user_id AS user_id,
+              COALESCE(NULLIF(u.email, ''), u.name) AS email
+       FROM assignments a JOIN users u ON u.id = a.user_id
+       WHERE a.task_id = ? ORDER BY email`,
+    )
     .all(taskId)
-    .map((r) => String((r as { user_id: number }).user_id));
+    .map((r) => {
+      const row = r as { user_id: number; email: string };
+      return { user_id: row.user_id, email: row.email };
+    });
 }
 
 /** A task's documents in queue order. */
@@ -54,20 +68,22 @@ export function annotations(
 ): RichAnnotation[] {
   const sql: string[] = [
     `SELECT ann_id, "start", "end", text, label, confidence, metadata,
-            user_id, doc_name
+            user_id, email, doc_name
      FROM (
        SELECT s.id AS ann_id, s."start" AS "start", s."end" AS "end",
               s.text AS text, s.label AS label, s.confidence AS confidence,
               s.metadata AS metadata, a.task_id AS task_id,
-              a.user_id AS user_id, d.name AS doc_name
+              a.user_id AS user_id, u.email AS email, u.name AS name, d.name AS doc_name
        FROM span_annotations s
        JOIN assignments a ON a.id = s.assignment_id
+       JOIN users u ON u.id = a.user_id
        JOIN documents d ON d.id = a.document_id
        UNION ALL
        SELECT t.id, 0, 0, '', t.label, t.confidence, NULL, a.task_id,
-              a.user_id, d.name
+              a.user_id, u.email, u.name, d.name
        FROM document_annotations t
        JOIN assignments a ON a.id = t.assignment_id
+       JOIN users u ON u.id = a.user_id
        JOIN documents d ON d.id = a.document_id
      )
      WHERE task_id = ?`,
@@ -81,7 +97,7 @@ export function annotations(
   };
   appendIn("label", filters.labels);
   appendIn("doc_name", filters.documents);
-  appendIn("CAST(user_id AS TEXT)", filters.annotators);
+  appendIn("COALESCE(NULLIF(email, ''), name)", filters.annotators);
   sql.push(` ORDER BY doc_name, "start", ann_id`);
 
   const rows = db.prepare(sql.join("")).all(...args) as {
@@ -93,6 +109,8 @@ export function annotations(
     confidence: number;
     metadata: string | null;
     user_id: number;
+    email: string | null;
+    name: string;
     doc_name: string;
   }[];
 
@@ -104,7 +122,7 @@ export function annotations(
     label: r.label,
     confidence: r.confidence,
     metadata: r.metadata,
-    annotator: String(r.user_id),
+    annotator: r.email && r.email !== "" ? r.email : r.name,
     doc_id: r.doc_name,
     doc_name: r.doc_name,
   }));
@@ -126,7 +144,8 @@ export function iaaInput(db: Handle, taskId: number): IaaInput {
   if (t.annotation_level === "document") input.annotation_level = "document";
 
   const assignmentsOf = db.prepare(
-    `SELECT a.id, a.user_id, a.confidence FROM assignments a
+    `SELECT a.id, a.user_id, a.confidence, u.email AS email, u.name AS name
+     FROM assignments a JOIN users u ON u.id = a.user_id
      WHERE a.task_id = ? AND a.document_id = ? ORDER BY a.user_id`,
   );
 
@@ -135,13 +154,15 @@ export function iaaInput(db: Handle, taskId: number): IaaInput {
       id: number;
       user_id: number;
       confidence: number;
+      email: string | null;
+      name: string;
     }[];
 
     input.documents.push({
       name: doc.name,
       full_text: doc.full_text,
       assignments: rows.map((a) => ({
-        annotator: String(a.user_id),
+        annotator: a.email && a.email !== "" ? a.email : a.name,
         difficulty_rating: a.confidence,
         annotations:
           t.annotation_level === "document"

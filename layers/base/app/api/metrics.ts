@@ -2,7 +2,9 @@
 
 import { json } from "./http";
 
-export async function getTaskAnnotators(taskId: number): Promise<string[]> {
+export async function getTaskAnnotators(
+  taskId: number,
+): Promise<{ user_id: number; email: string }[]> {
   return json(await fetch(`/api/tasks/${taskId}/annotators`), "loading annotators");
 }
 

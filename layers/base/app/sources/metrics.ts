@@ -49,7 +49,7 @@ export function createMetricsSource(taskId: number, task: Task): MetricsSource {
     },
 
     async getAnnotators(): Promise<string[]> {
-      return getTaskAnnotators(taskId);
+      return (await getTaskAnnotators(taskId)).map((a) => a.email);
     },
 
     async getDocuments(): Promise<DocumentOption[]> {
