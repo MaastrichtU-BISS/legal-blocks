@@ -1,6 +1,6 @@
 // The one call only the composer makes.
 
-import type { Pipeline } from "../types";
+import type { Pipeline } from "@legal-blocks/manifest";
 
 /** Asks the host to build the platform zip and hands it to the browser. */
 export async function exportPipeline(p: Pipeline): Promise<void> {

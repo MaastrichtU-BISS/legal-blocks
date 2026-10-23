@@ -19,8 +19,8 @@ import ModuleHost from "../runtime/ModuleHost.vue";
 import type { ResolveEnv } from "../runtime/resolve";
 import AnnotatorProgress from "./AnnotatorProgress.vue";
 import TaskProgressPanel from "./TaskProgressPanel.vue";
-import type { Manifest, Node } from "../types";
-import { allowsRole } from "../types";
+import type { Manifest, Node } from "@legal-blocks/manifest";
+import { allowsRole } from "@legal-blocks/manifest";
 import type { TaskSummary } from "../api";
 
 export interface TaskModule {

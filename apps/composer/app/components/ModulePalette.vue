@@ -7,7 +7,7 @@
 // package and nothing to mount; they are capabilities the platform provides.
 
 import ModuleIcon from "./ModuleIcon.vue";
-import type { Manifest } from "@base/types";
+import type { Manifest } from "@legal-blocks/manifest";
 
 defineProps<{
   modules: Manifest[];

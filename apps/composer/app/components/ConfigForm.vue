@@ -3,7 +3,7 @@
 // named here — a new setting on any module appears automatically.
 
 import { reactive } from "vue";
-import type { ConfigField } from "@base/types";
+import type { ConfigField } from "@legal-blocks/manifest";
 import ModuleIcon from "./ModuleIcon.vue";
 
 defineProps<{ fields: ConfigField[]; modelValue: Record<string, unknown> }>();

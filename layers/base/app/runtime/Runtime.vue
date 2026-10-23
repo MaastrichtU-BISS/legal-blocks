@@ -9,8 +9,8 @@ import { computed, ref, watch } from "vue";
 import ModuleHost from "./ModuleHost.vue";
 import PlatformWorkspace from "../workspace/PlatformWorkspace.vue";
 import type { ResolveEnv } from "./resolve";
-import type { Pipeline, Registry } from "../types";
-import { exportKind } from "../types";
+import type { Pipeline, Registry } from "@legal-blocks/manifest";
+import { exportKind } from "@legal-blocks/manifest";
 import { getUsers, type User } from "../api";
 
 const props = defineProps<{

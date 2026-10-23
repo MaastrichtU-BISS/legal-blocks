@@ -1,6 +1,6 @@
 // What this platform is: its module catalogue and the pipeline it runs.
 
-import type { Pipeline, Registry } from "../types";
+import type { Pipeline, Registry } from "@legal-blocks/manifest";
 import { json } from "./http";
 
 export async function getRegistry(): Promise<Registry> {

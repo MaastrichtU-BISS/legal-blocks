@@ -6,8 +6,9 @@
 // composer's actual subject, and none of it needs to know how anything looks.
 
 import { computed, ref, type Ref } from "vue";
-import type { Kind, Manifest, Node, Pipeline, Registry } from "@base/types";
-import { canConnect, configWithDefaults, exportKind, supportsKind } from "@base/types";
+import type { Kind, Manifest, Node, Pipeline, Registry } from "@legal-blocks/manifest";
+import { canConnect, exportKind, supportsKind } from "@legal-blocks/manifest";
+import { configWithDefaults } from "@base/types";
 
 const blank = (): Pipeline => ({ version: 1, name: "My tool", kind: "pipeline", nodes: [] });
 

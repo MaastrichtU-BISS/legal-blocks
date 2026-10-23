@@ -7,7 +7,7 @@
 // it comes from its manifest.
 
 import type { App, Component, Plugin } from "vue";
-import type { Entry } from "../types";
+import type { Entry } from "@legal-blocks/manifest";
 
 type Loader = () => Promise<Record<string, unknown>>;
 
