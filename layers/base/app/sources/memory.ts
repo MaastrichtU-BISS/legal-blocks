@@ -9,7 +9,6 @@
 // The host only supplies the storage key, which is what makes it possible to
 // collect several annotators' work back together for the metrics step.
 
-import { createBulkSource } from "legal-annotation-kit";
 import type {
   AnnotationSource,
   Assignment,
@@ -102,11 +101,12 @@ export function buildTask(
 }
 
 /** One annotator's source, backed by the package's own bulk implementation. */
-export function createSessionAnnotationSource(
+export async function createSessionAnnotationSource(
   nodeId: string,
   task: TaskData,
   annotator: number,
-): AnnotationSource {
+): Promise<AnnotationSource> {
+  const { createBulkSource } = await import("legal-annotation-kit");
   return createBulkSource(task, annotator, bundlesKey(nodeId, annotator));
 }
 
