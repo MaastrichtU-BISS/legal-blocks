@@ -16,7 +16,8 @@
     "build": "npm -w @legal-blocks/platform run build && npm -w @legal-blocks/composer run build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "type-check": "tsc --build --force"
+    "type-check": "tsc --build --force",
+    "check:modules": "node script/check-no-hardcoded-modules.mjs"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
