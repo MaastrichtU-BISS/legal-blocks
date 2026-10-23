@@ -1,0 +1,22 @@
+{
+  "id": "vue-legal-project-manager",
+  "name": "Projects",
+  "description": "Manage the platforms you are designing: create, rename, open, delete, import and export. A project wraps one platform draft.",
+  "icon": "upload",
+  "version": "0.1.0",
+  "kind": "ui",
+  "runtime": "web",
+  "entry": {
+    "package": "vue-legal-project-manager",
+    "component": "ProjectManager",
+    "style": "vue-legal-project-manager/style.css"
+  },
+  "host": "ProjectManager",
+  "worksIn": [
+    "pipeline",
+    "workspace"
+  ],
+  "inputs": [],
+  "outputs": [],
+  "config": []
+}

@@ -19,6 +19,8 @@ import { fieldShown } from "@legal-blocks/manifest";
 
 const props = defineProps<{ registry: Registry }>();
 
+const emit = defineEmits<{ back: []; docs: [] }>();
+
 const {
   pipeline,
   selected,
@@ -103,6 +105,10 @@ async function doExport() {
 <template>
   <div class="app lb-ui">
     <header>
+      <nav class="top-nav">
+        <button class="nav-link" @click="emit('back')">Projects</button>
+        <button class="nav-link" @click="emit('docs')">Docs</button>
+      </nav>
       <input v-model="pipeline.name" class="name" aria-label="Platform name" />
 
       <div class="row modes">
@@ -214,6 +220,30 @@ header {
   padding: var(--space-sm, 0.6rem) var(--space-md, 1rem);
   border-bottom: 1px solid var(--rule);
   background: var(--surface);
+  flex-wrap: wrap;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs, 4px);
+}
+
+.top-nav .nav-link {
+  background: transparent;
+  border: 0;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 8px);
+}
+
+.top-nav .nav-link:hover {
+  background: var(--ground);
+  color: var(--accent-interactive);
 }
 
 header strong {

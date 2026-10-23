@@ -3,7 +3,7 @@
 // hands off to the composer. Keeping this separate from Composer.vue means the
 // composer stays a tool and this stays a page.
 
-const emit = defineEmits<{ start: []; about: []; docs: [] }>();
+const emit = defineEmits<{ start: []; docs: [] }>();
 </script>
 
 <template>
@@ -19,7 +19,6 @@ const emit = defineEmits<{ start: []; about: []; docs: [] }>();
         Legal Blocks
       </span>
       <nav class="page-nav">
-        <button class="nav-link" @click="emit('about')">About</button>
         <button class="nav-link" @click="emit('docs')">Docs</button>
         <a class="github-link" href="https://github.com/MaastrichtU-BISS/legal-blocks" target="_blank" rel="noreferrer" aria-label="GitHub">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.44 9.79 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.75-1.33-1.75-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.57C20.57 21.79 24 17.31 24 12 24 5.37 18.63 0 12 0z"/></svg>

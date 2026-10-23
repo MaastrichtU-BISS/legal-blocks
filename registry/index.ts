@@ -16,6 +16,7 @@ import vueIaaMetrics from "./vue-iaa-metrics.module.json";
 import vueLegalDocsImport from "./vue-legal-docs-import.module.json";
 import vueLegalDocsVisualizer from "./vue-legal-docs-visualizer.module.json";
 import vueLegalQueryBuilder from "./vue-legal-query-builder.module.json";
+import vueLegalProjectManager from "./vue-legal-project-manager.module.json";
 
 export const manifests: unknown[] = [
   legalAnnotationKit,
@@ -23,6 +24,7 @@ export const manifests: unknown[] = [
   vueLegalDocsImport,
   vueLegalDocsVisualizer,
   vueLegalQueryBuilder,
+  vueLegalProjectManager,
 ];
 
 export { adapters };
