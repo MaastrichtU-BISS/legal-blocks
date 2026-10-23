@@ -1,23 +1,55 @@
+<script lang="ts">
+let assemblyPlayedThisPage = false;
+</script>
+
 <script setup lang="ts">
 // The front door. Explains what Legal Blocks is in plain language, then
 // hands off to the composer. Keeping this separate from Composer.vue means the
 // composer stays a tool and this stays a page.
 
+import { animate } from "motion";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import ThemeToggle from "@base/components/ThemeToggle.vue";
+import SquareLockMark from "./SquareLockMark.vue";
 
 const emit = defineEmits<{ start: []; docs: [] }>();
+const assemblyRoot = ref<HTMLElement | null>(null);
+const assemblyAlreadyPlayed = assemblyPlayedThisPage;
+let stopAssemblyAnimations: (() => void) | undefined;
+
+function playAssemblyOnFreshLoad() {
+  if (assemblyPlayedThisPage) return;
+  assemblyPlayedThisPage = true;
+
+  const root = assemblyRoot.value;
+  if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  stopAssemblyAnimations?.();
+  const search = root.querySelector<HTMLElement>(".piece-search");
+  const annotate = root.querySelector<HTMLElement>(".piece-annotate");
+  const agreement = root.querySelector<HTMLElement>(".piece-agreement");
+  if (!search || !annotate || !agreement) return;
+
+  const sequence = [
+    [search, { y: [-360, 0], opacity: [0, 1] }, { duration: 2.7, ease: "easeInOut" }],
+    [annotate, { y: [-360, 0], opacity: [0, 1] }, { duration: 2.7, ease: "easeInOut", at: 1.35 }],
+    [agreement, { y: [-360, 0], opacity: [0, 1] }, { duration: 2.7, ease: "easeInOut", at: 2.7 }],
+  ] as const;
+
+  const animation = animate(sequence);
+
+  stopAssemblyAnimations = () => animation.stop();
+}
+
+onMounted(playAssemblyOnFreshLoad);
+onBeforeUnmount(() => stopAssemblyAnimations?.());
 </script>
 
 <template>
   <div class="landing lb-ui">
     <header class="landing-header">
       <span class="brand">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="3" width="7" height="7" rx="1" fill="#E3000B" stroke="#1A1A1A" stroke-width="2" />
-          <rect x="14" y="3" width="7" height="7" rx="1" fill="#0057A3" stroke="#1A1A1A" stroke-width="2" />
-          <rect x="3" y="14" width="7" height="7" rx="1" fill="#00852B" stroke="#1A1A1A" stroke-width="2" />
-          <rect x="14" y="14" width="7" height="7" rx="1" fill="#14B8A6" stroke="#1A1A1A" stroke-width="2" />
-        </svg>
+        <SquareLockMark :size="28" />
         Legal Blocks
       </span>
       <nav class="page-nav">
@@ -31,55 +63,74 @@ const emit = defineEmits<{ start: []; docs: [] }>();
 
     <main class="landing-main">
       <section class="hero">
-        <div class="hero-brand">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3" y="3" width="7" height="7" rx="1" fill="#E3000B" stroke="#1A1A1A" stroke-width="2" />
-            <rect x="14" y="3" width="7" height="7" rx="1" fill="#0057A3" stroke="#1A1A1A" stroke-width="2" />
-            <rect x="3" y="14" width="7" height="7" rx="1" fill="#00852B" stroke="#1A1A1A" stroke-width="2" />
-            <rect x="14" y="14" width="7" height="7" rx="1" fill="#14B8A6" stroke="#1A1A1A" stroke-width="2" />
-          </svg>
-          <span class="hero-brand-name">Legal Blocks</span>
+        <div
+          ref="assemblyRoot"
+          :class="['assembly-background', { 'assembly-static': assemblyAlreadyPlayed }]"
+          aria-hidden="true"
+        >
+          <div class="assembly-board">
+            <div class="assembly-piece piece-search" data-assembly-piece>
+              <div class="piece-grid">
+                <span class="tile"></span><span class="tile"></span>
+                <span class="tile tile-empty"></span><span class="tile"></span>
+                <span class="tile tile-empty"></span><span class="tile"></span>
+              </div>
+              <span class="piece-label">Search</span>
+            </div>
+            <div class="assembly-piece piece-annotate" data-assembly-piece>
+              <div class="piece-grid">
+                <span class="tile"></span><span class="tile"></span>
+                <span class="tile"></span><span class="tile tile-empty"></span>
+                <span class="tile"></span><span class="tile tile-empty"></span>
+              </div>
+              <span class="piece-label">Annotate</span>
+            </div>
+            <div class="assembly-piece piece-agreement" data-assembly-piece>
+              <div class="piece-grid piece-grid-square">
+                <span class="tile"></span><span class="tile"></span>
+                <span class="tile"></span><span class="tile"></span>
+              </div>
+              <span class="piece-label">Agreement</span>
+            </div>
+          </div>
         </div>
-        <h1>Build your own research platform.<br />No code required.</h1>
-        <p class="lede">
-          Pick the tools you need, snap them together like building blocks, and
-          share a working app with your team. Takes minutes, not months.
-        </p>
-        <div class="cta-row">
-          <button class="primary" @click="emit('start')">Start building →</button>
-        </div>
-        <p class="muted small">Free and open source. Runs on your computer.</p>
 
-        <div class="assembly" aria-hidden="true">
-          <div class="assembly-track">
-            <div class="assembly-block b1">Search</div>
-            <div class="assembly-connector c1"><span class="flow-dot"></span></div>
-            <div class="assembly-block b2">Annotate</div>
-            <div class="assembly-connector c2"><span class="flow-dot"></span></div>
-            <div class="assembly-block b3">Agree</div>
+        <div class="hero-copy">
+          <div class="hero-brand">
+            <SquareLockMark :size="40" />
+            <span class="hero-brand-name">Legal Blocks</span>
           </div>
-          <div class="assembly-status">
-            <span class="pulse-dot"></span>
-            <span>Running in the background…</span>
+          <h1>Build your own research platform.<br />No code required.</h1>
+          <p class="lede">
+            Pick the tools you need, snap them together like building blocks, and
+            share a working app with your team. Takes minutes, not months.
+          </p>
+          <div class="cta-row">
+            <button class="primary" @click="emit('start')">Start building →</button>
           </div>
+          <p class="muted small">Free and open source. Runs on your computer.</p>
+        </div>
+        <div class="assembly-status">
+          <span class="pulse-dot"></span>
+          <span>Running in the background…</span>
         </div>
       </section>
 
       <section class="shapes">
         <div class="shape">
-          <div class="shape-icon" style="background:#E3000B;">→</div>
+          <span class="shape-num">01</span>
           <h2>One-off runs</h2>
           <p>Search, explore, download. Great for a quick look at case law or
             documents. Nothing is saved — just take your results and go.</p>
         </div>
         <div class="shape">
-          <div class="shape-icon" style="background:#0D9488;">↔</div>
+          <span class="shape-num">02</span>
           <h2>Persistent storage</h2>
           <p>Turn on storage and your platform keeps documents, labels, and tasks
             in a database. Invite colleagues; work survives between visits.</p>
         </div>
         <div class="shape">
-          <div class="shape-icon" style="background:#00852B;">✓</div>
+          <span class="shape-num">03</span>
           <h2>Measure agreement</h2>
           <p>See how much your annotators agree. Built-in metrics, no setup
             required. Know when your labels are ready.</p>
@@ -158,14 +209,26 @@ const emit = defineEmits<{ start: []; docs: [] }>();
   padding: var(--space-2xl, 48px) var(--space-xl, 32px);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2xl, 48px);
+  gap: 0;
 }
 
 .hero {
-  text-align: left;
+  position: relative;
+  isolation: isolate;
+  min-height: 420px;
+  overflow: hidden;
+  padding: 0 0 var(--space-2xl, 48px);
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: min(60%, 620px);
+  min-width: 0;
 }
 
 .hero h1 {
+  margin: 0;
   font-family: var(--font-display);
   font-size: clamp(36px, 6vw, 56px);
   font-weight: 800;
@@ -176,7 +239,7 @@ const emit = defineEmits<{ start: []; docs: [] }>();
 }
 
 .lede {
-  margin-top: var(--space-md, 16px);
+  margin: var(--space-md, 16px) 0 0;
   font-size: 18px;
   color: var(--muted);
   max-width: 48ch;
@@ -213,34 +276,25 @@ button.primary:active {
 
 .shapes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-lg, 24px);
+  grid-template-columns: 1fr;
+  border-top: 1px solid var(--rule);
 }
 
 .shape {
-  background: var(--surface);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-md, 4px);
-  padding: var(--space-lg, 24px);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm, 8px);
-  box-shadow: 0 4px 12px rgb(31 41 55 / 0.08);
+  display: grid;
+  grid-template-columns: 48px minmax(210px, 260px) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-md, 16px);
+  padding: 20px 4px;
+  border-bottom: 1px solid var(--rule);
 }
 
-.shape-icon {
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-sm, 0px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 20px;
-  color: #fff;
-  box-shadow: 0 2px 6px rgb(31 41 55 / 0.08);
+.shape-num {
+  padding-top: 4px;
+  color: var(--accent-interactive);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
 }
 
 .shape h2 {
@@ -252,9 +306,24 @@ button.primary:active {
 }
 
 .shape p {
+  margin: 1px 0 0;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm, 8px);
+  margin-bottom: var(--space-md, 16px);
+}
+
+.hero-brand-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--ink);
 }
 
 .how h2 {
@@ -312,8 +381,8 @@ button.primary:active {
 }
 
 .foot {
-  border-top: 2px solid var(--ink);
-  padding-top: var(--space-lg, 24px);
+  border-top: 1px solid var(--rule);
+  padding: var(--space-lg, 24px) 4px 0;
 }
 
 .muted {
@@ -326,19 +395,6 @@ button.primary:active {
 
 code {
   font-family: var(--font-mono);
-}
-
-.hero-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm, 8px);
-  margin-bottom: var(--space-md, 16px);
-}
-.hero-brand-name {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 18px;
-  color: var(--ink);
 }
 
 .page-nav {
@@ -371,70 +427,113 @@ code {
   color: var(--accent-interactive);
 }
 
-/* Animated assembly preview */
-.assembly {
-  margin-top: var(--space-xl, 32px);
-  background: var(--surface);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-md, 4px);
-  padding: var(--space-lg, 24px);
-  box-shadow: 0 4px 12px rgb(31 41 55 / 0.08);
-}
-.assembly-track {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.assembly-block {
-  background: var(--ground);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-sm, 0px);
-  padding: 10px 18px;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 14px;
-  color: var(--ink);
-  box-shadow: 0 2px 6px rgb(31 41 55 / 0.08);
-  animation: snap-in 0.6s ease-out both;
-}
-.assembly-block.b1 { animation-delay: 0s; background: #E3000B; color: #fff; }
-.assembly-block.b2 { animation-delay: 0.2s; background: #0057A3; color: #fff; }
-.assembly-block.b3 { animation-delay: 0.4s; background: #00852B; color: #fff; }
-.assembly-connector {
-  width: 40px;
-  height: 2px;
-  background: var(--rule);
-  position: relative;
-  flex-shrink: 0;
-  margin: 0 4px;
-  animation: fade-in 0.4s ease-out both;
-}
-.assembly-connector.c1 { animation-delay: 0.1s; }
-.assembly-connector.c2 { animation-delay: 0.3s; }
-.flow-dot {
+/* Oversized, translucent tetrominoes run behind the hero copy. */
+.assembly-background {
   position: absolute;
-  top: -3px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-live);
-  animation: flow 1.6s linear infinite;
+  z-index: 0;
+  inset: 0 -24px 0 auto;
+  display: grid;
+  width: 62%;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
 }
-@keyframes flow { 0% { left: 0; } 100% { left: calc(100% - 8px); } }
-@keyframes snap-in {
-  0% { opacity: 0; transform: translateY(-12px) scale(0.9); }
-  60% { transform: translateY(2px) scale(1.02); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+
+.assembly-board {
+  --assembly-tile: 68px;
+  position: relative;
+  width: calc(var(--assembly-tile) * 4);
+  height: calc(var(--assembly-tile) * 3);
 }
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.assembly-piece {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  will-change: transform;
+}
+
+.assembly-static .assembly-piece {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.piece-annotate {
+  left: calc(var(--assembly-tile) * 2);
+  --piece-color: #0b746b;
+}
+
+.piece-search {
+  --piece-color: #b5473f;
+}
+
+.piece-agreement {
+  top: 0;
+  left: var(--assembly-tile);
+  --piece-color: #315a53;
+}
+
+.piece-grid {
+  display: grid;
+  grid-template-columns: repeat(2, var(--assembly-tile));
+  grid-template-rows: repeat(3, var(--assembly-tile));
+}
+
+.piece-search .piece-grid,
+.piece-annotate .piece-grid {
+  transform: rotate(180deg);
+}
+
+.piece-grid-square {
+  grid-template-rows: repeat(2, var(--assembly-tile));
+}
+
+.tile {
+  display: block;
+  background: var(--piece-color);
+  border: 1px solid rgb(255 255 255 / 22%);
+}
+
+.tile-empty {
+  visibility: hidden;
+}
+
+.piece-label {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: calc(var(--assembly-tile) * 2);
+  height: var(--assembly-tile);
+  place-items: center;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.piece-search .piece-label,
+.piece-annotate .piece-label {
+  top: auto;
+  bottom: 0;
+}
+
+.piece-agreement .piece-label {
+  height: calc(var(--assembly-tile) * 2);
+}
+
 .assembly-status {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: var(--space-sm, 8px);
-  margin-top: var(--space-md, 16px);
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--muted);
@@ -446,10 +545,97 @@ code {
   height: 8px;
   border-radius: 50%;
   background: var(--accent-live);
-  animation: pulse 1.4s ease-in-out infinite;
+  animation: pulse 3.5s ease-in-out infinite;
 }
 @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
-@media (prefers-reduced-motion: reduce) {
-  .assembly-block, .assembly-connector, .flow-dot, .pulse-dot { animation: none; }
+
+.how {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.3fr);
+  gap: var(--space-xl, 32px);
+  padding: var(--space-2xl, 48px) 4px;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .assembly-piece { opacity: 1; }
+  .pulse-dot { animation: none; }
+}
+
+@media (max-width: 820px) {
+  .hero {
+    min-height: 500px;
+  }
+
+  .hero-copy {
+    max-width: 100%;
+  }
+
+  .assembly-background {
+    top: 90px;
+    right: -10%;
+    bottom: 0;
+    width: 78%;
+  }
+
+  .assembly-board {
+    --assembly-tile: 58px;
+  }
+}
+
+@media (max-width: 600px) {
+  .landing-header {
+    padding-inline: var(--space-md, 16px);
+  }
+
+  .brand {
+    font-size: 18px;
+  }
+
+  .landing-main {
+    padding: var(--space-xl, 32px) var(--space-md, 16px);
+  }
+
+  .hero h1 br {
+    display: none;
+  }
+
+  .hero {
+    min-height: 540px;
+  }
+
+  .hero-copy {
+    padding-bottom: 30px;
+  }
+
+  .assembly-background {
+    top: 150px;
+    right: -18%;
+    width: 100%;
+  }
+
+  .assembly-board {
+    --assembly-tile: 50px;
+  }
+
+  .assembly-status {
+    right: 0;
+    bottom: 10px;
+    font-size: 10px;
+  }
+
+  .shape {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 8px var(--space-md, 16px);
+  }
+
+  .shape p {
+    grid-column: 2;
+  }
+
+  .how {
+    grid-template-columns: 1fr;
+    gap: var(--space-md, 16px);
+  }
+}
+
 </style>

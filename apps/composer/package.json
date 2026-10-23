@@ -13,6 +13,7 @@
     "@legal-blocks/base": "*",
     "@legal-blocks/export": "*",
     "@legal-blocks/manifest": "*",
+    "motion": "^14.6.0",
     "nuxt": "^4.5.0",
     "vue": "^3.5.0"
   }
