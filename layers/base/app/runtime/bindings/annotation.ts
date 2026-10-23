@@ -44,7 +44,7 @@ export const AnnotationSource: KindBindings = {
     async props(ctx) {
       const task = await sessionTask(ctx);
       return {
-        source: createSessionAnnotationSource(ctx.nodeId, task, ctx.annotator),
+        source: await createSessionAnnotationSource(ctx.nodeId, task, ctx.annotator),
         labelset: task.labelset,
         annotationLevel: task.annotation_level,
         guidelinesUrl: String(ctx.config.guidelines_url ?? "") || undefined,
