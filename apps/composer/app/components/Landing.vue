@@ -71,10 +71,10 @@ const emit = defineEmits<{ start: []; about: []; docs: [] }>();
             documents. Nothing is saved — just take your results and go.</p>
         </div>
         <div class="shape">
-          <div class="shape-icon" style="background:#0057A3;">↔</div>
-          <h2>Shared workspaces</h2>
-          <p>Upload documents, define labels, create tasks, invite colleagues.
-            Everyone works on the same data. Your work survives between visits.</p>
+          <div class="shape-icon" style="background:#0D9488;">↔</div>
+          <h2>Persistent storage</h2>
+          <p>Turn on storage and your platform keeps documents, labels, and tasks
+            in a database. Invite colleagues; work survives between visits.</p>
         </div>
         <div class="shape">
           <div class="shape-icon" style="background:#00852B;">✓</div>

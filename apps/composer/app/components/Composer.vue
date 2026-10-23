@@ -106,7 +106,10 @@ async function doExport() {
       <input v-model="pipeline.name" class="name" aria-label="Platform name" />
 
       <div class="row modes">
-        <span class="muted">{{ stored ? "Workspace" : "Pipeline" }}</span>
+        <span class="muted">{{ stored ? "With database" : "Without database" }}</span>
+        <button :class="{ primary: !stored }" @click="toggleStorage">
+          {{ stored ? "Remove database" : "Add database" }}
+        </button>
         <button @click="startOver">Start over</button>
       </div>
 

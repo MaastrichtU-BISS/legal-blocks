@@ -24,21 +24,6 @@ const emit = defineEmits<{ add: [m: Manifest]; toggleStorage: []; toggleLogin: [
   <section class="palette">
     <h2>Available</h2>
 
-    <div class="module" :class="{ on: stored }">
-      <div class="row">
-        <span class="ico"><ModuleIcon name="database" /></span>
-        <strong>Workspace</strong>
-        <button :class="{ primary: !stored }" @click="emit('toggleStorage')">
-          {{ stored ? "Remove" : "Add" }}
-        </button>
-      </div>
-      <p class="muted small">
-        A place people come back to. They bring in documents, define labels, create tasks and
-        hand them to others, and their work is kept between visits. Without this the platform
-        is a one-off run: work stays in the browser and leaves through a download.
-      </p>
-    </div>
-
     <div class="module" :class="{ on: login }">
       <div class="row">
         <span class="ico"><ModuleIcon name="user" /></span>
@@ -57,6 +42,9 @@ const emit = defineEmits<{ add: [m: Manifest]; toggleStorage: []; toggleLogin: [
       <div class="row">
         <span class="ico"><ModuleIcon :name="m.icon" /></span>
         <strong>{{ m.name }}</strong>
+        <span v-if="m.storage" class="db-badge" title="Stores data in the database when persistent storage is on">
+          <ModuleIcon name="database" :size="12" /> db
+        </span>
         <button :disabled="!canAppend(m)" :title="canAppend(m) ? '' : whyNot(m)" @click="emit('add', m)">
           Add
         </button>
@@ -133,6 +121,21 @@ h2 {
 .ico {
   display: inline-flex;
   color: var(--accent-interactive);
+}
+
+.db-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm, 8px);
+  padding: 1px 6px;
 }
 
 .hint {
