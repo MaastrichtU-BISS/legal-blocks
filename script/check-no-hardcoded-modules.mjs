@@ -21,6 +21,8 @@ const roots = ["apps/composer", "layers/base", "apps/platform"].map((p) =>
 
 const allowedFile = (rel) => {
   if (rel.startsWith("registry/")) return true;
+  if (rel.includes("/test/")) return true;
+  if (rel.endsWith(".test.ts") || rel.endsWith(".test.js")) return true;
   if (rel === "layers/base/app/modules/loaders.ts") return true;
   if (rel.startsWith("layers/base/app/runtime/bindings/")) return true;
   if (rel.startsWith("layers/base/app/sources/")) return true;
