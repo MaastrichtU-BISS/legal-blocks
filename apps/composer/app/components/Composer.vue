@@ -17,7 +17,7 @@ import type { Registry } from "@legal-blocks/manifest";
 import { appliesIn as fieldAppliesIn } from "@legal-blocks/manifest";
 import { fieldShown } from "@legal-blocks/manifest";
 
-const props = defineProps<{ registry: Registry }>();
+const props = defineProps<{ registry: Registry; initialName?: string }>();
 
 const emit = defineEmits<{ back: []; docs: [] }>();
 
@@ -38,6 +38,8 @@ const {
   toggleStorage,
   startOver,
 } = usePlatformDraft(toRef(props, "registry"));
+
+if (props.initialName) pipeline.value.name = props.initialName;
 
 const status = ref("");
 

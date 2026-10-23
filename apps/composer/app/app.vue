@@ -14,6 +14,7 @@ const registry = ref<Registry | null>(null);
 const error = ref("");
 type View = "landing" | "docs" | "projects" | "compose";
 const view = ref<View>("landing");
+const currentProjectName = ref("");
 
 getRegistry()
   .then((reg) => {
@@ -40,7 +41,7 @@ function go(v: View) {
     @back="go('landing')"
     @docs="go('docs')"
     @compose="go('compose')"
-    @open="go('compose')"
+    @open="(name: string) => { currentProjectName = name; go('compose'); }"
   />
   <Docs
     v-else-if="view === 'docs'"
@@ -50,8 +51,8 @@ function go(v: View) {
   <Composer
     v-else-if="view === 'compose' && registry"
     :registry="registry"
+    :initial-name="currentProjectName"
     @back="go('projects')"
-    @about="go('about')"
     @docs="go('docs')"
   />
   <p v-else class="pad muted">Starting…</p>

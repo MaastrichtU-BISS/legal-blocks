@@ -14,7 +14,7 @@ interface Project {
   updatedAt: number;
 }
 
-const emit = defineEmits<{ open: [id: string]; back: []; compose: []; docs: [] }>();
+const emit = defineEmits<{ open: [name: string]; back: []; compose: []; docs: [] }>();
 
 const projects = ref<Project[]>([]);
 const newName = ref("");
@@ -152,7 +152,7 @@ onMounted(load);
           <div class="project-actions">
             <button class="ghost" @click="startEdit(p)">Rename</button>
             <button class="ghost danger" @click="remove(p.id)">Delete</button>
-            <button class="primary" @click="emit('open', p.id)">Open →</button>
+            <button class="primary" @click="emit('open', p.name)">Open →</button>
           </div>
         </div>
       </section>
