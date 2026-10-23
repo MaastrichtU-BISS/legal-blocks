@@ -3,37 +3,39 @@
 name: Legal Blocks
 description: A living schematic — quiet industrial chrome framing a breathing pipeline.
 colors:
-  primary: "#13171F"
-  on-primary: "#EAEFF5"
-  surface: "#F4F7FB"
-  ground: "#EAEFF5"
-  text: "#13171F"
-  text-muted: "#5B6370"
-  rule: "#C9D2DE"
-  accent-live: "#E63946"
-  accent-interactive: "#2563EB"
-  success: "#2A8F5B"
-  warning: "#C97A1A"
-  error: "#C0392B"
+  primary: "#E3000B"
+  on-primary: "#FFFFFF"
+  surface: "#F5F5F5"
+  ground: "#FFFFFF"
+  text: "#1A1A1A"
+  text-muted: "#6B7280"
+  rule: "#E5E7EB"
+  accent-live: "#E3000B"
+  accent-interactive: "#0057A3"
+  accent-warm: "#FFD500"
+  accent-success: "#00852B"
+  success: "#00852B"
+  warning: "#FFD500"
+  error: "#E3000B"
 typography:
   display:
-    fontFamily: Bricolage Grotesque
-    fontWeight: 600
-    fontSize: clamp(24px, 3vw, 32px)
+    fontFamily: Nunito
+    fontWeight: 800
+    fontSize: clamp(28px, 4vw, 40px)
     letterSpacing: -0.01em
   body:
-    fontFamily: Manrope
-    fontSize: 0.875rem
+    fontFamily: Nunito Sans
+    fontSize: 1rem
     lineHeight: 1.5
   label:
-    fontFamily: IBM Plex Mono
-    fontSize: 0.6875rem
-    letterSpacing: 0.06em
+    fontFamily: Nunito Sans
+    fontSize: 0.75rem
+    letterSpacing: 0.04em
   mono:
-    fontFamily: IBM Plex Mono
+    fontFamily: JetBrains Mono
     fontFeature: tnum
 rounded:
-  sm: 2px
+  sm: 0px
   md: 4px
   lg: 8px
   full: 9999px
@@ -69,7 +71,7 @@ components:
 
 ## Overview
 
-**Creative North Star:** A living schematic — quiet industrial chrome framing a breathing pipeline.
+**Creative North Star:** Playful blocks — bright primary colors on clean white, chunky blocky shapes, friendly type. Lego-inspired: every module is a brick you snap into place.
 
 **Product context:** Legal Blocks composes platforms out of existing packages. A composer designs a platform (pipeline or workspace); the platform runs it. Audience: developers and researchers (legal/annotation research). Project type: web app (Nuxt 3 / Vue 3), two apps sharing one layer.
 
@@ -81,22 +83,23 @@ components:
 
 ## Colors
 
-**Strategy:** Restrained — one accent (vermillion) for live flow, neutrals derived from a cool blue-gray. Color on the canvas is reserved for live flow only.
+**Strategy:** Full palette — primary Lego red for CTAs, Lego blue for interaction, Lego yellow for highlights, Lego green for success. Bright primaries on clean white, like a box of bricks.
 
-**Light or dark:** Light. Research and annotation work happens in bright offices; the canvas is the only dark-ish contrast surface (cool paper ground #EAEFF5 vs. ink #13171F).
+**Light or dark:** Light. Playful, inviting, high-contrast. White ground, near-black ink, bright primary accents.
 
-- `accent-live` (#E63946) signals live flow and active assembly. Never used for static decoration.
-- `accent-interactive` (#2563EB) for links and focus rings.
-- Neutrals derive from the cool paper ground; hierarchy via ink/muted/rule.
-- Dark-mode surfaces preserve hierarchy by shifting ground/surface lightness, not inverting.
+- `primary` (#E3000B) Lego red — primary CTAs and the "live flow" accent. The one color that owns the action.
+- `accent-interactive` (#0057A3) Lego blue — links, focus rings, secondary actions.
+- `accent-warm` (#FFD500) Lego yellow — highlights, badges, warnings.
+- `accent-success` (#00852B) Lego green — success, completed states.
+- Neutrals are pure white/gray; primaries carry all the energy.
 
 ## Typography
 
-- **Display — Bricolage Grotesque** (Google Fonts): quirky geometric grotesk; carries the indie-studio voice. Used for page titles and the memorable first impression.
-- **Body — Manrope** (Google Fonts): humanist, legible at small sizes. UI text and body copy.
-- **Label/Mono — IBM Plex Mono** (Google Fonts): data, code, ports (corpus@1), step labels, settings field labels. Tabular numerals via `tnum`.
+- **Display — Nunito** (Google Fonts): rounded, friendly, playful. Bold 800 for headlines. Carries the Lego-box energy.
+- **Body — Nunito Sans** (Google Fonts): clean, legible, warm. UI text and body copy.
+- **Label/Mono — JetBrains Mono** (Google Fonts): data, code, ports (corpus@1), step labels. Tabular numerals via `tnum`.
 
-Scale: display 24–32px / 600; body 14px / 400; label 11px uppercase tracked.
+Scale: display 28–40px / 800; body 16px / 400; label 12px tracked. Friendly, not tiny.
 
 ## Layout
 
@@ -113,17 +116,17 @@ Scale: display 24–32px / 600; body 14px / 400; label 11px uppercase tracked.
 
 ## Shapes
 
-- Radius hierarchy: sm 2px (buttons, inputs, nodes), md 4px (cards), lg 8px (panels). Sharp corners reinforce the industrial/utilitarian feel.
+- Radius hierarchy: sm 0px (buttons, inputs, bricks — blocky), md 4px (cards), lg 8px (panels). Sharp corners reinforce the Lego-block feel.
 - Nested inner radius = outer radius − gap.
 
 ## Components
 
-- **Button:** sharp 2px radius, 1px border, 8/14px padding. Primary = ink ground; live = vermillion; ghost = transparent.
-- **Input:** 2px radius, 1px rule border, monospace uppercase label above.
-- **Node (pipeline):** 2px radius, 1px border, title + mono port label. Active state: vermillion border + ring.
-- **Connector:** 2px rule line with animated vermillion dot (flow). Respects prefers-reduced-motion (dot static).
-- **Card:** 4px radius, surface background, 1px border. No nested cards.
-- **Status:** motion + label, never color alone. Pulse dot for "assembling".
+- **Button:** blocky 0px radius, 2px border, 10/18px padding. Primary = Lego red; interactive = Lego blue; warm = Lego yellow. Bold, chunky.
+- **Input:** 0px radius (blocky), 2px rule border, friendly label above.
+- **Node (pipeline):** 4px radius (brick), 2px border, title + mono port label. Active state: Lego red border + ring.
+- **Connector:** 2px rule line with animated Lego red dot (flow). Respects prefers-reduced-motion.
+- **Card:** 4px radius (brick), surface background, 2px border. No nested cards.
+- **Status:** motion + label + color. Pulse dot for "assembling". Playful, not subtle.
 
 ## Do's and Don'ts
 

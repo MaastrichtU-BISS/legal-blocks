@@ -49,21 +49,26 @@ const emit = defineEmits<{ select: []; remove: [] }>();
   gap: 0.25rem;
   text-align: center;
   padding: 0.9rem 0.6rem;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm, 2px);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm, 0px);
   background: var(--surface);
   cursor: pointer;
   font-family: var(--font-body);
-  transition: border-color 120ms ease-out;
+  font-weight: 600;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms ease-out;
 }
 
 .card:hover {
-  border-color: var(--accent-interactive);
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--ink);
+  border-color: var(--accent-live);
 }
 
 .card.selected {
   border-color: var(--accent-live);
-  box-shadow: 0 0 0 1px var(--accent-live);
+  box-shadow: 3px 3px 0 var(--accent-live);
+  background: var(--accent-warm);
 }
 
 .card strong {

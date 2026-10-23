@@ -200,14 +200,15 @@ header {
   align-items: center;
   gap: var(--space-md, 1rem);
   padding: var(--space-sm, 0.6rem) var(--space-md, 1rem);
-  border-bottom: 1px solid var(--rule);
-  background: var(--surface);
+  border-bottom: 2px solid var(--ink);
+  background: var(--accent-warm);
 }
 
 header strong {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--ink);
 }
 
 .name {
@@ -251,7 +252,7 @@ header strong {
 
 .settings {
   background: var(--surface);
-  border-left: 1px solid var(--rule);
+  border-left: 2px solid var(--ink);
 }
 
 h2 {

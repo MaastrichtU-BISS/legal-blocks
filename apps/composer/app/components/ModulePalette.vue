@@ -71,24 +71,24 @@ const emit = defineEmits<{ add: [m: Manifest]; toggleStorage: []; toggleLogin: [
   padding: var(--space-md, 1rem);
   overflow: auto;
   background: var(--surface);
-  border-right: 1px solid var(--rule);
+  border-right: 2px solid var(--ink);
   font-family: var(--font-body);
 }
 
 h2 {
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-display);
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--muted);
+  color: var(--ink);
   margin: 0 0 var(--space-md, 0.8rem);
-  font-weight: 500;
+  font-weight: 800;
 }
 
 .module {
   margin-bottom: var(--space-md, 1rem);
   padding-bottom: var(--space-md, 0.9rem);
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 2px solid var(--rule);
 }
 
 .module:last-child {
@@ -102,17 +102,22 @@ h2 {
 
 .module .row button {
   margin-left: auto;
-  font-family: var(--font-body);
+  font-family: var(--font-display);
+  font-weight: 700;
   font-size: 12px;
   padding: 4px 10px;
-  border-radius: var(--radius-sm, 2px);
+  border-radius: var(--radius-sm, 0px);
+  border: 2px solid var(--ink);
+  background: var(--accent-warm);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
 }
 
 .module.on strong::after {
   content: " · on";
   color: var(--accent-live);
-  font-weight: 500;
-  font-family: var(--font-mono);
+  font-weight: 800;
+  font-family: var(--font-display);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -127,7 +132,7 @@ h2 {
 
 .ico {
   display: inline-flex;
-  color: var(--muted);
+  color: var(--accent-interactive);
 }
 
 .small {
@@ -136,7 +141,8 @@ h2 {
 
 strong {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--ink);
 }
 </style>

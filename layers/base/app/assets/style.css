@@ -2,28 +2,30 @@
    Tokens are defined here and consumed by the shared shell (.lb-ui) and by
    both apps. Modules ship their own styling and must be left alone. */
 
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 :root {
-  /* Color */
-  --ground: #EAEFF5;
-  --surface: #F4F7FB;
-  --ink: #13171F;
-  --muted: #5B6370;
-  --rule: #C9D2DE;
-  --accent-live: #E63946;
-  --accent-interactive: #2563EB;
-  --success: #2A8F5B;
-  --warning: #C97A1A;
-  --danger: #C0392B;
+  /* Color — Lego-inspired primaries on clean white */
+  --ground: #FFFFFF;
+  --surface: #F5F5F5;
+  --ink: #1A1A1A;
+  --muted: #6B7280;
+  --rule: #E5E7EB;
+  --accent-live: #E3000B;
+  --accent-interactive: #0057A3;
+  --accent-warm: #FFD500;
+  --accent-success: #00852B;
+  --success: #00852B;
+  --warning: #FFD500;
+  --danger: #E3000B;
 
   /* Typography */
-  --font-display: "Bricolage Grotesque", "Manrope", system-ui, sans-serif;
-  --font-body: "Manrope", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", "SF Mono", Consolas, monospace;
+  --font-display: "Nunito", "Nunito Sans", system-ui, sans-serif;
+  --font-body: "Nunito Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
 
-  /* Radius */
-  --radius-sm: 2px;
+  /* Radius — blocky */
+  --radius-sm: 0px;
   --radius-md: 4px;
   --radius-lg: 8px;
   --radius-full: 9999px;
@@ -66,10 +68,10 @@ body {
 .lb-ui button {
   font: inherit;
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 8px 14px;
-  border: 1px solid var(--rule);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border: 2px solid var(--rule);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
@@ -88,25 +90,25 @@ body {
 }
 
 .lb-ui button.primary {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--ground);
-}
-
-.lb-ui button.primary:hover:not(:disabled) {
-  background: #1f2530;
-  color: var(--ground);
-}
-
-.lb-ui button.live {
   background: var(--accent-live);
   border-color: var(--accent-live);
   color: #fff;
 }
 
+.lb-ui button.primary:hover:not(:disabled) {
+  background: #c00009;
+  color: #fff;
+}
+
+.lb-ui button.live {
+  background: var(--accent-warm);
+  border-color: var(--accent-warm);
+  color: var(--ink);
+}
+
 .lb-ui button.live:hover:not(:disabled) {
   opacity: 0.9;
-  color: #fff;
+  color: var(--ink);
 }
 
 .lb-ui button.ghost {
@@ -119,12 +121,13 @@ body {
   font: inherit;
   font-family: var(--font-body);
   font-size: 13px;
-  padding: 6px 8px;
-  border: 1px solid var(--rule);
+  padding: 8px 10px;
+  border: 2px solid var(--rule);
   border-radius: var(--radius-sm);
   width: 100%;
   background: var(--surface);
   color: var(--ink);
+  font-weight: 500;
 }
 
 .lb-ui input:focus,
