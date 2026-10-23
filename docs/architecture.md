@@ -96,7 +96,7 @@ is worth the six lines.
 The composer writes **its own version** into every export:
 
 ```yaml
-image: ghcr.io/maastrichtu-biss/legal-blocks-platform:0.1.0
+image: ghcr.io/maastrichtu-biss/legal-blocks-platform:0.8.1
 ```
 
 `script/docker-build.sh` builds all three images from one commit under one
@@ -561,13 +561,13 @@ Everything from here on assumes you are changing legal-blocks. **Using** the
 composer needs none of it — no clone, no Node, no npm:
 
 ```bash
-docker run --rm -p 7788:7788 ghcr.io/maastrichtu-biss/legal-blocks-composer:0.1.0
+docker run --rm -p 7788:7788 ghcr.io/maastrichtu-biss/legal-blocks-composer:0.8.1
 ```
 
 The composer writes nothing and reads nothing but its own bundle, so there is
 no volume, no data folder and nothing to configure. That is the command to give
 a colleague who wants to design a platform rather than work on one, and its
-exports name the public `0.1.0` images so the zip runs on their machine too.
+exports name the public `0.8.1` images so the zip runs on their machine too.
 
 Node 24, pinned in `.nvmrc`. `nvm use` affects only the shell you run it in.
 
@@ -592,7 +592,7 @@ Agreement metrics need the `lawnotation-iaa` container, which `npm run dev` does
 not start. To work on that screen, run the published image alongside:
 
 ```bash
-docker run -d --rm -p 8080:8080 ghcr.io/maastrichtu-biss/lawnotation-iaa:0.1.0
+docker run -d --rm -p 8080:8080 ghcr.io/maastrichtu-biss/lawnotation-iaa:0.8.1
 LEGAL_BLOCKS_IAA_URL=http://localhost:8080 npm run dev:platform
 ```
 
@@ -674,7 +674,7 @@ module's code lives inside the platform image, so a published platform keeps
 shipping the old version until you cut a new one:
 
 ```bash
-./script/docker-build.sh 0.2.0 push
+./script/docker-build.sh 0.8.1 push
 ```
 
 Three things to check while you are there:
@@ -736,7 +736,7 @@ Either way, add the id to the module's `services` array in its manifest.
 ## Cutting a release
 
 ```bash
-./script/docker-build.sh 0.2.0 push
+./script/docker-build.sh 0.8.1 push
 ```
 
 All three images, one version, one commit. The script refuses `:dev` and builds

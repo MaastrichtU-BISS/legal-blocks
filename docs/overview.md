@@ -103,7 +103,7 @@ You need Docker. You do not need this repository.
 
 ```bash
 docker run --rm -p 127.0.0.1:7788:7788 \
-  ghcr.io/maastrichtu-biss/legal-blocks-composer:0.5.0
+  ghcr.io/maastrichtu-biss/legal-blocks-composer:0.8.1
 ```
 
 Open <http://localhost:7788>, add a couple of modules, press **Export platform**.
