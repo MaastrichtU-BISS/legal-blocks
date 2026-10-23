@@ -286,7 +286,7 @@ describe("task progress", () => {
       const first = q.find((e) => e.name === "doc-a")!;
       const b = bundle(db, first.assignment_id);
       b.assignment.annotations = [
-        { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 4, relations: [] },
+        { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 4, metadata: null, relations: [] },
       ];
       saveAssignment(db, first.assignment_id, b.assignment);
     }
@@ -341,7 +341,7 @@ describe("task progress", () => {
     const q = queue(db, taskId, people[0]!.id);
     const b = bundle(db, q[0]!.assignment_id);
     b.assignment.annotations = [
-      { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 4, relations: [] },
+      { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 4, metadata: null, relations: [] },
     ];
     b.assignment.status = "done";
     saveAssignment(db, q[0]!.assignment_id, b.assignment);
@@ -365,7 +365,7 @@ describe("exporting a task", () => {
     const q = queue(db, taskId, people[0]!.id);
     const b = bundle(db, q[0]!.assignment_id);
     b.assignment.annotations = [
-      { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 4, relations: [] },
+      { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 4, metadata: null, relations: [] },
     ];
     saveAssignment(db, q[0]!.assignment_id, b.assignment);
 
@@ -420,9 +420,9 @@ describe("exporting a task", () => {
     const q = queue(db, taskId, people[0]!.id);
     const b = bundle(db, q[0]!.assignment_id);
     b.assignment.annotations = [
-      { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 0,
+      { id: -1, start: 0, end: 3, text: "The", label: "Obligation", confidence: 0, metadata: null,
         relations: [{ to: -2, direction: "right", labels: ["Part of"] }] },
-      { id: -2, start: 4, end: 10, text: "tenant", label: "Right", confidence: 0, relations: [] },
+      { id: -2, start: 4, end: 10, text: "tenant", label: "Right", confidence: 0, metadata: null, relations: [] },
     ];
     saveAssignment(db, q[0]!.assignment_id, b.assignment);
 
