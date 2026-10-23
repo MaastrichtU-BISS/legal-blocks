@@ -9,7 +9,7 @@
 import { ref } from "vue";
 import Runtime from "@base/runtime/Runtime.vue";
 import { getPipeline, getRegistry } from "@base/api";
-import type { Pipeline, Registry } from "@base/types";
+import type { Pipeline, Registry } from "@legal-blocks/manifest";
 import { getAuthState, type AuthState } from "./auth";
 import SignIn from "./components/SignIn.vue";
 import AccountMenu from "./components/AccountMenu.vue";

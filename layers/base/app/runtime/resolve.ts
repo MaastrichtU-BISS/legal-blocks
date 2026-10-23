@@ -7,7 +7,7 @@
 // differ but are compatible.
 
 import { adapt, canAdapt } from "../adapters";
-import type { Kind, Pipeline, Registry } from "../types";
+import type { Kind, Pipeline, Registry } from "@legal-blocks/manifest";
 import { inputPort, configWithDefaults } from "../types";
 import { bindingFor, type BindingContext } from "./bindings";
 

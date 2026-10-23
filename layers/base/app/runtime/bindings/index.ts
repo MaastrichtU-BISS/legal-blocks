@@ -18,7 +18,7 @@
 // a genuinely new kind of module needs one file, which is the honest cost of a
 // new kind of module.
 
-import type { Kind } from "../../types";
+import type { Kind } from "@legal-blocks/manifest";
 import { AnnotationSource } from "./annotation";
 import { DocumentImport, DocumentPassthrough, DocumentSearch } from "./documents";
 import { MetricsSource } from "./metrics";

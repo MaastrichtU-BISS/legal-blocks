@@ -22,7 +22,7 @@ import "vue-legal-workspace/style.css";
 
 import ModuleHost from "../runtime/ModuleHost.vue";
 import type { ResolveEnv } from "../runtime/resolve";
-import type { Manifest, Pipeline, Registry } from "../types";
+import type { Manifest, Pipeline, Registry } from "@legal-blocks/manifest";
 import type { DatasetSummary, LabelsetSummary, TaskSummary } from "../api";
 import { getDatasets, getLabelsets, getTasks } from "../api";
 import NewLabelsetForm from "./NewLabelsetForm.vue";

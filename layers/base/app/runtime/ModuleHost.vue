@@ -6,7 +6,7 @@
 import { ref, watch } from "vue";
 import type { Component } from "vue";
 import { loadComponent } from "../modules/loaders";
-import type { Manifest, Node } from "../types";
+import type { Manifest, Node } from "@legal-blocks/manifest";
 import { bindingFor } from "./bindings";
 import { contextFor, type ResolveEnv } from "./resolve";
 

@@ -5,7 +5,7 @@
 import { ref } from "vue";
 import Composer from "./components/Composer.vue";
 import { getRegistry } from "@base/api";
-import type { Registry } from "@base/types";
+import type { Registry } from "@legal-blocks/manifest";
 
 const registry = ref<Registry | null>(null);
 const error = ref("");

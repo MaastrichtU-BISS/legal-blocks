@@ -4,7 +4,7 @@
 // the vocabulary every contract speaks.
 
 import type { TaskData } from "legal-annotation-kit";
-import type { Kind } from "../../types";
+import type { Kind } from "@legal-blocks/manifest";
 
 /** One document as the search API returns it: an id and its own attributes. */
 export interface ResultNode {

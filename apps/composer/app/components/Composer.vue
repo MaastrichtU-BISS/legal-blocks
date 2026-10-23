@@ -13,8 +13,8 @@ import PipelineFlow from "./PipelineFlow.vue";
 import WorkspaceRing from "./WorkspaceRing.vue";
 import { usePlatformDraft } from "../composables/usePlatformDraft";
 import { exportPipeline } from "@base/api";
-import type { Registry } from "@base/types";
-import { fieldAppliesIn } from "@base/types";
+import type { Registry } from "@legal-blocks/manifest";
+import { appliesIn as fieldAppliesIn } from "@legal-blocks/manifest";
 import { fieldShown } from "@legal-blocks/manifest";
 
 const props = defineProps<{ registry: Registry }>();
