@@ -4,11 +4,13 @@
 
 import { ref } from "vue";
 import Composer from "./components/Composer.vue";
+import Landing from "./components/Landing.vue";
 import { getRegistry } from "@base/api";
 import type { Registry } from "@legal-blocks/manifest";
 
 const registry = ref<Registry | null>(null);
 const error = ref("");
+const started = ref(false);
 
 getRegistry()
   .then((reg) => {
@@ -17,10 +19,15 @@ getRegistry()
   .catch((e: unknown) => {
     error.value = e instanceof Error ? e.message : String(e);
   });
+
+function start() {
+  started.value = true;
+}
 </script>
 
 <template>
   <p v-if="error" class="pad error">{{ error }}</p>
+  <Landing v-else-if="!started" @start="start" />
   <Composer v-else-if="registry" :registry="registry" />
   <p v-else class="pad muted">Starting…</p>
 </template>
