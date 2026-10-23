@@ -162,29 +162,50 @@ async function doExport() {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  font-family: var(--font-body);
+  background: var(--ground);
+  color: var(--ink);
 }
 
 header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.6rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-soft);
+  gap: var(--space-md, 1rem);
+  padding: var(--space-sm, 0.6rem) var(--space-md, 1rem);
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+header strong {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
 }
 
 .name {
   width: auto;
   min-width: 14rem;
   font-weight: 600;
+  font-family: var(--font-display);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm, 2px);
+  padding: 6px 8px;
+  background: var(--ground);
 }
 
 .modes {
   margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .modes button {
-  padding: 0.25rem 0.6rem;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-sm, 2px);
 }
 
 .columns {
@@ -196,21 +217,23 @@ header {
 
 .board,
 .settings {
-  padding: 1rem;
+  padding: var(--space-md, 1rem);
   overflow: auto;
 }
 
 .settings {
-  background: var(--bg-soft);
-  border-left: 1px solid var(--border);
+  background: var(--surface);
+  border-left: 1px solid var(--rule);
 }
 
 h2 {
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
-  margin: 0 0 0.8rem;
+  margin: 0 0 var(--space-md, 0.8rem);
+  font-weight: 500;
 }
 
 .board {
@@ -223,17 +246,23 @@ h2 {
   max-width: 26rem;
   line-height: 1.5;
   align-self: flex-start;
+  color: var(--muted);
 }
 
 .field {
   display: block;
-  margin-bottom: 0.9rem;
+  margin-bottom: var(--space-md, 0.9rem);
 }
 
 .field span {
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-xs, 0.25rem);
   font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .small {

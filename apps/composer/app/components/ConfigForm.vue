@@ -143,19 +143,22 @@ function describeJson(value: unknown): string {
 
 <style scoped>
 .field {
-  margin-bottom: 0.9rem;
+  margin-bottom: var(--space-md, 0.9rem);
 }
 
 label {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-xs, 0.25rem);
   font-weight: 500;
+  font-size: 13px;
+  font-family: var(--font-body);
 }
 
 .required {
   color: var(--danger);
+  font-family: var(--font-mono);
 }
 
 /* Shown at once on hover or keyboard focus. A title attribute waits a second
@@ -175,13 +178,14 @@ label {
   width: max-content;
   max-width: 16rem;
   padding: 0.45rem 0.6rem;
-  border-radius: 6px;
-  background: #18181b;
-  color: #fff;
+  border-radius: var(--radius-sm, 2px);
+  background: var(--ink);
+  color: var(--ground);
   font-size: 0.85rem;
   font-weight: 400;
   line-height: 1.4;
   white-space: normal;
+  font-family: var(--font-body);
 }
 
 .info:hover .tip,
@@ -192,25 +196,35 @@ label {
 .upload input[type="file"] {
   max-width: 100%;
   font-size: 0.9em;
+  font-family: var(--font-body);
 }
 
 .link {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--accent-interactive);
   font: inherit;
   cursor: pointer;
   text-decoration: underline;
 }
 
 .help {
-  margin: 0.25rem 0 0;
+  margin: var(--space-xs, 0.25rem) 0 0;
   font-size: 0.9em;
   line-height: 1.45;
+  color: var(--muted);
 }
 
 .help a {
-  color: var(--accent);
+  color: var(--accent-interactive);
+}
+
+select,
+input,
+textarea {
+  font-family: var(--font-body);
+  font-size: 13px;
+  border-radius: var(--radius-sm, 2px);
 }
 </style>

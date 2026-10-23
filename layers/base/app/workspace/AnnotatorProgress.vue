@@ -122,7 +122,7 @@ function label(entry: QueueEntry, index: number): { text: string; cls: string } 
 }
 
 .ap-error {
-  color: #b91c1c;
+  color: var(--danger);
 }
 
 header {
@@ -132,7 +132,7 @@ header {
   flex-wrap: wrap;
   padding-bottom: 0.5rem;
   margin-bottom: 0.25rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--rule);
 }
 
 .go {
@@ -140,9 +140,9 @@ header {
   font-size: 0.8rem;
   margin-left: auto;
   padding: 0.25rem 0.7rem;
-  border: 1px solid #1e4e79;
-  border-radius: 4px;
-  background: #1e4e79;
+  border: 1px solid var(--accent-interactive);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--accent-interactive);
   color: #fff;
   cursor: pointer;
 }
@@ -161,7 +161,7 @@ header {
 }
 
 .pos {
-  color: #9ca3af;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -175,36 +175,36 @@ header {
 .badge {
   font-size: 0.7rem;
   padding: 0.05rem 0.4rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full, 9999px);
   white-space: nowrap;
   border: 1px solid currentColor;
 }
 
 .badge.all {
-  color: #15803d;
+  color: var(--success);
 }
 
 .badge.some {
-  color: #b45309;
+  color: var(--warning);
 }
 
 .badge.none {
-  color: #9ca3af;
+  color: var(--muted);
 }
 
 .open {
   font: inherit;
   font-size: 0.78rem;
   padding: 0.12rem 0.5rem;
-  border: 1px solid #1e4e79;
-  border-radius: 4px;
-  background: #fff;
-  color: #1e4e79;
+  border: 1px solid var(--accent-interactive);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--surface);
+  color: var(--accent-interactive);
   cursor: pointer;
 }
 
 .muted {
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .small {

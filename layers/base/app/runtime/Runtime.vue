@@ -200,11 +200,12 @@ function goTo(index: number) {
 header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-soft);
+  gap: var(--space-md, 1rem);
+  padding: var(--space-sm, 0.5rem) var(--space-md, 1rem);
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
   flex-wrap: wrap;
+  font-family: var(--font-body);
 }
 
 nav {

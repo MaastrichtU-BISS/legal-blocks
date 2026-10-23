@@ -66,9 +66,9 @@ async function leave() {
   flex-direction: column;
   min-width: 11rem;
   padding: 0.25rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--surface);
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
   z-index: 10;
 }

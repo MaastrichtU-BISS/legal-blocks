@@ -1,20 +1,51 @@
-/* Deliberately minimal: enough structure to read, nothing that competes with
-   the modules' own styling. This is a proof of concept for the wiring, not a
-   design system. */
+/* Design system: see DESIGN.md (living schematic).
+   Tokens are defined here and consumed by the shared shell (.lb-ui) and by
+   both apps. Modules ship their own styling and must be left alone. */
+
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 
 :root {
-  --border: #d4d4d8;
-  --muted: #71717a;
-  --bg-soft: #fafafa;
-  --accent: #2563eb;
-  --danger: #b91c1c;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 14px;
-  color: #18181b;
+  /* Color */
+  --ground: #EAEFF5;
+  --surface: #F4F7FB;
+  --ink: #13171F;
+  --muted: #5B6370;
+  --rule: #C9D2DE;
+  --accent-live: #E63946;
+  --accent-interactive: #2563EB;
+  --success: #2A8F5B;
+  --warning: #C97A1A;
+  --danger: #C0392B;
 
-  /* The modules are all light-themed, so the shell commits to light too
-     rather than leaving half the page following the OS and half not. */
+  /* Typography */
+  --font-display: "Bricolage Grotesque", "Manrope", system-ui, sans-serif;
+  --font-body: "Manrope", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", Consolas, monospace;
+
+  /* Radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* Back-compat aliases for existing component styles. */
+  --border: var(--rule);
+  --bg-soft: var(--surface);
+  --accent: var(--accent-interactive);
+  --danger: var(--error);
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
   color-scheme: light;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
 }
 
 .lb-ui,
@@ -24,27 +55,31 @@
 
 body {
   margin: 0;
-  background: #fff;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
 }
 
 /* Form controls are scoped to .lb-ui — the shell's own chrome — and never
-   applied globally. A bare `input { width: 100% }` reaches inside every
-   mounted module and, for example, stretches a package's filter checkboxes to
-   the full row width, pushing their labels off to the right. Modules ship
-   their own styling and must be left alone. */
+   applied globally. Modules ship their own styling and must be left alone. */
 
 .lb-ui button {
   font: inherit;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: #fff;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
   cursor: pointer;
+  transition: border-color 120ms ease-out, color 120ms ease-out, background 120ms ease-out;
 }
 
 .lb-ui button:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-interactive);
+  color: var(--accent-interactive);
 }
 
 .lb-ui button:disabled {
@@ -53,25 +88,51 @@ body {
 }
 
 .lb-ui button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ground);
 }
 
 .lb-ui button.primary:hover:not(:disabled) {
+  background: #1f2530;
+  color: var(--ground);
+}
+
+.lb-ui button.live {
+  background: var(--accent-live);
+  border-color: var(--accent-live);
   color: #fff;
+}
+
+.lb-ui button.live:hover:not(:disabled) {
   opacity: 0.9;
+  color: #fff;
+}
+
+.lb-ui button.ghost {
+  background: transparent;
 }
 
 .lb-ui input,
 .lb-ui select,
 .lb-ui textarea {
   font: inherit;
-  padding: 0.3rem 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
   width: 100%;
-  background: #fff;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.lb-ui input:focus,
+.lb-ui select:focus,
+.lb-ui textarea:focus {
+  outline: none;
+  border-color: var(--accent-interactive);
+  box-shadow: 0 0 0 1px var(--accent-interactive);
 }
 
 .muted {
@@ -84,11 +145,100 @@ body {
 }
 
 .pad {
-  padding: 1rem;
+  padding: var(--space-md);
 }
 
 .row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-sm);
+}
+
+/* Mono labels for ports/settings */
+.lb-ui .label-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+/* Status dot (assembly) */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--accent-live);
+  animation: lb-pulse 1.4s ease-in-out infinite;
+  margin-right: var(--space-xs);
+}
+
+@keyframes lb-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* Pipeline flow */
+.lb-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding: var(--space-lg) 0;
+}
+
+.lb-node {
+  background: var(--ground);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  min-width: 140px;
+}
+
+.lb-node.active {
+  border-color: var(--accent-live);
+  box-shadow: 0 0 0 1px var(--accent-live);
+}
+
+.lb-node-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lb-node-sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+.lb-connector {
+  width: 48px;
+  height: 2px;
+  background: var(--rule);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.lb-connector .dot {
+  position: absolute;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--accent-live);
+  animation: lb-flow 1.6s linear infinite;
+}
+
+@keyframes lb-flow {
+  0% { left: 0; }
+  100% { left: calc(100% - 8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot,
+  .lb-connector .dot {
+    animation: none;
+  }
 }

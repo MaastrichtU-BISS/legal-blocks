@@ -49,33 +49,39 @@ const emit = defineEmits<{ select: []; remove: [] }>();
   gap: 0.25rem;
   text-align: center;
   padding: 0.9rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--surface);
   cursor: pointer;
+  font-family: var(--font-body);
+  transition: border-color 120ms ease-out;
 }
 
 .card:hover {
-  border-color: var(--accent);
+  border-color: var(--accent-interactive);
 }
 
 .card.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--accent-live);
+  box-shadow: 0 0 0 1px var(--accent-live);
 }
 
 .card strong {
   font-size: 0.9rem;
   line-height: 1.2;
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 .ico {
   display: inline-flex;
-  color: var(--accent);
+  color: var(--accent-interactive);
 }
 
 .small {
   font-size: 0.9em;
+  font-family: var(--font-mono);
+  color: var(--muted);
 }
 
 /* Only on hover or when chosen: eight cards each showing a × is a wall of
@@ -89,11 +95,12 @@ const emit = defineEmits<{ select: []; remove: [] }>();
   padding: 0;
   line-height: 1;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-full, 9999px);
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   opacity: 0;
+  font-family: var(--font-body);
 }
 
 .card:hover .close,
@@ -103,8 +110,8 @@ const emit = defineEmits<{ select: []; remove: [] }>();
 }
 
 .close:hover:not(:disabled) {
-  background: var(--border);
-  color: #b91c1c;
+  background: var(--rule);
+  color: var(--danger);
 }
 
 .close:disabled {

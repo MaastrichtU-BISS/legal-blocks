@@ -287,8 +287,8 @@ function created() {
 .name input {
   font: inherit;
   padding: 0.35rem 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm, 2px);
 }
 
 h3 {

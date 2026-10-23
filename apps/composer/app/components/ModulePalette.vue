@@ -68,24 +68,27 @@ const emit = defineEmits<{ add: [m: Manifest]; toggleStorage: []; toggleLogin: [
 
 <style scoped>
 .palette {
-  padding: 1rem;
+  padding: var(--space-md, 1rem);
   overflow: auto;
-  background: var(--bg-soft);
-  border-right: 1px solid var(--border);
+  background: var(--surface);
+  border-right: 1px solid var(--rule);
+  font-family: var(--font-body);
 }
 
 h2 {
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
-  margin: 0 0 0.8rem;
+  margin: 0 0 var(--space-md, 0.8rem);
+  font-weight: 500;
 }
 
 .module {
-  margin-bottom: 1rem;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-md, 1rem);
+  padding-bottom: var(--space-md, 0.9rem);
+  border-bottom: 1px solid var(--rule);
 }
 
 .module:last-child {
@@ -93,24 +96,33 @@ h2 {
 }
 
 .module .row {
-  gap: 0.5rem;
+  gap: var(--space-sm, 0.5rem);
   align-items: center;
 }
 
 .module .row button {
   margin-left: auto;
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm, 2px);
+}
+
+.module.on strong::after {
+  content: " · on";
+  color: var(--accent-live);
+  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .module p {
-  margin: 0.2rem 0 0;
+  margin: var(--space-xs, 0.2rem) 0 0;
   line-height: 1.45;
-}
-
-/* Storage on: say so here, since it governs everything under it. */
-.module.on strong::after {
-  content: " · on";
-  color: var(--accent);
-  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .ico {
@@ -120,5 +132,11 @@ h2 {
 
 .small {
   font-size: 0.9em;
+}
+
+strong {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
 }
 </style>

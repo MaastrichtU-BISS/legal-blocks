@@ -53,8 +53,9 @@ const emit = defineEmits<{ select: [id: string]; remove: [i: number]; removeLogi
 }
 
 .arrow {
-  color: var(--muted);
+  color: var(--accent-live);
   font-size: 1.2rem;
   user-select: none;
+  font-family: var(--font-mono);
 }
 </style>

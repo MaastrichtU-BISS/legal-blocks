@@ -132,15 +132,15 @@ async function download() {
   /* A summary is read down, not across. Left-aligned rather than centred so it
      lines up with the step bar above it. */
   max-width: 40rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm, 2px);
   padding: 0.6rem 0.75rem;
   margin-bottom: 0.75rem;
   font-size: 0.85rem;
 }
 
 .tp-error {
-  color: #b91c1c;
+  color: var(--danger);
   margin: 0 0 0.4rem;
 }
 
@@ -156,29 +156,29 @@ header {
   flex: 1;
   min-width: 4rem;
   height: 6px;
-  background: #e2e8f0;
-  border-radius: 3px;
+  background: var(--rule);
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .fill {
   display: block;
   height: 100%;
-  background: #1e4e79;
+  background: var(--accent-interactive);
 }
 
 .dl {
   font: inherit;
   font-size: 0.8rem;
   padding: 0.2rem 0.6rem;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--surface);
   cursor: pointer;
 }
 
 .dl:hover:not(:disabled) {
-  border-color: #9ca3af;
+  border-color: var(--muted);
 }
 
 .dl:disabled {
@@ -190,7 +190,7 @@ h4 {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #6b7280;
+  color: var(--muted);
   margin: 0.5rem 0 0.25rem;
 }
 
@@ -211,7 +211,7 @@ h4 {
 .n {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: #6b7280;
+  color: var(--muted);
   min-width: 3.2rem;
   text-align: right;
 }
@@ -219,21 +219,21 @@ h4 {
 .badge {
   font-size: 0.7rem;
   padding: 0.05rem 0.4rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full, 9999px);
   white-space: nowrap;
   border: 1px solid currentColor;
 }
 
 .badge.all {
-  color: #15803d;
+  color: var(--success);
 }
 
 .badge.some {
-  color: #b45309;
+  color: var(--warning);
 }
 
 .badge.none {
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .disclose {
@@ -241,7 +241,7 @@ h4 {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #6b7280;
+  color: var(--muted);
   background: none;
   border: 0;
   padding: 0.5rem 0 0.25rem;
@@ -249,7 +249,7 @@ h4 {
 }
 
 .disclose:hover {
-  color: #1f2937;
+  color: var(--ink);
 }
 
 /* Bounded so a long corpus scrolls here rather than pushing the step below the
@@ -260,7 +260,7 @@ h4 {
 }
 
 .muted {
-  color: #6b7280;
+  color: var(--muted);
   margin: 0.15rem 0;
 }
 </style>

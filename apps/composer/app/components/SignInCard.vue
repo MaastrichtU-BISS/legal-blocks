@@ -27,9 +27,9 @@ const emit = defineEmits<{ remove: [] }>();
   justify-content: center;
   gap: 0.25rem;
   padding: 0.9rem 0.6rem;
-  border: 1px dashed var(--accent);
-  border-radius: 8px;
-  background: #fff;
+  border: 1px dashed var(--accent-live);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--surface);
 }
 
 .card.compact {
@@ -37,13 +37,13 @@ const emit = defineEmits<{ remove: [] }>();
   min-height: 0;
   flex-direction: row;
   padding: 0.25rem 1.6rem 0.25rem 0.6rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full, 9999px);
   font-size: 0.85rem;
 }
 
 .ico {
   display: inline-flex;
-  color: var(--accent);
+  color: var(--accent-live);
 }
 
 .close {
@@ -73,7 +73,7 @@ const emit = defineEmits<{ remove: [] }>();
 }
 
 .close:hover {
-  background: var(--border);
-  color: #b91c1c;
+  background: var(--rule);
+  color: var(--danger);
 }
 </style>

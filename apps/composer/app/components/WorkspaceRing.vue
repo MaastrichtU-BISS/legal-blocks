@@ -110,7 +110,7 @@ function spoke(index: number, total: number): Record<string, number> {
 }
 
 .spoke {
-  stroke: var(--border);
+  stroke: var(--rule);
   stroke-width: 0.5;
   marker-start: url(#lb-arrow);
   marker-end: url(#lb-arrow);
@@ -128,10 +128,11 @@ function spoke(index: number, total: number): Record<string, number> {
   gap: 0.2rem;
   width: 7rem;
   height: 7rem;
-  border: 1px solid var(--accent);
-  border-radius: 50%;
-  background: #fff;
-  color: var(--accent);
+  border: 1px solid var(--accent-live);
+  border-radius: var(--radius-full, 9999px);
+  background: var(--surface);
+  color: var(--accent-live);
+  font-family: var(--font-body);
 }
 
 .on-store {
