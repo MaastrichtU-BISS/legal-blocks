@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ThemeToggle from "@base/components/ThemeToggle.vue";
+import SquareLockMark from "./SquareLockMark.vue";
 
 const emit = defineEmits<{ back: []; compose: [] }>();
 </script>
@@ -8,12 +9,7 @@ const emit = defineEmits<{ back: []; compose: [] }>();
   <div class="page lb-ui">
     <header class="page-header">
       <span class="brand" @click="emit('back')">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="3" width="7" height="7" rx="1" fill="#E3000B" stroke="#1A1A1A" stroke-width="2" />
-          <rect x="14" y="3" width="7" height="7" rx="1" fill="#0057A3" stroke="#1A1A1A" stroke-width="2" />
-          <rect x="3" y="14" width="7" height="7" rx="1" fill="#00852B" stroke="#1A1A1A" stroke-width="2" />
-          <rect x="14" y="14" width="7" height="7" rx="1" fill="#14B8A6" stroke="#1A1A1A" stroke-width="2" />
-        </svg>
+        <SquareLockMark :size="28" />
         Legal Blocks
       </span>
       <nav class="page-nav">

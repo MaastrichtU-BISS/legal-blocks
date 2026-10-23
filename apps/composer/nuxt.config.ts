@@ -6,6 +6,12 @@
 export default defineNuxtConfig({
   extends: ["../../layers/base"],
 
+  app: {
+    head: {
+      link: [{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
+    },
+  },
+
   runtimeConfig: {
     // Stamped at build time. See server/utils/images.ts for why the composer
     // writes its own version rather than :latest.
