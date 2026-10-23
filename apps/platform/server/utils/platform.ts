@@ -5,7 +5,7 @@
 // server runs — it is mounted read-only beside the platform — and reopening
 // SQLite per request would throw away the connection's pragmas along with it.
 
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { accessSync, constants, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { H3Event } from "h3";
 import { exportKind, parsePipeline, requiresLogin, type Pipeline } from "@legal-blocks/manifest";
@@ -87,13 +87,35 @@ export function useAccountsDb(event: H3Event): Handle {
 /** The data folder, created on first use. Where the database and session secret live. */
 export function dataDir(): string {
   const data = join(dir(), "data");
-  mkdirSync(data, { recursive: true });
+  try {
+    mkdirSync(data, { recursive: true });
+    accessSync(data, constants.W_OK);
+  } catch (e) {
+    throw createError({
+      statusCode: 503,
+      statusMessage:
+        `this platform's data directory (${data}) is not writable. ` +
+        `Check its ownership and permissions ` +
+        `(the cause is usually a read-only mount, SELinux, or NFS).`,
+    });
+  }
   return data;
 }
 
 function openDb(): Handle {
   if (dbCache) return dbCache;
-  dbCache = open(join(dataDir(), "platform.db"));
+  const data = dataDir();
+  try {
+    dbCache = open(join(data, "platform.db"));
+  } catch (e) {
+    throw createError({
+      statusCode: 503,
+      statusMessage:
+        `this platform's data directory (${data}) is not writable. ` +
+        `Check its ownership and permissions ` +
+        `(the cause is usually a read-only mount, SELinux, or NFS).`,
+    });
+  }
 
   // Settle the platform's own account now rather than on the first write.
   // Whether somebody is an admin decides what the workspace offers them, and
