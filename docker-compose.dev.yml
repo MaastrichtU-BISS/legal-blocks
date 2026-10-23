@@ -1,0 +1,21 @@
+# Development compose: bind-mounts the source so edits are reflected without
+# rebuilding the image. Run with:
+#
+#   docker compose -f docker-compose.dev.yml up
+#
+# The composer runs its dev server inside the container, with hot reload.
+
+name: legal-blocks-dev
+
+services:
+  composer:
+    image: node:24-alpine
+    working_dir: /src
+    volumes:
+      - .:/src
+    command: sh -c "npm install && npm run dev:composer"
+    ports:
+      - "127.0.0.1:7788:7788"
+    environment:
+      - NITRO_HOST=0.0.0.0
+      - NITRO_PORT=7788

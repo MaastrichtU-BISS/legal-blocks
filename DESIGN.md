@@ -3,41 +3,40 @@
 name: Legal Blocks
 description: A living schematic — quiet industrial chrome framing a breathing pipeline.
 colors:
-  primary: "#E3000B"
+  primary: "#E85A4F"
   on-primary: "#FFFFFF"
-  surface: "#F5F5F5"
+  surface: "#F9FAFB"
   ground: "#FFFFFF"
-  text: "#1A1A1A"
+  text: "#1F2937"
   text-muted: "#6B7280"
   rule: "#E5E7EB"
-  accent-live: "#E3000B"
-  accent-interactive: "#0057A3"
-  accent-warm: "#FFD500"
-  accent-success: "#00852B"
-  success: "#00852B"
-  warning: "#FFD500"
-  error: "#E3000B"
+  accent-live: "#E85A4F"
+  accent-interactive: "#0D9488"
+  accent-success: "#10B981"
+  success: "#10B981"
+  warning: "#F59E0B"
+  error: "#E85A4F"
 typography:
   display:
-    fontFamily: Nunito
-    fontWeight: 800
-    fontSize: clamp(28px, 4vw, 40px)
-    letterSpacing: -0.01em
+    fontFamily: Cabinet Grotesk
+    fontWeight: 700
+    fontSize: clamp(32px, 4vw, 48px)
+    letterSpacing: -0.02em
   body:
-    fontFamily: Nunito Sans
+    fontFamily: DM Sans
     fontSize: 1rem
-    lineHeight: 1.5
+    lineHeight: 1.6
   label:
-    fontFamily: Nunito Sans
-    fontSize: 0.75rem
-    letterSpacing: 0.04em
+    fontFamily: DM Sans
+    fontSize: 0.8125rem
+    letterSpacing: 0.02em
   mono:
     fontFamily: JetBrains Mono
     fontFeature: tnum
 rounded:
-  sm: 0px
-  md: 4px
-  lg: 8px
+  sm: 8px
+  md: 12px
+  lg: 16px
   full: 9999px
 spacing:
   xs: 4px
@@ -71,7 +70,7 @@ components:
 
 ## Overview
 
-**Creative North Star:** Playful blocks — bright primary colors on clean white, chunky blocky shapes, friendly type. Lego-inspired: every module is a brick you snap into place.
+**Creative North Star:** Friendly and inviting — soft coral and teal on clean white, gentle rounded shapes, warm type. Approachable to non-technical users; calm, not loud.
 
 **Product context:** Legal Blocks composes platforms out of existing packages. A composer designs a platform (pipeline or workspace); the platform runs it. Audience: developers and researchers (legal/annotation research). Project type: web app (Nuxt 3 / Vue 3), two apps sharing one layer.
 
@@ -83,23 +82,22 @@ components:
 
 ## Colors
 
-**Strategy:** Full palette — primary Lego red for CTAs, Lego blue for interaction, Lego yellow for highlights, Lego green for success. Bright primaries on clean white, like a box of bricks.
+**Strategy:** Restrained two-accent — soft coral for primary actions, teal for interaction. Calm, friendly, not loud. High contrast without harshness.
 
-**Light or dark:** Light. Playful, inviting, high-contrast. White ground, near-black ink, bright primary accents.
+**Light or dark:** Light. Clean white ground, soft gray surfaces, warm coral CTAs, teal links.
 
-- `primary` (#E3000B) Lego red — primary CTAs and the "live flow" accent. The one color that owns the action.
-- `accent-interactive` (#0057A3) Lego blue — links, focus rings, secondary actions.
-- `accent-warm` (#FFD500) Lego yellow — highlights, badges, warnings.
-- `accent-success` (#00852B) Lego green — success, completed states.
-- Neutrals are pure white/gray; primaries carry all the energy.
+- `primary` / `accent-live` (#E85A4F) soft coral — primary CTAs and the "live flow" accent. Warm, inviting, not aggressive.
+- `accent-interactive` (#0D9488) teal — links, focus rings, secondary actions.
+- `accent-success` (#10B981) emerald — success, completed states.
+- Neutrals are soft grays; accents are muted but distinct. No yellow.
 
 ## Typography
 
-- **Display — Nunito** (Google Fonts): rounded, friendly, playful. Bold 800 for headlines. Carries the Lego-box energy.
-- **Body — Nunito Sans** (Google Fonts): clean, legible, warm. UI text and body copy.
+- **Display — Cabinet Grotesk** (Fontshare): modern, friendly, slightly geometric. Warm but not childish. Used for headlines and the memorable first impression.
+- **Body — DM Sans** (Google Fonts): clean, highly legible, neutral-warm. UI text and body copy.
 - **Label/Mono — JetBrains Mono** (Google Fonts): data, code, ports (corpus@1), step labels. Tabular numerals via `tnum`.
 
-Scale: display 28–40px / 800; body 16px / 400; label 12px tracked. Friendly, not tiny.
+Scale: display 32–48px / 700; body 16px / 400; label 13px tracked. Generous, readable.
 
 ## Layout
 
@@ -116,17 +114,17 @@ Scale: display 28–40px / 800; body 16px / 400; label 12px tracked. Friendly, n
 
 ## Shapes
 
-- Radius hierarchy: sm 0px (buttons, inputs, bricks — blocky), md 4px (cards), lg 8px (panels). Sharp corners reinforce the Lego-block feel.
+- Radius hierarchy: sm 8px (buttons, inputs), md 12px (cards), lg 16px (panels). Soft, friendly, approachable.
 - Nested inner radius = outer radius − gap.
 
 ## Components
 
-- **Button:** blocky 0px radius, 2px border, 10/18px padding. Primary = Lego red; interactive = Lego blue; warm = Lego yellow. Bold, chunky.
-- **Input:** 0px radius (blocky), 2px rule border, friendly label above.
-- **Node (pipeline):** 4px radius (brick), 2px border, title + mono port label. Active state: Lego red border + ring.
-- **Connector:** 2px rule line with animated Lego red dot (flow). Respects prefers-reduced-motion.
-- **Card:** 4px radius (brick), surface background, 2px border. No nested cards.
-- **Status:** motion + label + color. Pulse dot for "assembling". Playful, not subtle.
+- **Button:** 8px radius, 1px border, 10/20px padding. Primary = coral; interactive = teal. Soft, friendly, with subtle shadow (not chunky).
+- **Input:** 8px radius, 1px rule border, friendly label above.
+- **Node (pipeline):** 12px radius, 1px border, title + mono port label. Active state: coral border + soft ring.
+- **Connector:** 2px rule line with animated coral dot (flow). Respects prefers-reduced-motion.
+- **Card:** 12px radius, surface background, 1px border, subtle shadow. No nested cards.
+- **Status:** motion + label + color. Pulse dot for "assembling". Gentle, not loud.
 
 ## Do's and Don'ts
 

@@ -32,6 +32,7 @@ const {
   canRemove,
   whyNotRemove,
   remove,
+  reorder,
   toggleStorage,
   startOver,
 } = usePlatformDraft(toRef(props, "registry"));
@@ -45,6 +46,13 @@ function onKey(e: KeyboardEvent) {
   if (e.key === "Escape") {
     selected.value = null;
     e.preventDefault();
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
+    if (steps.value.length > 0) {
+      doExport();
+      e.preventDefault();
+    }
     return;
   }
   if (kind.value === "pipeline" && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
@@ -161,6 +169,7 @@ async function doExport() {
           :login="!!pipeline.login"
           @select="selected = $event"
           @remove="remove"
+          @reorder="(from, to) => reorder(from, to)"
           @remove-login="pipeline.login = false"
         />
       </section>
@@ -200,8 +209,8 @@ header {
   align-items: center;
   gap: var(--space-md, 1rem);
   padding: var(--space-sm, 0.6rem) var(--space-md, 1rem);
-  border-bottom: 2px solid var(--ink);
-  background: var(--accent-warm);
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
 }
 
 header strong {
@@ -242,6 +251,16 @@ header strong {
   grid-template-columns: 20rem 1fr 20rem;
   flex: 1;
   min-height: 0;
+}
+
+@media (max-width: 1024px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+  .settings {
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
 }
 
 .board,

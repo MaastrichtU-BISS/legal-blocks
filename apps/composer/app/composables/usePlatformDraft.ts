@@ -139,6 +139,41 @@ export function usePlatformDraft(registry: Ref<Registry>) {
   }
 
   /**
+   * Reorder a step. In a workspace anything goes; in a pipeline the chain has
+   * to keep connecting, so a move that would break a join is refused.
+   */
+  function canReorder(from: number, to: number): boolean {
+    if (stored.value) return true;
+    const nodes = [...pipeline.value.nodes];
+    const [moved] = nodes.splice(from, 1);
+    if (!moved) return false;
+    nodes.splice(to, 0, moved);
+    for (let i = 1; i < nodes.length; i++) {
+      const prev = registry.value.modules[nodes[i - 1]!.module]?.outputs?.[0]?.type;
+      const req = registry.value.modules[nodes[i]!.module]?.inputs?.find((p) => p.required)?.type;
+      if (req && !(prev && canConnect(registry.value, prev, req))) return false;
+      if (!req && prev) return false;
+    }
+    // First step must be a starter.
+    const first = registry.value.modules[nodes[0]!.module];
+    if (first?.inputs?.some((p) => p.required)) return false;
+    return true;
+  }
+
+  function reorder(from: number, to: number) {
+    if (!canReorder(from, to)) {
+      problem.value = "That order would break the chain — a step needs what the one before it produces.";
+      return false;
+    }
+    const nodes = [...pipeline.value.nodes];
+    const [moved] = nodes.splice(from, 1);
+    if (moved) nodes.splice(to, 0, moved);
+    pipeline.value.nodes = nodes;
+    problem.value = "";
+    return true;
+  }
+
+  /**
    * Turning storage on and off, which starts the board again.
    *
    * The two kinds are not two settings on one design — they are two different
@@ -185,6 +220,8 @@ export function usePlatformDraft(registry: Ref<Registry>) {
     canRemove,
     whyNotRemove,
     remove,
+    reorder,
+    canReorder,
     toggleStorage,
     startOver,
   };

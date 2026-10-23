@@ -61,6 +61,7 @@ const emit = defineEmits<{ add: [m: Manifest]; toggleStorage: []; toggleLogin: [
           Add
         </button>
       </div>
+      <p v-if="!canAppend(m)" class="hint small">{{ whyNot(m) }}</p>
       <p class="muted small">{{ m.description }}</p>
     </div>
   </section>
@@ -106,11 +107,10 @@ h2 {
   font-weight: 700;
   font-size: 12px;
   padding: 4px 10px;
-  border-radius: var(--radius-sm, 0px);
-  border: 2px solid var(--ink);
-  background: var(--accent-warm);
-  color: var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--rule);
+  background: var(--accent-interactive);
+  color: #fff;
 }
 
 .module.on strong::after {
@@ -133,6 +133,14 @@ h2 {
 .ico {
   display: inline-flex;
   color: var(--accent-interactive);
+}
+
+.hint {
+  margin: 0.2rem 0 0;
+  font-size: 11px;
+  color: var(--accent-live);
+  font-family: var(--font-mono);
+  line-height: 1.4;
 }
 
 .small {
