@@ -127,26 +127,111 @@ export function requireDb(event: H3Event): Handle {
  * send to it, and if a real person's address ended up here they would silently
  * own everything.
  */
-const OWNER_EMAIL = "owner@platform.invalid";
+export const OWNER_EMAIL = "owner@platform.invalid";
+
+/** The role the platform's own account holds when nobody signs in. */
+export const OWNER_ROLE = "admin";
+
+/**
+ * Resolves the account a platform runs as when nobody signs in.
+ *
+ * This is the auth seam: a future login replaces this resolver (or the
+ * `owner()` call sites) in one place instead of scattering "who is asking"
+ * through the routes. `owner()` keeps the default behaviour; passing a
+ * resolver makes the seam explicit and testable without a running server.
+ */
+export interface AccountResolver {
+  resolve(db: Handle): number;
+  resolveAccount?(db: Handle): number;
+  getOwnerId?(db: Handle): number;
+  ownerId?(db: Handle): number;
+}
+
+/** The resolver used when no login is configured. */
+export const defaultAccountResolver: AccountResolver = {
+  resolve(db: Handle): number {
+    const [user] = usersByEmail(db, [OWNER_EMAIL]);
+    if (!user) throw new Error("could not resolve the platform's owner account");
+
+    // usersByEmail creates everyone as an annotator, because that is what an
+    // address typed into a task's annotator list is. This account is not one,
+    // and the difference has to be recorded rather than inferred from the
+    // address: the workspace decides what to show from the role, and a role the
+    // database does not hold is a rule living in a string comparison somewhere.
+    if (user.role !== OWNER_ROLE) {
+      setRole(db, user.id, OWNER_ROLE);
+    }
+    return user.id;
+  },
+};
+
+// Convenience aliases for callers and tests that name the seam differently.
+export const defaultOwnerResolver = defaultAccountResolver;
+export const ownerAccountResolver = defaultAccountResolver;
+
+type ResolverInput =
+  | AccountResolver
+  | ((db: Handle) => number)
+  | string
+  | {
+      resolve?: (db: Handle) => number;
+      resolveAccount?: (db: Handle) => number;
+      getOwnerId?: (db: Handle) => number;
+      ownerId?: (db: Handle) => number;
+      email?: string;
+      role?: string;
+    };
+
+function resolveFrom(input: {
+  resolve?: (db: Handle) => number;
+  resolveAccount?: (db: Handle) => number;
+  getOwnerId?: (db: Handle) => number;
+  ownerId?: (db: Handle) => number;
+}): ((db: Handle) => number) | undefined {
+  return input.resolve ?? input.resolveAccount ?? input.getOwnerId ?? input.ownerId;
+}
+
+function toResolver(input: ResolverInput | undefined): AccountResolver {
+  if (input === undefined) return defaultAccountResolver;
+  if (typeof input === "function") {
+    const fn = input as (db: Handle) => number;
+    return { resolve: fn };
+  }
+  if (typeof input === "string") {
+    const role = input;
+    return {
+      resolve(db: Handle): number {
+        const [user] = usersByEmail(db, [OWNER_EMAIL]);
+        if (!user) throw new Error("could not resolve the platform's owner account");
+        if (user.role !== role) setRole(db, user.id, role);
+        return user.id;
+      },
+    };
+  }
+  const resolved = resolveFrom(input);
+  if (resolved) {
+    return { resolve: resolved };
+  }
+  const email = input.email ?? OWNER_EMAIL;
+  const role = input.role ?? OWNER_ROLE;
+  return {
+    resolve(db: Handle): number {
+      const [user] = usersByEmail(db, [email]);
+      if (!user) throw new Error("could not resolve the platform's owner account");
+      if (user.role !== role) setRole(db, user.id, role);
+      return user.id;
+    },
+  };
+}
 
 /**
  * The user rows are created under when nobody signs in.
  *
  * Everything is owned by one account then. With a login, currentUser in
- * current-user.ts answers instead.
+ * current-user.ts answers instead. Accepts an optional resolver (or role
+ * string / `{ email, role }`) so the no-login assumption can be replaced or
+ * exercised in tests without touching the database shape.
  */
-export function owner(db: Handle): number {
-  const [user] = usersByEmail(db, [OWNER_EMAIL]);
-  if (!user) throw new Error("could not resolve the platform's owner account");
-
-  // usersByEmail creates everyone as an annotator, because that is what an
-  // address typed into a task's annotator list is. This account is not one, and
-  // the difference has to be recorded rather than inferred from the address:
-  // the workspace decides what to show from the role, and a role the database
-  // does not hold is a rule living in a string comparison somewhere.
-  if (user.role !== "admin") {
-    setRole(db, user.id, "admin");
-    return user.id;
-  }
-  return user.id;
+export function owner(db: Handle, resolver?: ResolverInput): number {
+  return toResolver(resolver).resolve(db);
 }
