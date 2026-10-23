@@ -24,8 +24,35 @@ getRegistry()
     error.value = e instanceof Error ? e.message : String(e);
   });
 
+const pathFor: Record<View, string> = {
+  landing: "/",
+  projects: "/projects",
+  docs: "/docs",
+  compose: "/compose",
+};
+
+const viewFor: Record<string, View> = {
+  "/": "landing",
+  "/projects": "projects",
+  "/docs": "docs",
+  "/compose": "compose",
+};
+
 function go(v: View) {
   view.value = v;
+  if (typeof window !== "undefined" && window.location.pathname !== pathFor[v]) {
+    window.history.pushState({ view: v }, "", pathFor[v]);
+  }
+}
+
+function syncFromLocation() {
+  const v = viewFor[window.location.pathname];
+  if (v) view.value = v;
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", syncFromLocation);
+  syncFromLocation();
 }
 </script>
 
