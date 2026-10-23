@@ -152,8 +152,9 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
             <span class="step-num">2</span>
             <div>
               <strong>Snap them together</strong>
-              <p>Drag blocks into a pipeline or a workspace. The app checks that
-                they fit — you can't build something that won't run.</p>
+              <p>Connect compatible blocks in a pipeline, or add persistent
+                storage for a shared application. The app checks that the modules
+                fit — you can't build something that won't run.</p>
             </div>
           </li>
           <li>

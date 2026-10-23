@@ -1,7 +1,7 @@
 ---
 title: "Legal Blocks — Architecture"
 subtitle: "How it works, why it is shaped this way, and how to work on it"
-date: "Last updated: 25 August 2026"
+date: "Last updated: 23 October 2026"
 ---
 
 # How to read this
@@ -82,7 +82,7 @@ become a bundle-analysis check in CI.
 | `/api/registry`     | yes                                 | yes                       |
 | `/api/pipeline`     | no — the draft lives in the browser | the mounted pipeline      |
 | `/api/export`       | yes                                 | no                        |
-| Database            | **no**                              | only for a workspace      |
+| Database            | **no**                              | persistent-data application only |
 | Module services     | **no**                              | those its modules declare |
 
 Both register an `/api/` catch-all that answers JSON. Without it an unknown API
@@ -182,43 +182,45 @@ built on it looked right and annotated the wrong thing.
 
 ---
 
-# 4. Kind: the axis everything follows from
+# 4. Application mode: the axis everything follows from
 
 There are two sorts of thing you can build:
 
 ```
-  PIPELINE                          WORKSPACE
+  PIPELINE                          PERSISTENT-DATA APPLICATION
   runs start to finish              somewhere people come back to
   keeps nothing                     everything is stored
   work leaves via a download        work survives; several people share it
 
   Search -> Explore                 Documents | Labels | Tasks
-  Search -> Annotate -> Download      ...open a task:
-                                        Annotate -> Agreement
+  Import -> Annotate -> Agreement      ...open a task:
+                                         Annotate -> Agreement
 ```
 
-**Kind is a property of the export, never of a module.** Not arbitrary — the
+**Mode is a property of the export, never of a module.** Not arbitrary — the
 packages say so themselves. `legal-annotation-kit` ships both `createBulkSource`
 ("for hosts with no backend to save to") and `createLazySource` ("for hosts with
 an external backend"). The package is telling you the same component works
 either way and the host decides. A module declares only which kinds it *can* be
 part of.
 
-Do not confuse it with the module's own `kind`:
+In product-facing documentation, the stored mode is a **persistent-data
+application**. The current serialization still calls it `kind: "workspace"`;
+that is an internal enum value and not the name of a separate product. Do not
+confuse it with the module's own `kind`:
 
 | Field              | Values                     | Says                   |
 | ------------------ | -------------------------- | ---------------------- |
-| `Pipeline.kind`    | `pipeline`, `workspace`    | what the **export** is |
+| `Pipeline.kind`    | `pipeline`, `workspace`    | what the **export** is (`workspace` is the internal value for persistent data) |
 | `Manifest.kind`    | `source`, `ui`, `service`  | what the **module** is |
 | `Manifest.runtime` | `web`, `node`, `container` | how it is **executed** |
 
-**How the kind gets chosen is a UI decision, not a model one.** The composer
-used to open on a screen asking which of two things you were building, before
-you had seen a single module. It does not any more: storage is one capability,
-so it is offered the way every other capability is — a card called **Workspace**
-at the top of the palette. Adding it makes a workspace; leaving it makes a
-pipeline, which is the simpler thing and the right default for somebody who has
-not decided yet.
+**How the mode gets chosen is a UI decision, not a model one.** The composer
+starts with a pipeline. Storage is an optional capability: adding it makes a
+persistent-data application; leaving it out makes a session pipeline, the
+simpler default. The current code and composer control still use the legacy name
+**Workspace** for this storage capability, while user-facing documentation calls
+the result an application.
 
 That card is deliberately **not** a registry module. It has no package, nothing
 to mount and no ports — it is the one capability the platform itself provides,
@@ -227,9 +229,9 @@ exist. There was such a module once, `results-download`, whose "package" lived
 in this repository; it was removed for exactly this reason. **The registry is
 for things that are really somebody else's package.**
 
-Once an export declares its kind, four things follow mechanically:
+Once an export declares its mode, four things follow mechanically:
 
-1. **Storage.** A workspace opens SQLite; a pipeline opens nothing.
+1. **Storage.** A persistent-data application opens SQLite; a pipeline opens nothing.
 2. **Which binding runs.** Every host contract has two implementations (§5).
 3. **Which config fields appear.** A `ConfigField` has its own `worksIn`.
 4. **Which modules are legal.** Enforced in `validatePipeline`, so an export
@@ -237,7 +239,7 @@ Once an export declares its kind, four things follow mechanically:
 
 Point 3 is subtle and important. All five of the annotate step's task settings —
 name, labels, level, annotators, guidelines — are marked `worksIn: ["pipeline"]`.
-In a workspace they do not appear in the composer, because there they are not
+In a persistent-data application they do not appear in the composer, because there they are not
 the composer's decisions. They are made by the user, once per task, in a form.
 
 That is the difference between a platform and an appliance, in one field:
@@ -308,7 +310,7 @@ It never names a module.
 implementations, one per kind. This is the single place where "the same
 component, fed differently" is expressed.
 
-| Contract              | Module                    | workspace                    | pipeline                        |
+| Contract              | Module                    | persistent-data application   | pipeline                        |
 | --------------------- | ------------------------- | ---------------------------- | ------------------------------- |
 | `AnnotationSource`    | legal-annotation-kit      | task by id from the database | task built from node config     |
 | `MetricsSource`       | vue-iaa-metrics           | SQL-filtered queries         | in-memory over the session task |
@@ -318,12 +320,12 @@ component, fed differently" is expressed.
 
 Modules never learn the difference between the two columns.
 
-## The workspace screen
+## The persistent-data application screen
 
 Nobody owns it; three things collaborate, which is the contract working:
 
 ```
-  vue-legal-workspace     draws the tabs, tables and modals
+  vue-legal-workspace     draws the tabs, tables and modals (package name)
                           knows nothing about documents
         |  slot: #create-datasets
         v
@@ -332,7 +334,7 @@ Nobody owns it; three things collaborate, which is the contract working:
         |  manifest.entry
         v
   vue-legal-docs-import   the file picker
-                          knows nothing about the workspace
+                           knows nothing about the application data model
 ```
 
 The tabs are **computed from the pipeline**, not fixed. No module that brings
@@ -344,7 +346,7 @@ furniture.
 
 # 6. Storage
 
-A workspace opens SQLite at `data/platform.db` through `packages/db`.
+A persistent-data application opens SQLite at `data/platform.db` through `packages/db`.
 
 ```
   users
@@ -427,8 +429,9 @@ that address makes the row theirs.
 Nobody is an editor or an annotator in general. You edit what you created —
 a dataset, a labelset, a task — and you annotate in a task where you were given
 documents; making a task and adding yourself makes you both. The routes check
-this through `server/utils/access.ts`, and the workspace works out the same
-thing per task in `OpenTask.vue` to decide what to show.
+this through `server/utils/access.ts`, and the persistent-data application works out the same
+thing per task in `OpenTask.vue` to decide what to show. The runtime view
+component and source directory retain the internal `workspace` name.
 
 | | annotator in a task | made it |
 |---|---|---|
@@ -583,7 +586,7 @@ npm run type-check
 ```
 
 The platform dev server runs against `apps/platform/dev/pipeline.json` — a
-workspace with import, annotation and metrics. Its database is
+persistent-data application with import, annotation and metrics. Its database is
 `apps/platform/dev/data/`, gitignored; **delete that folder to start over**.
 Edit the dev pipeline to work against a different composition; the server reads
 it once at boot, so restart after changing it.
@@ -607,7 +610,7 @@ LEGAL_BLOCKS_IAA_URL=http://localhost:8080 npm run dev:platform
       resolve.ts         a step's input is the step before it
       ModuleHost.vue     mounts one module, names none
       bindings/          one file per host contract, + index
-    workspace/           the tabbed shell; OpenTask is a task, open
+      workspace/           the persistent-data shell; OpenTask is a task, open
     sources/             adapters onto packages' own source interfaces
     modules/             the import map
     api/                 every call the frontend makes, by subject
@@ -658,6 +661,29 @@ docker inspect <container> --format '{{.Config.Image}}'
 
 Steps 4–6 are the only code a new module touches. If you find yourself editing
 anything else, something is leaking.
+
+### Using an npm package or a Git repository
+
+npm supports both registry packages and Git URLs. Install either as a dependency
+of the base layer; for Git dependencies pin a tag or, preferably, a commit:
+
+```bash
+npm install some-package --workspace @legal-blocks/base
+npm install 'git+https://github.com/example/some-package.git#<commit>' \
+  --workspace @legal-blocks/base
+```
+
+Installation is only the dependency step. The Vue platform bundle uses explicit
+imports in `layers/base/app/modules/loaders.ts`; it does not discover or install
+packages dynamically. To make a package selectable, add its component and style
+to that loader map, describe its entry and typed ports in `registry/<id>.module.json`,
+register the manifest in `registry/index.ts`, and reuse or implement a host
+binding. Existing packages commonly need a small Vue wrapper to adapt props,
+events, context, or data formats to a host contract. For server-only libraries,
+write named Nitro operations instead; use a declared service when the package
+must run as a separate process. Then test and publish a platform image containing
+the dependency. An exported application pins that image and does not run npm at
+startup.
 
 ## Updating a module you already use
 

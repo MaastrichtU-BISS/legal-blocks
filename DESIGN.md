@@ -72,9 +72,9 @@ components:
 
 **Creative North Star:** Friendly and inviting — soft coral and teal on clean white, gentle rounded shapes, warm type. Approachable to non-technical users; calm, not loud.
 
-**Product context:** Legal Blocks composes platforms out of existing packages. A composer designs a platform (pipeline or workspace); the platform runs it. Audience: developers and researchers (legal/annotation research). Project type: web app (Nuxt 3 / Vue 3), two apps sharing one layer.
+**Product context:** Legal Blocks composes applications out of existing packages. The composer designs an application (a session pipeline or an application with persistent data); the platform runs it. Audience: developers and researchers (legal/annotation research). Project type: web app (Nuxt 3 / Vue 3), two apps sharing one layer.
 
-**Mode per surface:** Composer = Operate (designing pipelines). Platform = Operate (annotating, reviewing, measuring agreement).
+**Mode per surface:** Composer = Operate (designing applications and pipelines). Platform = Operate (annotating, reviewing, measuring agreement).
 
 **Reference sites:** Retool IDE, n8n editor, Label Studio, Hypothesis, CVAT.
 

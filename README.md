@@ -1,14 +1,15 @@
 # Legal Blocks
 
-Compose platforms out of existing packages. Pick modules, chain them, export a
-zip; the recipient runs `docker compose up` and has a working platform.
+Compose applications from existing modules. Connect compatible steps for a
+pipeline, or enable persistent data for shared work, then export a zip the
+recipient runs with `docker compose up`.
 
 ```
 Search → Explore                              a pipeline: runs once, keeps nothing
 
             Import documents
-                   ↕                          a workspace: everything is stored,
-  Annotate  ↔  [ database ]  ↔  Agreement     several people share it
+                   ↕                          a persistent-data application:
+  Annotate  ↔  [ database ]  ↔  Agreement     people share durable work
 ```
 
 New here? **[docs/overview.md](docs/overview.md)** is the fifteen-minute version.
@@ -28,7 +29,7 @@ in the architecture note).
 | `packages/db` | schema and queries over better-sqlite3 | 17 tests |
 | `packages/export` | the zip: compose file, pipeline, credentials, README | 10 tests |
 | `node-legal-docs-import` | text · HTML · Word · PDF, server-only | its own repo, 19 tests |
-| `layers/base` | the runtime: resolve, bindings, ModuleHost, workspace | — |
+| `layers/base` | the runtime: resolve, bindings, ModuleHost, persistent app UI | — |
 | `apps/composer` | composer UI + `/api/export` | — |
 | `apps/platform` | the platform: 28 routes over the database | — |
 
@@ -88,7 +89,7 @@ npm run dev:platform
 
 Then open <http://localhost:7777>.
 
-You get the workspace: **Documents**, **Labels**, **Tasks**. It runs against
+You get the persistent-data application: **Documents**, **Labels**, **Tasks**. It runs against
 `apps/platform/dev/pipeline.json`, which stands in for the `pipeline.json` an
 export would ship. Its database appears at `apps/platform/dev/data/` and is
 gitignored — delete that folder to start over.
@@ -117,8 +118,12 @@ npm run dev:composer
 
 Then open <http://localhost:7788>.
 
-Add modules from the left — **Workspace** first if the platform should keep
-anything — and press **Export platform**. You get a ~2 kB zip:
+Create a project, open it in the composer, and add modules from the left. For a
+one-session pipeline, connect **Search documents → Explore documents**. For a
+persistent annotation application, enable storage and add **Import documents**,
+**Annotate**, and **Agreement metrics**; when it runs, upload documents, create
+a labelset and task, then assign annotators. Configure required module settings
+and press **Export platform**. You get a small zip:
 a `docker-compose.yml`, your `pipeline.json`, a `credentials.json` when the
 design carries a token, and a README written for someone who has never used a
 terminal.
@@ -151,7 +156,7 @@ npm run type-check
 packages/manifest/    the module contract, pipeline model, validation, secrets
 packages/db/          schema, queries, resources
 packages/export/      the zip an export is
-layers/base/          shared Nuxt layer — resolve, bindings, ModuleHost, workspace
+layers/base/          shared Nuxt layer — resolve, bindings, ModuleHost, persistent app UI
 apps/composer/        design platforms, export zips
 apps/platform/        run one exported platform
 docs/overview.md      the short version — start here
@@ -181,7 +186,15 @@ connection is legal when types match or an adapter is declared for the pair.
 its data lives. `legal-annotation-kit` ships `createBulkSource` *"for hosts with
 no backend to save to"* alongside `createLazySource` *"for hosts with an
 external backend"* — the package itself says the host decides. That is what lets
-one set of modules build both a stored workspace and a session pipeline.
+one set of modules build both a persistent-data application and a session pipeline.
+
+**npm and Git dependencies are build inputs, not runtime plugins.** A package
+can be installed from npm or a Git URL, but the platform needs explicit imports,
+a module manifest, and a compatible host binding before the composer can offer
+it. The application export does not fetch or install packages. See
+[the module conversion guide](docs/overview.md#turning-an-existing-package-into-a-module)
+for an example and the [architecture recipes](docs/architecture.md#using-an-npm-package-or-a-git-repository)
+for the integration steps.
 
 See [docs/architecture.md](docs/architecture.md) for the reasoning, the decision
 log, and the known gaps.

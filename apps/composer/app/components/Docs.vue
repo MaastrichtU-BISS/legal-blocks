@@ -28,8 +28,8 @@ const emit = defineEmits<{ back: []; compose: [] }>();
         <h1>How Legal Blocks works</h1>
         <p class="lede">
           Modules describe themselves. The composer lets you join them where the
-          data one produces is data the next can read. The platform runs what you
-          designed.
+          data one produces is data the next can read. The platform runs the
+          application you designed.
         </p>
       </section>
 
@@ -41,10 +41,22 @@ const emit = defineEmits<{ back: []; compose: [] }>();
       </section>
 
       <section class="doc">
-        <h2>Workspaces</h2>
-        <p>A workspace is somewhere people come back to. Upload documents, define
-          labels, create tasks, hand them to colleagues. Everything is stored in a
-          shared database and survives between visits.</p>
+        <h2>Applications with persistent data</h2>
+        <p>Enable storage when people need to return to their work. Add document
+          import, annotation and agreement modules. When the application runs,
+          upload documents, define labels, create tasks and assign annotators.
+          Records are stored in a shared database and survive between visits.</p>
+      </section>
+
+      <section class="doc">
+        <h2>Example applications</h2>
+        <ul class="ports">
+          <li><span class="port">Search documents → Explore documents</span> case-law search and citation graph</li>
+          <li><span class="port">Import documents → Annotate → Agreement metrics</span> one-session annotation</li>
+          <li><span class="port">Import + Annotate + Agreement metrics</span> shared, persistent annotation workflow</li>
+        </ul>
+        <p>In a pipeline, arrange modules in data-flow order. With persistent data,
+          the modules are tools over shared records rather than a linear chain.</p>
       </section>
 
       <section class="doc">
@@ -56,14 +68,30 @@ const emit = defineEmits<{ back: []; compose: [] }>();
 
       <section class="doc">
         <h2>Modules</h2>
-        <p>Each module ships a manifest saying what it is, what it reads, and
-          what it writes. Neither the composer nor the platform knows any module
-          by name. Adding one is adding a file.</p>
+        <p>Each module is described by a manifest saying what it is, what it
+          reads, and what it writes. The manifest describes typed ports and a component
+          entry. Adding an existing npm package also requires a build dependency,
+          explicit loader import, registry entry and compatible host binding.</p>
         <ul class="ports">
           <li><span class="port">corpus@1</span> text to work on</li>
           <li><span class="port">document-set@1</span> case law with dates, courts, citations</li>
           <li><span class="port">annotated-task@1</span> a task, by reference</li>
         </ul>
+      </section>
+
+      <section class="doc">
+        <h2>Using npm and Git packages</h2>
+        <p>npm registry packages and Git repositories can be installed as
+          build-time dependencies. That alone does not make one selectable in the
+          composer or install it into an exported application at runtime.</p>
+        <p>For a Vue package, add it to the base layer, map its component and
+          stylesheet in <code>loaders.ts</code>, describe it in a manifest under
+          <code>registry/</code>, and reuse or implement a host binding. Test and
+          release a platform image containing it. Server libraries should be
+          called from named API operations; separate runtimes should be declared
+          as services.</p>
+        <p>See the <a href="https://github.com/MaastrichtU-BISS/legal-blocks/blob/main/docs/overview.md">module conversion guide</a>
+          for details and an install example.</p>
       </section>
     </main>
   </div>

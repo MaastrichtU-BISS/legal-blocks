@@ -1,151 +1,152 @@
 ---
 title: "Legal Blocks — the short version"
-subtitle: "What it is, what it does, and how to try it"
-date: "Last updated: 28 August 2026"
+subtitle: "What it is, how to create an application, and how modules fit together"
+date: "Last updated: 23 October 2026"
 ---
-
-# The problem
-
-We keep building the same research platform.
-
-Someone needs documents annotated. There is already an annotation kit, a
-metrics screen, a case-law search form, a citation graph — each written for one
-project and welded into it. Reusing one has meant forking an application and
-maintaining the fork.
-
-So the pieces exist. What has been missing is a way to **join** them.
 
 # What Legal Blocks is
 
-Not another platform. A **linking layer**, plus two small programs that use it.
+Legal Blocks is a composer and runtime for building small research applications
+from reusable modules. A module can import documents, search case law, annotate
+text, explore results, or calculate agreement metrics. The composer checks how
+modules fit together, then exports a Docker Compose package that runs the
+application.
 
-```
-  packages we already had              this project
-  ---------------------------          -----------------------------------
-  legal-annotation-kit      \
-  vue-iaa-metrics            \         a contract   how modules describe
-  vue-legal-query-builder     >---->                themselves
-  vue-legal-docs-visualizer  /         a composer   where you design one
-  vue-legal-docs-import     /          a platform   where it runs
-                                       an exporter  how it is handed over
-```
+The platform is the runtime; the application is the design you create for it.
+An application can either run as a one-session pipeline or keep its data in the
+platform database for people to return to. “Application” is the user-facing term
+for both. The code and exported JSON still use `kind: "workspace"` for the
+persistent-data mode; this is an implementation name, not a separate product.
 
-You pick modules, arrange them, and press export. What comes out is a **2 kB
-zip**. Your colleague unzips it, runs one command, and has a working platform.
+## Two application workflows
 
-Nothing is compiled at export time. The zip holds a `docker-compose.yml`, the
-design you made, and a README — that is all.
+### Case-law explorer — a pipeline
 
-# The two shapes a platform can take
-
-This is the only concept worth holding on to. Everything else follows from it.
-
-## A pipeline — runs once, keeps nothing
-
-```
-   Search  ──→  Explore
+```text
+Search documents  →  Explore documents
 ```
 
-Documents go in one end, results come out the other. Each step reads what the
-step before it produced. Nothing is saved: the work lives in the browser for
-one session and leaves through a download.
+Create a project in the composer, open it, and add **Search documents** followed
+by **Explore documents**. The composer connects compatible ports automatically:
+search produces `document-set@1`, which the explorer accepts. Configure the Case
+Law Explorer token in the search module, export, and run the generated package.
+This is a short-lived workflow: results are available during the session and
+are not stored by the platform.
 
-*Good for:* a case-law explorer. Search, look at what came back, take it away.
+### Shared annotation application — persistent data
 
-## A workspace — everything is stored
-
+```text
+Import documents     Annotate     Agreement metrics
+       \               |                 /
+           shared platform database
 ```
-              Import documents
-                     ↕
-      Annotate  ↔  [ database ]  ↔  Agreement metrics
-```
 
-There is no chain here. Every tool reaches the same database, and the people
-using the platform decide what work exists — they upload their own documents,
-define their own labels, and create their own tasks. Several people share it and
-the work survives.
+Create an application that keeps data, then add **Import documents**,
+**Annotate**, and **Agreement metrics**. In this mode the modules are available
+tools over shared records rather than a linear chain. When the application is
+running, upload documents, create a labelset, make a task from the documents and
+labelset, assign annotators, and review progress and agreement. Data survives
+between visits. Sign-in can be enabled; the current export is intended for
+localhost and is not a public HTTPS deployment.
 
-*Good for:* an annotation platform. Upload, define a task, hand it to three
-colleagues, measure how much they agreed.
+## Create and run an application
 
-**The same modules build both.** The annotation kit does not know whether it is
-saving to a database or to browser memory — the platform decides and hands it
-the right one. That is the single trick this project turns on.
+1. Start the composer with Docker (no repository or Node setup is needed):
 
-# How a module joins in
+   ```bash
+   docker run --rm -p 127.0.0.1:7788:7788 \
+     ghcr.io/maastrichtu-biss/legal-blocks-composer:0.8.1
+   ```
 
-Each module ships a small JSON file saying what it is:
+2. Open <http://localhost:7788>, create a project, and open it in the composer.
+3. Add modules from the catalogue. For a pipeline, arrange them in data-flow
+   order; for an application with persistent data, enable storage and add the
+   tools the people using it need.
+4. Configure module settings and credentials. Secret fields are kept out of the
+   application definition and placed in `credentials.json` in the export.
+5. Export and unzip the package, then run:
+
+   ```bash
+   docker compose up
+   ```
+
+6. Open <http://localhost:7777>.
+
+The export is a small deployment package, not a build of module source. Its
+Compose file pins the composer-compatible platform and service images.
+
+## How modules fit
+
+Each module has a JSON manifest describing its identity, runtime, component,
+configuration, services, and typed inputs and outputs. For example:
 
 ```json
 {
-  "id": "legal-annotation-kit",
-  "name": "Annotate",
-  "icon": "annotate",
-  "inputs":  [{ "name": "corpus", "type": "corpus@1", "required": true }],
-  "outputs": [{ "name": "task",   "type": "annotated-task@1" }]
+  "id": "vue-legal-docs-visualizer",
+  "kind": "ui",
+  "runtime": "web",
+  "entry": {
+    "package": "vue-legal-docs-visualizer",
+    "component": "LegalDocVisualizer",
+    "style": "vue-legal-docs-visualizer/style.css"
+  },
+  "host": "DocumentPassthrough",
+  "inputs": [{ "name": "documents", "type": "document-set@1", "required": true }],
+  "outputs": [{ "name": "documents", "type": "document-set@1" }]
 }
 ```
 
-Two things matter here.
+The composer checks port compatibility, and the runtime supplies the host
+binding that connects a module to platform services and data. A package being
+available on npm does not by itself make it a selectable module: it must be
+integrated into the platform build and described by a manifest.
 
-**Neither the composer nor the platform knows any module by name.** The palette,
-the type checking, the settings forms and the icons are all read from these
-files. Adding a module is adding a file — no code in either program changes.
+## Can an npm package or Git repository be used?
 
-**Ports are typed.** `corpus@1` is text to work on; `document-set@1` is case law
-with dates, courts and citations. The composer only lets you place a step where
-the one before it produces something that step can read, so a platform that
-could not run cannot be built.
-
-# Try it in two minutes
-
-You need Docker. You do not need this repository.
+Yes, as a **build-time dependency**. npm can install registry packages and Git
+dependencies, for example:
 
 ```bash
-docker run --rm -p 127.0.0.1:7788:7788 \
-  ghcr.io/maastrichtu-biss/legal-blocks-composer:0.8.1
+npm install some-package --workspace @legal-blocks/base
+npm install 'git+https://github.com/example/some-package.git#<commit>' \
+  --workspace @legal-blocks/base
 ```
 
-Open <http://localhost:7788>, add a couple of modules, press **Export platform**.
-Then, in the folder you unzip:
+Use a release or immutable commit rather than a moving branch for reproducible
+builds. A Git URL only downloads the package; it does not adapt its API or
+register it with the composer. The platform's web loader uses explicit imports
+so Vite can bundle and code-split modules. New packages need a loader entry, a
+manifest, and—when they use a new data contract—a host binding. The package is
+then included in a platform image release; exported applications do not install
+arbitrary npm packages at runtime.
 
-```bash
-docker compose up
-```
+### Turning an existing package into a module
 
-Open <http://localhost:7777> and it is running.
+1. Check its license, package exports, framework, and dependencies. A browser UI
+   package is easiest when it exports a Vue component and any stylesheet as
+   package entry points.
+2. Install it as a dependency of `@legal-blocks/base` (or use a local `file:`
+   dependency while developing).
+3. Add explicit component and stylesheet imports to
+   `layers/base/app/modules/loaders.ts`.
+4. Add a manifest under `registry/` with a unique id, display metadata, runtime,
+   `entry`, configuration, and accurate typed ports.
+5. Reuse a host contract from `layers/base/app/runtime/bindings/` when the
+   package's data access matches one. Otherwise implement and register a new
+   binding that adapts the platform context to the package API.
+6. Register the manifest in `registry/index.ts`, test it in the composer and
+   platform, and publish a new platform image so exports contain the dependency.
 
-# What is real and what is not
+For a non-UI npm package, use it as a server-side library behind named platform
+API operations. If it needs a separate process or a different runtime, package
+that process as a service and declare it in the service catalogue and module
+manifest. Do not expose a general-purpose proxy to a package's upstream API.
 
-Honest, because prototyping against a false picture wastes more time than it
-saves.
+## Where to look next
 
-**Real.** Both shapes work end to end. Documents import from text, HTML, Word
-and PDF. Annotation, agreement metrics and the citation graph all run against
-either shape. Exports run on a machine that has never seen this repository.
-
-**Not real yet.**
-
-- **Sign-in is localhost-only.** A platform can ask people to sign in with an
-  email and password, and then annotators see only their own work. Without it,
-  who you are is a dropdown. Either way an export publishes only to
-  `127.0.0.1`: there is no HTTPS yet, so a password must not cross a network.
-- **One task shape.** Every annotator gets every document. Splitting a corpus
-  between people is not built.
-- **Five modules.** The contract is the point, not the catalogue.
-
-# Where to look next
-
-| | |
+| Need | Start here |
 |---|---|
-| Try it | the two commands above |
-| Work on it | [README](../README.md) — install, dev servers, tests |
-| Why it is built this way | [architecture.md](architecture.md) — reasoning, decisions, gaps |
-| What a module must declare | [`registry/`](../registry) — one JSON file each |
-
-# The one-sentence version
-
-Modules describe themselves, ports say what may be joined to what, and the
-platform — not the module — decides where data lives; which is what lets one set
-of packages become either a throwaway pipeline or a shared workspace, exported
-as a zip that runs anywhere Docker does.
+| Install, run, and test the repository | [README](../README.md) |
+| Runtime, manifest, bindings, and export details | [architecture.md](architecture.md) |
+| Existing compatible module examples | [`registry/`](../registry/) |
+| Authoring a new module | Architecture §10, “Adding a web module” |
