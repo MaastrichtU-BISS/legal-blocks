@@ -136,12 +136,17 @@ Scale: display 24–32px / 600; body 14px / 400; label 11px uppercase tracked.
 - Don't: use purple/indigo gradients, 3-column feature grids, centered everything, decorative blobs, icon tiles above headings.
 - Don't: use system-ui or -apple-system as primary display/body font.
 
-## Motion
+## Motion & Interaction
 
-- **Approach:** intentional — the assembly pulse is the one authored moment.
+- **Approach:** intentional — the assembly pulse is the one authored moment; everything else is micro-interaction (hover lift, focus ring, transition).
 - **Easing:** enter(ease-out) exit(ease-in) move(ease-in-out)
 - **Duration:** micro(50-100ms) short(150-250ms) medium(250-400ms) long(400-700ms)
 - **The one authored moment:** animated dots flowing along pipeline connectors + breathing pulse on the active node, communicating assembly status.
+- **Hover:** cards and nodes lift 1px with a soft shadow; buttons shift border/text color.
+- **Focus:** 2px interactive-blue ring on all focusable elements (keyboard accessibility).
+- **Empty states:** centered headline + guidance + shortcut hint; never a bare "no data".
+- **Keyboard:** Escape deselects; arrow keys move between steps in a pipeline.
+- **Respects prefers-reduced-motion:** all animation disabled; static indicators remain.
 
 ## Decisions Log
 

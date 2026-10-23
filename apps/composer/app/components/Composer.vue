@@ -6,7 +6,7 @@
 // rules out of the screens is what makes them followable by reading: "can this
 // module be added" is a question about a platform, not about a column.
 
-import { computed, ref, toRef } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, toRef } from "vue";
 import ConfigForm from "./ConfigForm.vue";
 import ModulePalette from "./ModulePalette.vue";
 import PipelineFlow from "./PipelineFlow.vue";
@@ -37,6 +37,28 @@ const {
 } = usePlatformDraft(toRef(props, "registry"));
 
 const status = ref("");
+
+// Keyboard shortcuts for the composer shell.
+function onKey(e: KeyboardEvent) {
+  const target = e.target as HTMLElement | null;
+  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")) return;
+  if (e.key === "Escape") {
+    selected.value = null;
+    e.preventDefault();
+    return;
+  }
+  if (kind.value === "pipeline" && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+    const idx = steps.value.findIndex((s) => s.node.id === selected.value);
+    const next = e.key === "ArrowRight" ? idx + 1 : idx - 1;
+    if (next >= 0 && next < steps.value.length) {
+      selected.value = steps.value[next]!.node.id;
+      e.preventDefault();
+    }
+  }
+}
+
+onMounted(() => window.addEventListener("keydown", onKey));
+onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
 
 const modules = computed(() =>
   Object.values(props.registry.modules).sort((a, b) => a.name.localeCompare(b.name)),
@@ -103,16 +125,22 @@ async function doExport() {
       />
 
       <section class="board">
-        <p v-if="steps.length === 0 && !pipeline.login" class="muted empty">
-          <template v-if="stored">
-            Add the tools this workspace should have. They do not connect to each other —
-            everything reaches the same database.
-          </template>
-          <template v-else>
-            Add a starting step from the left. Steps can only be joined where the data one
-            produces is data the next can read.
-          </template>
-        </p>
+        <div v-if="steps.length === 0 && !pipeline.login" class="empty-state">
+          <h3>{{ stored ? "Empty workspace" : "No steps yet" }}</h3>
+          <p>
+            <template v-if="stored">
+              Add the tools this workspace should have from the left. They do not connect
+              to each other — everything reaches the same database.
+            </template>
+            <template v-else>
+              Add a starting step from the left. Steps can only be joined where the data
+              one produces is data the next can read.
+            </template>
+          </p>
+          <p class="muted small">
+            Tip: press <kbd>A</kbd> to add the first module, <kbd>?</kbd> for shortcuts.
+          </p>
+        </div>
 
         <WorkspaceRing
           v-else-if="stored"

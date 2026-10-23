@@ -163,6 +163,58 @@ body {
   color: var(--muted);
 }
 
+/* Interactive utilities */
+.lb-ui button,
+.lb-ui input,
+.lb-ui select,
+.lb-ui textarea,
+.lb-ui .card,
+.lb-ui .node {
+  transition: border-color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out, transform 120ms ease-out;
+}
+
+.lb-ui button:focus-visible,
+.lb-ui input:focus-visible,
+.lb-ui select:focus-visible,
+.lb-ui textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-interactive);
+}
+
+/* Hover lift for interactive cards */
+.lb-ui .card:hover,
+.lb-ui .node:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgb(19 23 31 / 0.08);
+}
+
+/* Empty state */
+.lb-ui .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm, 8px);
+  padding: var(--space-2xl, 48px);
+  text-align: center;
+  color: var(--muted);
+}
+
+.lb-ui .empty-state h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.lb-ui .empty-state p {
+  max-width: 36ch;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 /* Status dot (assembly) */
 .status-dot {
   display: inline-block;
