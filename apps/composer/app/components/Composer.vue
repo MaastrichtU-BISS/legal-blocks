@@ -109,7 +109,7 @@ async function doExport() {
         <button class="nav-link" @click="emit('back')">Projects</button>
         <button class="nav-link" @click="emit('docs')">Docs</button>
       </nav>
-      <input v-model="pipeline.name" class="name" aria-label="Platform name" />
+      <input v-model="pipeline.name" class="name" aria-label="Platform name" placeholder="Untitled platform" />
 
       <div class="row modes">
         <span class="muted">{{ stored ? "With database" : "Without database" }}</span>

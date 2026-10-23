@@ -10,7 +10,7 @@ import type { Kind, Manifest, Node, Pipeline, Registry } from "@legal-blocks/man
 import { canConnect, exportKind, supportsKind } from "@legal-blocks/manifest";
 import { configWithDefaults } from "@base/types";
 
-const blank = (): Pipeline => ({ version: 1, name: "My tool", kind: "pipeline", nodes: [] });
+const blank = (): Pipeline => ({ version: 1, name: "", kind: "pipeline", nodes: [] });
 
 export interface Step {
   node: Node;
