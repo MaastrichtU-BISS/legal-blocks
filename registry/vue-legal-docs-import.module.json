@@ -36,5 +36,6 @@
       ],
       "help": "What this collection is called. A workspace asks for it each time documents are uploaded instead."
     }
-  ]
+  ],
+  "storage": true
 }

@@ -204,6 +204,13 @@ export interface Manifest {
   icon?: string;
 
   /**
+   * Whether this module stores data in the platform's database when persistent
+   * storage is on. Absent (or false) means it runs in memory and keeps nothing.
+   * Only meaningful when the platform has persistent storage enabled.
+   */
+  storage?: boolean;
+
+  /**
    * Who this module is for. Absent means everybody.
    *
    * The workspace reads it to decide which of a task's steps to offer: an

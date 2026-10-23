@@ -32,5 +32,6 @@
       "name": "task",
       "type": "annotated-task@1"
     }
-  ]
+  ],
+  "storage": true
 }
