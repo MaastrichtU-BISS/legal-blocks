@@ -17,11 +17,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "tsc --build --force",
-    "check:no-artifacts": "node script/check-no-artifacts.mjs",
     "check:artifacts": "node script/check-no-artifacts.mjs",
-    "check:no-build-artifacts": "node script/check-no-artifacts.mjs",
-    "check:modules": "node script/check-no-artifacts.mjs",
-    "check": "node script/check-no-artifacts.mjs"
+    "check:modules": "node script/check-no-hardcoded-modules.mjs",
+    "check": "npm run check:artifacts && npm run check:modules"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
