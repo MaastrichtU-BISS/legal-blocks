@@ -7,6 +7,7 @@
 
 import { onMounted, ref } from "vue";
 import ThemeToggle from "@base/components/ThemeToggle.vue";
+import SquareLockMark from "./SquareLockMark.vue";
 
 interface Project {
   id: string;
@@ -99,12 +100,7 @@ onMounted(load);
   <div class="page lb-ui">
     <header class="page-header">
       <span class="brand" @click="emit('back')">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="3" width="7" height="7" rx="1" fill="#E85A4F" stroke="#1F2937" stroke-width="2" />
-          <rect x="14" y="3" width="7" height="7" rx="1" fill="#0D9488" stroke="#1F2937" stroke-width="2" />
-          <rect x="3" y="14" width="7" height="7" rx="1" fill="#10B981" stroke="#1F2937" stroke-width="2" />
-          <rect x="14" y="14" width="7" height="7" rx="1" fill="#3B82F6" stroke="#1F2937" stroke-width="2" />
-        </svg>
+        <SquareLockMark :size="28" />
         Legal Blocks
       </span>
       <nav class="page-nav">
