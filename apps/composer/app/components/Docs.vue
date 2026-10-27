@@ -193,6 +193,12 @@ const emit = defineEmits<{ back: []; compose: [] }>();
   line-height: 1.6;
   max-width: 60ch;
 }
+.doc a {
+  color: var(--accent-interactive);
+}
+.doc a:hover {
+  color: var(--ink);
+}
 .ports {
   list-style: none;
   padding: 0;
