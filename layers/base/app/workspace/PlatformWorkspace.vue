@@ -386,4 +386,14 @@ html.dark .lw-modal {
   background: var(--surface);
   color: var(--ink);
 }
+
+/* On a phone the row holding the tab's name and its "needs documents and
+   labels" notice shares one flex line and gets cramped; stack it. */
+@media (max-width: 600px) {
+  html .lw-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
 </style>
