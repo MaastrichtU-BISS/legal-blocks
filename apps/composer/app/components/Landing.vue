@@ -199,7 +199,7 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
   align-items: center;
   gap: var(--space-sm, 8px);
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 20px;
   color: var(--ink);
 }
@@ -232,7 +232,7 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(36px, 6vw, 56px);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.05;
   max-width: 16ch;
@@ -256,7 +256,7 @@ button.primary {
   border: 2px solid var(--ink);
   color: #fff;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 18px;
   padding: 14px 28px;
   border-radius: var(--radius-sm, 8px);
@@ -301,7 +301,7 @@ button.primary:active {
 .shape h2 {
   font-family: var(--font-display);
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
   margin: 0;
   color: var(--ink);
 }
@@ -322,7 +322,7 @@ button.primary:active {
 
 .hero-brand-name {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 18px;
   color: var(--ink);
 }
@@ -330,7 +330,7 @@ button.primary:active {
 .how h2 {
   font-family: var(--font-display);
   font-size: 24px;
-  font-weight: 800;
+  font-weight: 700;
   margin: 0 0 var(--space-md, 16px);
   color: var(--ink);
 }
@@ -369,7 +369,7 @@ button.primary:active {
 
 .steps-list strong {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 16px;
   color: var(--ink);
 }

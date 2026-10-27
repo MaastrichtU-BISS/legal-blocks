@@ -152,7 +152,7 @@ h2 {
 
 strong {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 14px;
   color: var(--ink);
 }

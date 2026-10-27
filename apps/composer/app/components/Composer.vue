@@ -252,14 +252,14 @@ header {
 
 header strong {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 18px;
   color: var(--ink);
 }
 
 .platform-name {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 16px;
   color: var(--ink);
 }

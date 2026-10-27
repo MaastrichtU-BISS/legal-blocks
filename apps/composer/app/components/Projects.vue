@@ -180,7 +180,7 @@ onMounted(load);
   align-items: center;
   gap: var(--space-sm, 8px);
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 20px;
   color: var(--ink);
   cursor: pointer;
@@ -229,7 +229,7 @@ onMounted(load);
 .hero h1 {
   font-family: var(--font-display);
   font-size: clamp(32px, 5vw, 48px);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.05;
   color: var(--ink);
