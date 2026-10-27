@@ -100,7 +100,7 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
             <SquareLockMark :size="40" />
             <span class="hero-brand-name">Legal Blocks</span>
           </div>
-          <h1>Build your own research platform.<br />No code required.</h1>
+          <h1>Build your own research platform.<br /><span class="h1-line2">No code required.</span></h1>
           <p class="lede">
             Pick the tools you need, snap them together like building blocks, and
             share a working app with your team. Takes minutes, not months.
@@ -598,6 +598,12 @@ code {
 
   .hero h1 br {
     display: none;
+  }
+
+  /* The br is hidden here, so the second sentence needs its own spacing
+     not to read as "platform.No code required." */
+  .hero h1 .h1-line2 {
+    margin-left: 0.3em;
   }
 
   .hero {
