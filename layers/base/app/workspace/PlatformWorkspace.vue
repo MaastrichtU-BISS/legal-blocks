@@ -309,6 +309,9 @@ h3 {
      package's own markup, so a scoped selector would never match, and the
      html-prefix outranks the package's .lw rules regardless of load order. -->
 <style>
+/* Light surface tokens come from the package; dark comes from the platform
+   theme, which the package knows nothing about. Re-paint its light-coded
+   surfaces with the theme variables. */
 html .lw .lw-primary,
 html .lw .lw-on {
   background: var(--accent-live);
@@ -325,5 +328,62 @@ html .lw .lw-on:hover:not(:disabled) {
 
 html .lw-table tbody tr.lw-click:focus-visible {
   outline-color: var(--accent-interactive);
+}
+
+html.dark .lw {
+  background: var(--ground);
+  color: var(--ink);
+}
+
+html.dark .lw .lw-muted {
+  color: var(--muted);
+}
+
+html.dark .lw button {
+  background: var(--surface);
+  border-color: var(--rule);
+  color: var(--ink);
+}
+
+html.dark .lw button:hover:not(:disabled) {
+  border-color: var(--accent-interactive);
+  color: var(--accent-interactive);
+}
+
+html.dark .lw .lw-primary,
+html.dark .lw .lw-on {
+  background: var(--accent-live);
+  border-color: var(--accent-live);
+  color: #fff;
+}
+
+html.dark .lw h2 {
+  color: var(--ink);
+}
+
+html.dark .lw-table th,
+html.dark .lw-table td {
+  border-color: var(--rule);
+}
+
+html.dark .lw-table th,
+html.dark .lw-table .lw-end,
+html.dark .lw .lw-open-btn {
+  color: var(--muted);
+}
+
+html.dark .lw-table tbody tr.lw-click:hover td,
+html.dark .lw-table tbody tr.lw-click:focus-visible td {
+  background: var(--surface);
+}
+
+html.dark .lw-chip {
+  background: var(--rule);
+  color: var(--ink);
+}
+
+html.dark .lw-modal {
+  background: var(--surface);
+  color: var(--ink);
 }
 </style>
