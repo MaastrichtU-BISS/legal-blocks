@@ -302,3 +302,28 @@ h3 {
   margin-bottom: 0.75rem;
 }
 </style>
+
+<!-- vue-legal-workspace ships its own blue; re-point the actions and focus
+     ring at the platform's accents so the runtime and composer read as one
+     product (DESIGN.md). Unscoped on purpose: the targets live inside the
+     package's own markup, so a scoped selector would never match, and the
+     html-prefix outranks the package's .lw rules regardless of load order. -->
+<style>
+html .lw .lw-primary,
+html .lw .lw-on {
+  background: var(--accent-live);
+  border-color: var(--accent-live);
+  color: #fff;
+}
+
+html .lw .lw-primary:hover:not(:disabled),
+html .lw .lw-on:hover:not(:disabled) {
+  background: #d64a3f;
+  border-color: #d64a3f;
+  color: #fff;
+}
+
+html .lw-table tbody tr.lw-click:focus-visible {
+  outline-color: var(--accent-interactive);
+}
+</style>
