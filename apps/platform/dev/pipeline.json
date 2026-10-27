@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "name": "Development workspace",
+  "name": "Development application",
   "kind": "workspace",
   "nodes": [
     { "id": "import1", "module": "vue-legal-docs-import", "label": "Import documents" },

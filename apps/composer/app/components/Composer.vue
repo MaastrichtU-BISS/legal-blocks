@@ -147,10 +147,10 @@ async function doExport() {
 
       <section class="board">
         <div v-if="steps.length === 0 && !pipeline.login" class="empty-state">
-          <h3>{{ stored ? "Empty workspace" : "No steps yet" }}</h3>
+          <h3>{{ stored ? "Empty application" : "No steps yet" }}</h3>
           <p>
             <template v-if="stored">
-              Add the tools this workspace should have from the left. They do not connect
+              Add the tools this application should have from the left. They do not connect
               to each other — everything reaches the same database.
             </template>
             <template v-else>
