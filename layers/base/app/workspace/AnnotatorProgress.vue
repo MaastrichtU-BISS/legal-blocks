@@ -143,7 +143,7 @@ header {
   border: 1px solid var(--accent-interactive);
   border-radius: var(--radius-sm, 2px);
   background: var(--accent-interactive);
-  color: #fff;
+  color: var(--on-accent);
   cursor: pointer;
 }
 

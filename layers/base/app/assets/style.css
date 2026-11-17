@@ -1,74 +1,20 @@
+/* Hallmark · checked: 2026-11-17 · genre: modern-minimal (inferred; Projects, Compose and the platform swept in app scope) · design.md: locked
+ * floor: 0 FAIL · fixed: 16 (10a, 15, 19, 24a, 24b, 26a, 26b, 27, 39a, 40, 48, 49a, 54, 63, 64, 67) · structural: 6 printed (44c, 58, 59, 77, 78, F15)
+ * built: the project · redesign: polish · v2.0.0 */
+/* Hallmark · dismissed 26a · the render tier tabs into nuxt-devtools-frame, a dev-only overlay; every app control shows the teal outline */
 /* Design system: see DESIGN.md (living schematic).
    Tokens are defined here and consumed by the shared shell (.lb-ui) and by
    both apps. Modules ship their own styling and must be left alone. */
 
-@import url("https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+/* Cabinet Grotesk is a Fontshare face; Google Fonts does not serve it, so the
+   display face loads from Fontshare and the other two from Google. */
+@import url("https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@500,700,800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "./tokens.css";
 
-:root {
-  /* Color — friendly coral + teal on clean white */
-  --ground: #FFFFFF;
-  --surface: #F9FAFB;
-  --ink: #1F2937;
-  --muted: #6B7280;
-  --rule: #E5E7EB;
-  --accent-live: #E85A4F;
-  --accent-interactive: #0D9488;
-  --accent-success: #10B981;
-  --success: #10B981;
-  --warning: #F59E0B;
-  --danger: #E85A4F;
 
-  /* Typography */
-  --font-display: "Cabinet Grotesk", "DM Sans", system-ui, sans-serif;
-  --font-body: "DM Sans", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
-
-  /* Radius — soft, friendly */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-full: 9999px;
-
-  /* Back-compat aliases for existing component styles. */
-  --border: var(--rule);
-  --bg-soft: var(--surface);
-  --accent: var(--accent-interactive);
-  --danger: var(--error);
-
-  /* Spacing */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --space-2xl: 48px;
-
-  color-scheme: light;
-  font-family: var(--font-body);
-  font-size: 14px;
-  color: var(--ink);
-}
-
-/* Dark theme: applied via .dark on <html> (see useTheme). */
-html.dark {
-  --ground: #0F1115;
-  --surface: #1A1D23;
-  --ink: #E5E7EB;
-  --muted: #9CA3AF;
-  --rule: #2A2F38;
-  --accent-live: #F06A5F;
-  --accent-interactive: #2DD4BF;
-  --accent-success: #34D399;
-  --success: #34D399;
-  --warning: #FBBF24;
-  --danger: #F06A5F;
-
-  --border: var(--rule);
-  --bg-soft: var(--surface);
-  --accent: var(--accent-interactive);
-
-  color-scheme: dark;
-  color: var(--ink);
+:where(.lb-ui, .lw) :where(h1, h2, h3) {
+  text-wrap: balance;
 }
 
 html.dark body {
@@ -96,14 +42,14 @@ body {
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
-  padding: 10px 20px;
+  padding: var(--space-sm) 20px;
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
-  box-shadow: 0 1px 2px rgb(31 41 55 / 0.06);
-  transition: border-color 120ms ease-out, color 120ms ease-out, background 120ms ease-out;
+  box-shadow: 0 1px 2px var(--shadow-soft);
+  transition: border-color 120ms ease-out, color 120ms ease-out, background-color 120ms ease-out;
 }
 
 .lb-ui button:hover:not(:disabled) {
@@ -111,34 +57,50 @@ body {
   color: var(--accent-interactive);
 }
 
-.lb-ui button:disabled {
-  opacity: 0.5;
-  cursor: default;
+.lb-ui button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lb-ui button:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 .lb-ui button.primary {
-  background: var(--accent-live);
-  border-color: var(--accent-live);
-  color: #fff;
-  box-shadow: 0 2px 8px rgb(232 90 79 / 0.25);
+  background: var(--accent-live-fill);
+  border-color: var(--accent-live-fill);
+  color: var(--on-accent);
+  box-shadow: 0 2px 8px var(--shadow-live);
 }
 
 .lb-ui button.primary:hover:not(:disabled) {
-  background: #d64a3f;
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgb(232 90 79 / 0.3);
+  background: var(--accent-live-fill-hover);
+  border-color: var(--accent-live-fill-hover);
+  color: var(--on-accent);
 }
 
 .lb-ui button.live {
   background: var(--accent-interactive);
   border-color: var(--accent-interactive);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .lb-ui button.live:hover:not(:disabled) {
-  opacity: 0.9;
-  color: #fff;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ground);
+}
+
+/* Disabled reads on three channels: fill, ink and cursor. */
+.lb-ui button:disabled,
+.lb-ui button.primary:disabled,
+.lb-ui button.live:disabled {
+  background: var(--disabled-fill);
+  border-color: var(--disabled-fill);
+  color: var(--disabled-ink);
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .lb-ui button.ghost {
@@ -151,8 +113,8 @@ body {
   font: inherit;
   font-family: var(--font-body);
   font-size: 13px;
-  padding: 10px 12px;
-  border: 1px solid var(--rule);
+  padding: var(--space-sm) 12px;
+  border: 1px solid var(--field-edge);
   border-radius: var(--radius-sm);
   width: 100%;
   background: var(--surface);
@@ -187,12 +149,12 @@ body {
   gap: var(--space-sm);
 }
 
-/* Mono labels for ports/settings */
+/* Section labels in the shell (Settings, Available): the body face, a step
+   smaller, sentence case. Mono stays for ports and data. */
 .lb-ui .label-mono {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
   color: var(--muted);
 }
 
@@ -203,22 +165,21 @@ body {
 .lb-ui textarea,
 .lb-ui .card,
 .lb-ui .node {
-  transition: border-color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out, transform 120ms ease-out;
+  transition: border-color 120ms ease-out, background-color 120ms ease-out, color 120ms ease-out, transform 120ms ease-out;
 }
 
-.lb-ui button:focus-visible,
-.lb-ui input:focus-visible,
-.lb-ui select:focus-visible,
-.lb-ui textarea:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-interactive);
+/* Focus: an outline, never transitioned, so the ring appears at once. The
+   :where() keeps this at zero specificity, so a module's own focus style
+   still wins inside it. */
+:where(button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
-/* Hover lift for interactive cards */
+/* Hover for interactive cards: the border, not a lift. */
 .lb-ui .card:hover,
 .lb-ui .node:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgb(19 23 31 / 0.08);
+  border-color: var(--accent-interactive);
 }
 
 /* Empty state */
@@ -242,8 +203,13 @@ body {
   letter-spacing: -0.01em;
 }
 
+.lb-ui .empty-state h3 {
+  text-wrap: balance;
+}
+
 .lb-ui .empty-state p {
-  max-width: 36ch;
+  max-width: 48ch;
+  text-wrap: pretty;
   font-size: 14px;
   line-height: 1.5;
 }
@@ -313,12 +279,14 @@ body {
   height: 8px;
   border-radius: var(--radius-full);
   background: var(--accent-live);
+  left: 0;
   animation: lb-flow 1.6s linear infinite;
 }
 
+/* The connector is 48px wide and the dot 8px: travel 40px on transform. */
 @keyframes lb-flow {
-  0% { left: 0; }
-  100% { left: calc(100% - 8px); }
+  0% { transform: translateX(0); }
+  100% { transform: translateX(40px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

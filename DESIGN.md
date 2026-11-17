@@ -11,7 +11,9 @@ colors:
   text-muted: "#6B7280"
   rule: "#E5E7EB"
   accent-live: "#E85A4F"
-  accent-interactive: "#0D9488"
+  accent-live-fill: "#C9443A"
+  field-edge: "#858C97"
+  accent-interactive: "#0F766E"
   accent-success: "#10B981"
   success: "#10B981"
   warning: "#F59E0B"
@@ -87,7 +89,9 @@ components:
 **Light or dark:** Light by default, with an optional dark mode (soft charcoal ground). Toggleable per surface.
 
 - `primary` / `accent-live` (#E85A4F) soft coral — primary CTAs and the "live flow" accent. Warm, inviting, not aggressive.
-- `accent-interactive` (#0D9488) teal — links, focus rings, secondary actions.
+- `accent-live-fill` (#C9443A) deeper coral — the fill under button and tab text. #E85A4F carries white at only 3.5:1; this step reaches 4.8:1. Coral as a line, dot or border stays #E85A4F.
+- `accent-interactive` (#0F766E) teal — links, focus rings, secondary actions. Darkened from #0D9488 (3.7:1 on white) to 5.5:1 so it can be text.
+- `field-edge` (#858C97) — input borders, 3:1 against the page so a field reads as a field.
 - `accent-success` (#10B981) emerald — success, completed states.
 - Neutrals are soft grays; accents are muted but distinct. No yellow.
 
@@ -95,7 +99,7 @@ components:
 
 ## Typography
 
-- **Display — Cabinet Grotesk** (Fontshare): modern, friendly, slightly geometric. Warm but not childish. Used for headlines and the memorable first impression.
+- **Display — Cabinet Grotesk** (Fontshare; load it from `api.fontshare.com`, Google Fonts does not serve it): modern, friendly, slightly geometric. Warm but not childish. Used for headlines and the memorable first impression.
 - **Body — DM Sans** (Google Fonts): clean, highly legible, neutral-warm. UI text and body copy.
 - **Label/Mono — JetBrains Mono** (Google Fonts): data, code, ports (corpus@1), step labels. Tabular numerals via `tnum`.
 
@@ -156,3 +160,4 @@ Scale: display 32–48px / 700; body 16px / 400; label 13px tracked. Generous, r
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-10-23 | Initial design system created | Created by /design-consultation based on product context + research + Claude subagent direction ("Living Paper Schematic") |
+| 2026-11-17 | Hallmark polish: tokens moved to `layers/base/app/assets/tokens.css`; deeper coral fill and teal for AA contrast; field edge token; Cabinet Grotesk from Fontshare; labels in DM Sans sentence case; focus as an instant 2px teal outline; disabled shown by fill, ink and cursor | The audit found white on coral at 3.5:1, the display face never loading, and `--danger` resolving to nothing in light mode |

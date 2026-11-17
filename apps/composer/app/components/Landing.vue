@@ -106,31 +106,24 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
             share a working app with your team. Takes minutes, not months.
           </p>
           <div class="cta-row">
-            <button class="primary" @click="emit('start')">Start building →</button>
+            <button class="primary" @click="emit('start')">Start building</button>
           </div>
           <p class="muted small">Free and open source. Runs on your computer.</p>
-        </div>
-        <div class="assembly-status">
-          <span class="pulse-dot"></span>
-          <span>Running in the background…</span>
         </div>
       </section>
 
       <section class="shapes">
         <div class="shape">
-          <span class="shape-num">01</span>
           <h2>One-off runs</h2>
           <p>Search, explore, download. Great for a quick look at case law or
-            documents. Nothing is saved — just take your results and go.</p>
+            documents. Nothing is saved: take your results and go.</p>
         </div>
         <div class="shape">
-          <span class="shape-num">02</span>
           <h2>Persistent storage</h2>
           <p>Turn on storage and your platform keeps documents, labels, and tasks
             in a database. Invite colleagues; work survives between visits.</p>
         </div>
         <div class="shape">
-          <span class="shape-num">03</span>
           <h2>Measure agreement</h2>
           <p>See how much your annotators agree. Built-in metrics, no setup
             required. Know when your labels are ready.</p>
@@ -154,7 +147,7 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
               <strong>Snap them together</strong>
               <p>Connect compatible blocks in a pipeline, or add persistent
                 storage for a shared application. The app checks that the modules
-                fit — you can't build something that won't run.</p>
+                fit, so you can’t build something that won’t run.</p>
             </div>
           </li>
           <li>
@@ -179,6 +172,12 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
 
 <style scoped>
 .landing {
+  /* The hero pieces are a drawing in the brand's two accents, not UI. */
+  --piece-search: var(--accent-live-fill);
+  --piece-annotate: var(--accent-interactive);
+  --piece-agreement: color-mix(in srgb, var(--accent-interactive) 55%, var(--ink));
+  --piece-seam: color-mix(in srgb, var(--ground) 22%, transparent);
+  --piece-ink: var(--on-accent);
   min-height: 100vh;
   background: var(--ground);
   color: var(--ink);
@@ -199,7 +198,7 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
   align-items: center;
   gap: var(--space-sm, 8px);
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 20px;
   color: var(--ink);
 }
@@ -236,6 +235,9 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
   letter-spacing: -0.02em;
   line-height: 1.05;
   max-width: 16ch;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  min-width: 0;
   color: var(--ink);
 }
 
@@ -252,27 +254,41 @@ onBeforeUnmount(() => stopAssemblyAnimations?.());
 }
 
 button.primary {
-  background: var(--accent-live);
-  border: 2px solid var(--ink);
-  color: #fff;
+  background: var(--accent-live-fill);
+  border: 1px solid var(--accent-live-fill);
+  color: var(--on-accent);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 18px;
-  padding: 14px 28px;
+  padding: 12px 28px;
   border-radius: var(--radius-sm, 8px);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgb(232 90 79 / 0.25);
-  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+  box-shadow: 0 2px 8px var(--shadow-live);
+  transition: background-color 120ms ease-out, transform 120ms ease-out;
 }
 
 button.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgb(232 90 79 / 0.3);
+  background: var(--accent-live-fill-hover);
+  border-color: var(--accent-live-fill-hover);
 }
 
 button.primary:active {
   transform: translateY(1px);
-  box-shadow: 0 1px 4px rgb(232 90 79 / 0.2);
+}
+
+button.primary:disabled {
+  background: var(--disabled-fill);
+  border-color: var(--disabled-fill);
+  color: var(--disabled-ink);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+button.primary:focus-visible,
+.nav-link:focus-visible,
+.github-link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .shapes {
@@ -283,19 +299,11 @@ button.primary:active {
 
 .shape {
   display: grid;
-  grid-template-columns: 48px minmax(210px, 260px) minmax(0, 1fr);
+  grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
   align-items: start;
   gap: var(--space-md, 16px);
   padding: 20px 4px;
   border-bottom: 1px solid var(--rule);
-}
-
-.shape-num {
-  padding-top: 4px;
-  color: var(--accent-interactive);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
 }
 
 .shape h2 {
@@ -308,6 +316,7 @@ button.primary:active {
 
 .shape p {
   margin: 1px 0 0;
+  text-wrap: pretty;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.5;
@@ -354,17 +363,16 @@ button.primary:active {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--accent-live-fill);
   border-radius: var(--radius-full, 9999px);
-  background: var(--accent-live);
-  color: #fff;
+  background: var(--accent-live-fill);
+  color: var(--on-accent);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgb(232 90 79 / 0.25);
 }
 
 .steps-list strong {
@@ -412,17 +420,20 @@ code {
   font-size: 14px;
   color: var(--ink);
   cursor: pointer;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm, 0px);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm, 8px);
+  box-shadow: none;
 }
 .nav-link:hover {
-  background: var(--surface);
+  background: transparent;
+  color: var(--accent-interactive);
 }
 .github-link {
   display: inline-flex;
   align-items: center;
   color: var(--ink);
-  padding: 6px;
+  padding: 8px;
+  border-radius: var(--radius-sm, 8px);
 }
 .github-link:hover {
   color: var(--accent-interactive);
@@ -462,17 +473,17 @@ code {
 
 .piece-annotate {
   left: calc(var(--assembly-tile) * 2);
-  --piece-color: #0b746b;
+  --piece-color: var(--piece-annotate);
 }
 
 .piece-search {
-  --piece-color: #b5473f;
+  --piece-color: var(--piece-search);
 }
 
 .piece-agreement {
   top: 0;
   left: var(--assembly-tile);
-  --piece-color: #315a53;
+  --piece-color: var(--piece-agreement);
 }
 
 .piece-grid {
@@ -493,7 +504,7 @@ code {
 .tile {
   display: block;
   background: var(--piece-color);
-  border: 1px solid rgb(255 255 255 / 22%);
+  border: 1px solid var(--piece-seam);
 }
 
 .tile-empty {
@@ -509,7 +520,7 @@ code {
   width: calc(var(--assembly-tile) * 2);
   height: var(--assembly-tile);
   place-items: center;
-  color: #fff;
+  color: var(--piece-ink);
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 700;
@@ -526,30 +537,6 @@ code {
   height: calc(var(--assembly-tile) * 2);
 }
 
-.assembly-status {
-  position: absolute;
-  z-index: 1;
-  right: 0;
-  bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-sm, 8px);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-live);
-  animation: pulse 3.5s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
-
 .how {
   display: grid;
   grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.3fr);
@@ -559,12 +546,16 @@ code {
 
 @media (prefers-reduced-motion: reduce) {
   .assembly-piece { opacity: 1; }
-  .pulse-dot { animation: none; }
+  button.primary:active { transform: none; }
 }
 
+/* Below 820px the pieces stack under the copy instead of running behind
+   it: at phone widths they covered the lede and the button. */
 @media (max-width: 820px) {
   .hero {
-    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 
   .hero-copy {
@@ -572,10 +563,17 @@ code {
   }
 
   .assembly-background {
-    top: 90px;
-    right: -10%;
-    bottom: 0;
-    width: 78%;
+    --assembly-tile: 58px;
+    position: relative;
+    inset: auto;
+    order: 1;
+    width: 100%;
+    height: calc(var(--assembly-tile) * 3);
+    margin-top: var(--space-lg, 24px);
+  }
+
+  .assembly-background .assembly-board {
+    height: calc(var(--assembly-tile) * 3);
   }
 
   .assembly-board {
@@ -606,37 +604,14 @@ code {
     margin-left: 0.3em;
   }
 
-  .hero {
-    min-height: 540px;
-  }
-
-  .hero-copy {
-    padding-bottom: 30px;
-  }
-
+  .assembly-board,
   .assembly-background {
-    top: 150px;
-    right: -18%;
-    width: 100%;
-  }
-
-  .assembly-board {
     --assembly-tile: 50px;
   }
 
-  .assembly-status {
-    right: 0;
-    bottom: 10px;
-    font-size: 10px;
-  }
-
   .shape {
-    grid-template-columns: 32px minmax(0, 1fr);
-    gap: 8px var(--space-md, 16px);
-  }
-
-  .shape p {
-    grid-column: 2;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
   }
 
   .how {

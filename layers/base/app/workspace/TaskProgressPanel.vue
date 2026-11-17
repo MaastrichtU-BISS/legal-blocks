@@ -182,14 +182,15 @@ header {
 }
 
 .dl:disabled {
-  opacity: 0.55;
-  cursor: default;
+  background: var(--disabled-fill);
+  border-color: var(--disabled-fill);
+  color: var(--disabled-ink);
+  cursor: not-allowed;
 }
 
 h4 {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--muted);
   margin: 0.5rem 0 0.25rem;
 }
@@ -238,9 +239,8 @@ h4 {
 
 .disclose {
   font: inherit;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--muted);
   background: none;
   border: 0;

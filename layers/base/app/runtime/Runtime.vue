@@ -156,7 +156,7 @@ function goTo(index: number) {
       <!-- Steps that produce something move on by themselves; this is for the
            ones that never finish, like annotating. -->
       <button v-if="kind === 'pipeline' && hasNext" class="primary" @click="goTo(current + 1)">
-        Next →
+        Next
       </button>
 
       <label v-if="users.length > 1" class="who">
