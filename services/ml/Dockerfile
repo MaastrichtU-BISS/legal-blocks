@@ -17,6 +17,9 @@ COPY requirements.txt .
 # The CPU build first, because the default one pulls several GB of CUDA.
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r requirements.txt
+# The summariser's sentence tokenizer, in a path NLTK searches, so an export
+# that cannot reach the internet still summarises.
+RUN python -m nltk.downloader -d /usr/local/share/nltk_data punkt punkt_tab
 
 COPY app.py worker.py migrate.py entrypoint.sh ./
 COPY alembic_env ./alembic_env

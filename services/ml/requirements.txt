@@ -1,5 +1,6 @@
 # The ML feature itself lives in legal-ml-core. Bump the tag to upgrade it.
-legal-ml-core @ git+https://github.com/shashankmc/legal-ml-core.git@v0.5.2
+# [compute] is the worker's stack: transformers, nltk, sumy, lime, shap.
+legal-ml-core[compute] @ git+https://github.com/shashankmc/legal-ml-core.git@v0.14.0
 
 # What this host adds. legal-ml-core expects its host to run the migrations.
 alembic==1.13.3
