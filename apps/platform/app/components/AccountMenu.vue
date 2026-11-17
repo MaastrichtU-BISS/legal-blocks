@@ -69,12 +69,28 @@ async function leave() {
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm, 2px);
   background: var(--surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+  box-shadow: 0 4px 12px var(--shadow-soft);
   z-index: 10;
 }
 
 .lb-ui .menu button {
   border: 0;
   text-align: left;
+}
+
+.who:focus-visible,
+.menu button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.who:active,
+.menu button:active {
+  background: var(--surface);
+}
+
+.menu button:disabled {
+  color: var(--disabled-ink);
+  cursor: not-allowed;
 }
 </style>

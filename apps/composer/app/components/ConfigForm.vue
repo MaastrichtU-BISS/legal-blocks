@@ -49,7 +49,7 @@ function describeJson(value: unknown): string {
       ? `Structure loaded: ${goals.length} goal${goals.length === 1 ? "" : "s"}.`
       : "File loaded.";
   } catch {
-    return "The stored file is not valid JSON — upload it again.";
+    return "The stored file is not valid JSON. Upload it again.";
   }
 }
 </script>

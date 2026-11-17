@@ -43,7 +43,7 @@ const emit = defineEmits<{ add: [m: Manifest]; toggleStorage: []; toggleLogin: [
         <span class="ico"><ModuleIcon :name="m.icon" /></span>
         <strong>{{ m.name }}</strong>
         <span v-if="m.storage" class="db-badge" title="Stores data in the database when persistent storage is on">
-          <ModuleIcon name="database" :size="12" /> db
+          <ModuleIcon name="database" :size="12" /> DB
         </span>
         <button :disabled="!canAppend(m)" :title="canAppend(m) ? '' : whyNot(m)" @click="emit('add', m)">
           Add
@@ -60,24 +60,22 @@ const emit = defineEmits<{ add: [m: Manifest]; toggleStorage: []; toggleLogin: [
   padding: var(--space-md, 1rem);
   overflow: auto;
   background: var(--surface);
-  border-right: 2px solid var(--ink);
+  border-right: 1px solid var(--rule);
   font-family: var(--font-body);
 }
 
 h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink);
+  color: var(--muted);
   margin: 0 0 var(--space-md, 0.8rem);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .module {
   margin-bottom: var(--space-md, 1rem);
   padding-bottom: var(--space-md, 0.9rem);
-  border-bottom: 2px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
 }
 
 .module:last-child {
@@ -93,22 +91,34 @@ h2 {
   margin-left: auto;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 12px;
-  padding: 4px 10px;
+  font-size: 13px;
+  padding: 8px 12px;
   border-radius: var(--radius-sm, 8px);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--accent-interactive);
   background: var(--accent-interactive);
-  color: #fff;
+  color: var(--on-accent);
+  white-space: nowrap;
+}
+
+.module .row button:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ground);
+}
+
+.module .row button:disabled {
+  background: var(--disabled-fill);
+  border-color: var(--disabled-fill);
+  color: var(--disabled-ink);
+  cursor: not-allowed;
 }
 
 .module.on strong::after {
-  content: " · on";
-  color: var(--accent-live);
-  font-weight: 800;
-  font-family: var(--font-display);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  content: ", on";
+  color: var(--accent-interactive);
+  font-weight: 600;
+  font-family: var(--font-body);
+  font-size: 13px;
 }
 
 .module p {
@@ -127,21 +137,19 @@ h2 {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-family: var(--font-body);
+  font-size: 12px;
   color: var(--muted);
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm, 8px);
-  padding: 1px 6px;
+  padding: 0 4px;
 }
 
 .hint {
   margin: 0.2rem 0 0;
-  font-size: 11px;
-  color: var(--accent-live);
+  font-size: 12px;
+  color: var(--muted);
   font-family: var(--font-mono);
   line-height: 1.4;
 }

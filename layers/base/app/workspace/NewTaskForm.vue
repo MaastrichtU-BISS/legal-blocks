@@ -108,7 +108,7 @@ async function submit() {
 
     <label>
       Guidelines link
-      <input v-model="guidelines" placeholder="Optional — a page explaining the labels" />
+      <input v-model="guidelines" placeholder="Optional: a page explaining the labels" />
     </label>
 
     <label>
@@ -121,7 +121,7 @@ async function submit() {
       <button v-if="me" type="button" class="add-me" @click="addMyself">Add myself</button>
       <small class="lw-muted">
         Email addresses, separated however you like. They create their account here with
-        that same address — nothing is sent to them, so tell them yourself.
+        that same address. Nothing is sent to them, so tell them yourself.
       </small>
     </label>
 

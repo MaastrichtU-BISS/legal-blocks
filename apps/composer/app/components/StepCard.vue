@@ -22,18 +22,29 @@ const emit = defineEmits<{ select: []; remove: [] }>();
 </script>
 
 <template>
-  <div class="card" :class="{ selected }" @click="emit('select')">
+  <!-- The whole card is one button, so a keyboard user can reach and choose
+       a step; the × stays a separate button beside it, never inside it. -->
+  <div class="card" :class="{ selected }">
     <button
+      type="button"
+      class="pick"
+      :aria-pressed="selected"
+      @click="emit('select')"
+    >
+      <span class="ico"><ModuleIcon :name="step.manifest?.icon" :size="26" /></span>
+      <strong>{{ step.node.label }}</strong>
+      <span class="muted small">{{ step.manifest?.id }}</span>
+    </button>
+    <button
+      type="button"
       class="close"
       :disabled="!removable"
       :title="removeTitle ?? 'Remove'"
+      :aria-label="removeTitle ?? 'Remove'"
       @click.stop="emit('remove')"
     >
       ×
     </button>
-    <span class="ico"><ModuleIcon :name="step.manifest?.icon" :size="26" /></span>
-    <strong>{{ step.node.label }}</strong>
-    <span class="muted small">{{ step.manifest?.id }}</span>
   </div>
 </template>
 
@@ -43,33 +54,56 @@ const emit = defineEmits<{ select: []; remove: [] }>();
   width: 9.5rem;
   min-height: 6.5rem;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  text-align: center;
-  padding: 0.9rem 0.6rem;
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm, 8px);
   background: var(--surface);
   cursor: pointer;
   font-family: var(--font-body);
   font-weight: 600;
-  box-shadow: 0 2px 6px rgb(31 41 55 / 0.06);
-  transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms ease-out;
+  box-shadow: 0 1px 2px var(--shadow-soft);
+  transition: transform 120ms ease-out, border-color 120ms ease-out;
+}
+
+/* DESIGN.md: nodes lift 1px on hover; the chosen one takes a coral border
+   and a 1px ring, never a coral fill under text. */
+/* Reset the shell's button look: the card draws the frame. */
+.lb-ui .card .pick {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  text-align: center;
+  padding: 0.9rem 0.6rem;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font-weight: 600;
+  transform: none;
+}
+
+.lb-ui .card .pick:hover:not(:disabled) {
+  color: inherit;
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgb(31 41 55 / 0.1);
-  border-color: var(--accent-live);
+  transform: translateY(-1px);
+  border-color: var(--accent-interactive);
 }
 
 .card.selected {
   border-color: var(--accent-live);
-  box-shadow: 0 2px 8px rgb(232 90 79 / 0.2);
-  background: var(--accent-live);
-  color: #fff;
+  box-shadow: 0 0 0 1px var(--accent-live);
+  background: var(--ground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover {
+    transform: none;
+  }
 }
 
 .card strong {
@@ -85,8 +119,8 @@ const emit = defineEmits<{ select: []; remove: [] }>();
 }
 
 .small {
-  font-size: 0.9em;
-  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
   color: var(--muted);
 }
 
@@ -111,6 +145,7 @@ const emit = defineEmits<{ select: []; remove: [] }>();
 
 .card:hover .close,
 .card.selected .close,
+.card:focus-within .close,
 .close:focus-visible {
   opacity: 1;
 }
@@ -121,7 +156,8 @@ const emit = defineEmits<{ select: []; remove: [] }>();
 }
 
 .close:disabled {
-  cursor: default;
-  opacity: 0.35;
+  cursor: not-allowed;
+  background: var(--disabled-fill);
+  color: var(--disabled-ink);
 }
 </style>

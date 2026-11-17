@@ -167,7 +167,7 @@ function show(index: number) {
   <!-- An annotator opening a task nobody assigned them. Better said than shown
        as an empty screen with a step bar above it. -->
   <p v-else class="lw-muted">
-    You have nothing to do in this task — nobody has assigned you any documents in it.
+    You have nothing to do in this task: nobody has assigned you any documents in it.
   </p>
 </template>
 

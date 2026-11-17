@@ -54,7 +54,7 @@ function choose(v: ThemePreference) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
+  padding: 4px;
   border: 0;
   border-radius: calc(var(--radius-sm) - 2px);
   background: transparent;
@@ -71,6 +71,6 @@ function choose(v: ThemePreference) {
 .theme-toggle button.active {
   color: var(--ink);
   background: var(--ground);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  box-shadow: 0 1px 2px var(--shadow-soft);
 }
 </style>

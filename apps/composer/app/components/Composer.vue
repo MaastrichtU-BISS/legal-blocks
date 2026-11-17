@@ -151,7 +151,7 @@ async function doExport() {
           <p>
             <template v-if="stored">
               Add the tools this application should have from the left. They do not connect
-              to each other — everything reaches the same database.
+              to each other: everything reaches the same database.
             </template>
             <template v-else>
               Add a starting step from the left. Steps can only be joined where the data
@@ -241,8 +241,9 @@ header {
   font-size: 13px;
   color: var(--ink);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 8px;
   border-radius: var(--radius-sm, 8px);
+  box-shadow: none;
 }
 
 .top-nav .nav-link:hover {
@@ -266,17 +267,15 @@ header strong {
 
 .modes {
   margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-family: var(--font-body);
+  font-size: 13px;
   color: var(--muted);
 }
 
 .modes button {
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: var(--radius-sm, 2px);
+  padding: 8px 12px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .columns {
@@ -304,17 +303,15 @@ header strong {
 
 .settings {
   background: var(--surface);
-  border-left: 2px solid var(--ink);
+  border-left: 1px solid var(--rule);
 }
 
 h2 {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-family: var(--font-body);
+  font-size: 13px;
   color: var(--muted);
   margin: 0 0 var(--space-md, 0.8rem);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .board {
@@ -338,11 +335,9 @@ h2 {
 .field span {
   display: block;
   margin-bottom: var(--space-xs, 0.25rem);
-  font-weight: 500;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  font-family: var(--font-body);
+  font-size: 13px;
   color: var(--muted);
 }
 
