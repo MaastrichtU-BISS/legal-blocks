@@ -1,6 +1,6 @@
 /* Hallmark · checked: 2026-11-17 · genre: modern-minimal (inferred; Projects, Compose and the platform swept in app scope) · design.md: locked
  * floor: 0 FAIL · fixed: 16 (10a, 15, 19, 24a, 24b, 26a, 26b, 27, 39a, 40, 48, 49a, 54, 63, 64, 67) · structural: 6 printed (44c, 58, 59, 77, 78, F15)
- * built: the project · redesign: polish · v2.0.0 */
+ * built: the project · redesign: polish (site), full (Landing: hero Stage, the composer captured in public/composer-pipeline.png) · v2.0.0 */
 /* Hallmark · dismissed 26a · the render tier tabs into nuxt-devtools-frame, a dev-only overlay; every app control shows the teal outline */
 /* Design system: see DESIGN.md (living schematic).
    Tokens are defined here and consumed by the shared shell (.lb-ui) and by
@@ -15,6 +15,13 @@
 
 :where(.lb-ui, .lw) :where(h1, h2, h3) {
   text-wrap: balance;
+}
+
+/* Nothing on a page may scroll it sideways; clip, never hidden, so sticky
+   positioning inside still works. */
+html,
+body {
+  overflow-x: clip;
 }
 
 html.dark body {

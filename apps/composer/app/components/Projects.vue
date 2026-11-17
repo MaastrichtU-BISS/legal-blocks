@@ -20,6 +20,9 @@ const emit = defineEmits<{ open: [name: string]; back: []; compose: []; docs: []
 
 const projects = ref<Project[]>([]);
 const newName = ref("");
+// The file input stays hidden; a real button opens it, so Import is reachable
+// and operable from the keyboard like every other action in the row.
+const importInput = ref<HTMLInputElement | null>(null);
 const editing = ref<string | null>(null);
 const editName = ref("");
 
@@ -124,10 +127,14 @@ onMounted(load);
       <section class="create-row">
         <input v-model="newName" class="name-input" placeholder="New project name…" @keyup.enter="create" />
         <button class="primary" @click="create">Create</button>
-        <label class="import-btn">
-          Import
-          <input type="file" accept="application/json" @change="importFile" hidden />
-        </label>
+        <button type="button" class="import-btn" @click="importInput?.click()">Import</button>
+        <input
+          ref="importInput"
+          type="file"
+          accept="application/json"
+          hidden
+          @change="importFile"
+        />
         <button class="ghost" @click="exportAll">Export all</button>
       </section>
 
@@ -303,7 +310,7 @@ onMounted(load);
   border-color: var(--accent-interactive);
   color: var(--accent-interactive);
 }
-.import-btn:focus-within {
+.import-btn:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
@@ -370,8 +377,9 @@ onMounted(load);
 }
 .muted { color: var(--muted); }
 .small { font-size: 0.9em; }
+/* The body face, like every other control in the row: Cabinet's taller
+   ascent sat the label high in a 36px button. */
 button.primary {
-  font-family: var(--font-display);
   font-weight: 700;
 }
 @media (prefers-reduced-motion: reduce) {

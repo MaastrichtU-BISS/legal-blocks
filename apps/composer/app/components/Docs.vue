@@ -167,7 +167,7 @@ const emit = defineEmits<{ back: []; compose: [] }>();
   padding: var(--space-2xl, 48px) var(--space-xl, 32px);
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl, 32px);
+  gap: var(--space-2xl, 48px);
 }
 .hero h1 {
   font-family: var(--font-display);
@@ -189,7 +189,8 @@ const emit = defineEmits<{ back: []; compose: [] }>();
 }
 .doc h2 {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: clamp(24px, 2.4vw, 30px);
+  letter-spacing: -0.01em;
   font-weight: 700;
   color: var(--ink);
   margin: 0 0 var(--space-sm, 8px);
@@ -197,7 +198,7 @@ const emit = defineEmits<{ back: []; compose: [] }>();
 }
 .doc p {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.6;
   max-width: 60ch;
   text-wrap: pretty;

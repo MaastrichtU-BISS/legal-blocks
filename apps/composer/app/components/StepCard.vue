@@ -22,18 +22,29 @@ const emit = defineEmits<{ select: []; remove: [] }>();
 </script>
 
 <template>
-  <div class="card" :class="{ selected }" @click="emit('select')">
+  <!-- The whole card is one button, so a keyboard user can reach and choose
+       a step; the × stays a separate button beside it, never inside it. -->
+  <div class="card" :class="{ selected }">
     <button
+      type="button"
+      class="pick"
+      :aria-pressed="selected"
+      @click="emit('select')"
+    >
+      <span class="ico"><ModuleIcon :name="step.manifest?.icon" :size="26" /></span>
+      <strong>{{ step.node.label }}</strong>
+      <span class="muted small">{{ step.manifest?.id }}</span>
+    </button>
+    <button
+      type="button"
       class="close"
       :disabled="!removable"
       :title="removeTitle ?? 'Remove'"
+      :aria-label="removeTitle ?? 'Remove'"
       @click.stop="emit('remove')"
     >
       ×
     </button>
-    <span class="ico"><ModuleIcon :name="step.manifest?.icon" :size="26" /></span>
-    <strong>{{ step.node.label }}</strong>
-    <span class="muted small">{{ step.manifest?.id }}</span>
   </div>
 </template>
 
@@ -43,12 +54,6 @@ const emit = defineEmits<{ select: []; remove: [] }>();
   width: 9.5rem;
   min-height: 6.5rem;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  text-align: center;
-  padding: 0.9rem 0.6rem;
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm, 8px);
   background: var(--surface);
@@ -61,6 +66,29 @@ const emit = defineEmits<{ select: []; remove: [] }>();
 
 /* DESIGN.md: nodes lift 1px on hover; the chosen one takes a coral border
    and a 1px ring, never a coral fill under text. */
+/* Reset the shell's button look: the card draws the frame. */
+.lb-ui .card .pick {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  text-align: center;
+  padding: 0.9rem 0.6rem;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font-weight: 600;
+  transform: none;
+}
+
+.lb-ui .card .pick:hover:not(:disabled) {
+  color: inherit;
+}
+
 .card:hover {
   transform: translateY(-1px);
   border-color: var(--accent-interactive);
@@ -117,6 +145,7 @@ const emit = defineEmits<{ select: []; remove: [] }>();
 
 .card:hover .close,
 .card.selected .close,
+.card:focus-within .close,
 .close:focus-visible {
   opacity: 1;
 }

@@ -333,6 +333,22 @@ html .lw .lw-primary:disabled {
   cursor: not-allowed;
 }
 
+/* The package centres its list at --lw-max-width but leaves the tab strip
+   at the left edge, so on a wide screen the tabs and the content they
+   switch sat 250px apart. Put the tabs in the same column. */
+html .lw .lw-tabs {
+  width: 100%;
+  max-width: var(--lw-max-width, 64rem);
+  margin-inline: auto;
+}
+
+/* Table heads in the body face, sentence case, untracked (DESIGN.md). */
+html .lw-table th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.8125rem;
+}
+
 html .lw-table tbody tr.lw-click:focus-visible {
   outline-color: var(--accent-interactive);
 }

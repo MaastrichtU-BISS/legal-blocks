@@ -57,7 +57,9 @@
 
   color-scheme: light;
   font-family: var(--font-body);
-  font-size: 14px;
+  /* Body text is 16px (DESIGN.md), the browser default, so modules' rem
+     sizes come out as their authors drew them. */
+  font-size: 100%;
   color: var(--ink);
 }
 
