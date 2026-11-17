@@ -27,3 +27,9 @@ node_modules/
 
 # nuxt-auth-utils writes a session secret here in dev
 .env
+
+# Local agent skills
+.claude/
+
+# Hallmark design runs: screenshots, lint records, the run log
+.hallmark/
