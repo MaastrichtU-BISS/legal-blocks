@@ -30,7 +30,7 @@ is left as it is.
 The LLM routes are mounted, but stay off without setup. With no `FEATURE_GATE`
 nobody gets the shared key, and users' own keys need `LLM_ENCRYPTION_KEY`.
 
-Summaries (`/api/summarize`, legal-ml-core 0.14) run on the worker. NLTK's
+Summaries (`/api/summarize`, legal-ml-core 0.19) run on the worker. NLTK's
 tokenizer data is built into the image; abstractive (Hugging Face) models are
 downloaded into the models volume on first use, so the first abstractive summary
 needs internet access. `LEGAL_ML_SUMMARIZATION_HF_MODELS` is not set here, so the
