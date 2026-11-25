@@ -160,6 +160,7 @@ describe("the ML routes", () => {
       "models/available.get.ts",
       "models/index.get.ts",
       "models/index.post.ts",
+      "training/[jobId]/metrics.get.ts",
       "training/start.post.ts",
       "training/status/[jobId].get.ts",
     ]);
