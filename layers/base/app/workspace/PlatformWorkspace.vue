@@ -23,8 +23,8 @@ import "vue-legal-workspace/style.css";
 import ModuleHost from "../runtime/ModuleHost.vue";
 import type { ResolveEnv } from "../runtime/resolve";
 import type { Manifest, Pipeline, Registry } from "@legal-blocks/manifest";
-import type { DatasetSummary, LabelsetSummary, TaskSummary } from "../api";
-import { getDatasets, getLabelsets, getTasks } from "../api";
+import type { DatasetSummary, LabelsetSummary, MlModelSummary, TaskSummary } from "../api";
+import { getDatasets, getLabelsets, getMlModels, getTasks } from "../api";
 import NewLabelsetForm from "./NewLabelsetForm.vue";
 import OpenTask from "./OpenTask.vue";
 import NewTaskForm from "./NewTaskForm.vue";
@@ -65,6 +65,16 @@ const taskModules = computed(() =>
         (p) => p.type === "annotated-task@1",
       );
     }),
+);
+
+/**
+ * The modules that train models. A module qualifies by calling the ML
+ * service, the same declaration that puts that service in the export.
+ */
+const mlModules = computed(() =>
+  props.pipeline.nodes
+    .map((node) => ({ node, manifest: props.registry.modules[node.module] }))
+    .filter(({ manifest }) => manifest?.services?.includes("ml")),
 );
 
 // Kept here as well as fetched by their tabs, because the Tasks tab has to
@@ -117,6 +127,27 @@ const tasksTab = computed<WorkspaceTab>(() => ({
   empty: "No tasks yet. Make one and give it to somebody, or wait to be given one.",
 }));
 
+/** Only the signed-in person's: the platform signs each request for them. */
+const modelsTab: WorkspaceTab = {
+  id: "models",
+  label: "Models",
+  columns: [
+    { key: "name", label: "Name" },
+    { key: "model_type", label: "Type" },
+    { key: "status", label: "Status" },
+    { key: "accuracy", label: "Accuracy", align: "end" },
+  ],
+  list: getMlModels,
+  createLabel: "Train a model",
+  createTitle: "Train a model",
+  empty: "No models yet. Upload a labelled CSV and train one on it.",
+};
+
+function accuracy(row: Row): string {
+  const value = (row as MlModelSummary).metrics?.accuracy;
+  return typeof value === "number" ? `${Math.round(value * 100)}%` : "–";
+}
+
 const tabs = computed<WorkspaceTab[]>(() => {
   const out: WorkspaceTab[] = [
     {
@@ -134,6 +165,8 @@ const tabs = computed<WorkspaceTab[]>(() => {
       empty: "No documents yet. Everything else here is made from these.",
     },
   ];
+
+  if (mlModules.value.length) out.push(modelsTab);
 
   if (!taskModules.value.length) return out;
 
@@ -219,6 +252,18 @@ function created() {
       <div class="lw-actions">
         <button class="lw-primary" @click="done">Done</button>
       </div>
+    </template>
+
+    <!-- The ML workbench, whole: upload, train, try a model. Closing it
+         reloads the tab, so a model trained in there shows up here. -->
+    <template #create-models>
+      <div v-for="m in mlModules" :key="m.node.id" class="pane">
+        <ModuleHost :env="env" :node="m.node" :manifest="m.manifest as Manifest" :revision="0" />
+      </div>
+    </template>
+
+    <template #cell-models-accuracy="{ item }">
+      {{ accuracy(item) }}
     </template>
 
     <template #create-labelsets="{ done, close }">

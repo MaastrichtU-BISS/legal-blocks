@@ -6,6 +6,7 @@
 export * from "./composer";
 export * from "./documents";
 export * from "./metrics";
+export * from "./ml";
 export * from "./platform";
 export * from "./resources";
 export * from "./tasks";

@@ -22,6 +22,7 @@ import type { Kind } from "@legal-blocks/manifest";
 import { AnnotationSource } from "./annotation";
 import { DocumentImport, DocumentPassthrough, DocumentSearch } from "./documents";
 import { MetricsSource } from "./metrics";
+import { MLAdapter } from "./ml";
 import type { Binding, KindBindings } from "./types";
 
 export type {
@@ -40,6 +41,7 @@ const contracts: Record<string, KindBindings> = {
   DocumentImport,
   DocumentSearch,
   DocumentPassthrough,
+  MLAdapter,
 };
 
 export function bindingFor(host: string | undefined, kind: Kind): Binding {
