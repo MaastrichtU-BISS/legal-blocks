@@ -19,6 +19,8 @@ import type {
   IaaParams,
   LabelOption,
   MetricsSource,
+  PageRequest,
+  AnnotationPage,
   RichAnnotation,
 } from "vue-iaa-metrics";
 import {
@@ -30,6 +32,7 @@ import {
   getTaskDocuments,
   type Task,
 } from "../api";
+import { pageOf } from "./page";
 
 const SERVICE_ID = "lawnotation-iaa";
 
@@ -56,8 +59,9 @@ export function createMetricsSource(taskId: number, task: Task): MetricsSource {
       return getTaskDocuments(taskId);
     },
 
-    async getAnnotations(filters: AnnotationFilters): Promise<RichAnnotation[]> {
-      return (await getAnnotations(taskId, filters)) as RichAnnotation[];
+    async getAnnotations(filters: AnnotationFilters, page: PageRequest): Promise<AnnotationPage> {
+      const all = (await getAnnotations(taskId, filters)) as RichAnnotation[];
+      return pageOf(all, page);
     },
 
     async getIaaInputData(): Promise<IaaInputData> {

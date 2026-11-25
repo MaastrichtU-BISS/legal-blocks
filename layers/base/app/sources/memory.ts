@@ -24,9 +24,12 @@ import type {
   IaaParams,
   LabelOption,
   MetricsSource,
+  PageRequest,
+  AnnotationPage,
   RichAnnotation,
 } from "vue-iaa-metrics";
 import { callService } from "../api";
+import { pageOf } from "./page";
 import type { CorpusDocument } from "../types";
 
 /** Colours cycled through when the settings give only label names. */
@@ -230,14 +233,15 @@ export function createSessionMetricsSource(task: TaskData): MetricsSource {
       return task.documents.map((d) => ({ value: d.name, label: d.name }));
     },
 
-    async getAnnotations(filters: AnnotationFilters): Promise<RichAnnotation[]> {
+    async getAnnotations(filters: AnnotationFilters, page: PageRequest): Promise<AnnotationPage> {
       const { labels, documents, annotators } = filters;
-      return allAnnotations(task).filter(
+      const matching = allAnnotations(task).filter(
         (a) =>
           (labels.length === 0 || labels.includes(a.label)) &&
           (documents.length === 0 || documents.includes(a.doc_id)) &&
           (annotators.length === 0 || annotators.includes(a.annotator)),
       );
+      return pageOf(matching, page);
     },
 
     async getIaaInputData(): Promise<IaaInputData> {
