@@ -1,0 +1,94 @@
+/* Legal Blocks tokens: every colour, face, radius and space the shell uses.
+   Light on :root, dark on html.dark (set by useTheme). See DESIGN.md. */
+
+:root {
+  /* Color — friendly coral + teal on clean white */
+  --ground: #FFFFFF;
+  --surface: #F9FAFB;
+  --ink: #1F2937;
+  --muted: #6B7280;
+  --rule: #E5E7EB;
+  --accent-live: #E85A4F;
+  /* Coral as a fill under text: #E85A4F carries white at only 3.5:1, so
+     buttons and selected tabs use this deeper step (4.8:1). */
+  --accent-live-fill: #C9443A;
+  --accent-live-fill-hover: #B93C33;
+  --on-accent: #FFFFFF;
+  /* Teal is used as text (links, hover ink), so it sits at 5.5:1 on white. */
+  --accent-interactive: #0F766E;
+  --accent-success: #10B981;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #C9443A;
+  --error: var(--danger);
+  /* A field's edge has to read at 3:1 against the page. */
+  --field-edge: #858C97;
+  --disabled-fill: #E5E7EB;
+  --disabled-ink: #4B5563;
+  --shadow-soft: rgb(31 41 55 / 0.08);
+  /* Text on a user-chosen label colour. */
+  --label-ink: #FFFFFF;
+  --shadow-live: rgb(232 90 79 / 0.25);
+  --focus-ring: var(--accent-interactive);
+
+  /* Typography */
+  --font-display: "Cabinet Grotesk", "DM Sans", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+
+  /* Radius — soft, friendly */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Back-compat aliases for existing component styles. */
+  --border: var(--rule);
+  --bg-soft: var(--surface);
+  --accent: var(--accent-interactive);
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  color-scheme: light;
+  font-family: var(--font-body);
+  /* Body text is 16px (DESIGN.md), the browser default, so modules' rem
+     sizes come out as their authors drew them. */
+  font-size: 100%;
+  color: var(--ink);
+}
+
+/* Dark theme: applied via .dark on <html> (see useTheme). */
+html.dark {
+  --ground: #0F1115;
+  --surface: #1A1D23;
+  --ink: #E5E7EB;
+  --muted: #9CA3AF;
+  --rule: #2A2F38;
+  --accent-live: #F06A5F;
+  --accent-live-fill: #F06A5F;
+  --accent-live-fill-hover: #F48A81;
+  --on-accent: #0F1115;
+  --accent-interactive: #2DD4BF;
+  --accent-success: #34D399;
+  --success: #34D399;
+  --warning: #FBBF24;
+  --danger: #F06A5F;
+  --field-edge: #636B78;
+  --disabled-fill: #2A2F38;
+  --disabled-ink: #9CA3AF;
+  --shadow-soft: rgb(0 0 0 / 0.3);
+  --shadow-live: rgb(240 106 95 / 0.25);
+
+  --border: var(--rule);
+  --bg-soft: var(--surface);
+  --accent: var(--accent-interactive);
+
+  color-scheme: dark;
+  color: var(--ink);
+}

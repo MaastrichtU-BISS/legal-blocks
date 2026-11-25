@@ -20,6 +20,9 @@ const emit = defineEmits<{ open: [name: string]; back: []; compose: []; docs: []
 
 const projects = ref<Project[]>([]);
 const newName = ref("");
+// The file input stays hidden; a real button opens it, so Import is reachable
+// and operable from the keyboard like every other action in the row.
+const importInput = ref<HTMLInputElement | null>(null);
 const editing = ref<string | null>(null);
 const editName = ref("");
 
@@ -110,7 +113,7 @@ onMounted(load);
         <a class="github-link" href="https://github.com/MaastrichtU-BISS/legal-blocks" target="_blank" rel="noreferrer" aria-label="GitHub">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.44 9.79 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.75-1.33-1.75-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.57C20.57 21.79 24 17.31 24 12 24 5.37 18.63 0 12 0z"/></svg>
         </a>
-        <button class="primary" @click="emit('compose')">New project →</button>
+        <button class="primary" @click="emit('compose')">New project</button>
       </nav>
     </header>
 
@@ -124,10 +127,14 @@ onMounted(load);
       <section class="create-row">
         <input v-model="newName" class="name-input" placeholder="New project name…" @keyup.enter="create" />
         <button class="primary" @click="create">Create</button>
-        <label class="import-btn">
-          Import
-          <input type="file" accept="application/json" @change="importFile" hidden />
-        </label>
+        <button type="button" class="import-btn" @click="importInput?.click()">Import</button>
+        <input
+          ref="importInput"
+          type="file"
+          accept="application/json"
+          hidden
+          @change="importFile"
+        />
         <button class="ghost" @click="exportAll">Export all</button>
       </section>
 
@@ -144,13 +151,13 @@ onMounted(load);
             </template>
             <template v-else>
               <strong class="project-name" @dblclick="startEdit(p)">{{ p.name }}</strong>
-              <span class="project-meta">{{ p.kind === 'workspace' ? 'With database' : 'Without database' }} · {{ new Date(p.updatedAt).toLocaleDateString() }}</span>
+              <span class="project-meta">{{ p.kind === 'workspace' ? 'With database' : 'Without database' }}, {{ new Date(p.updatedAt).toLocaleDateString() }}</span>
             </template>
           </div>
           <div class="project-actions">
             <button class="ghost" @click="startEdit(p)">Rename</button>
             <button class="ghost danger" @click="remove(p.id)">Delete</button>
-            <button class="primary" @click="emit('open', p.name)">Open →</button>
+            <button class="primary" @click="emit('open', p.name)">Open</button>
           </div>
         </div>
       </section>
@@ -180,7 +187,7 @@ onMounted(load);
   align-items: center;
   gap: var(--space-sm, 8px);
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 20px;
   color: var(--ink);
   cursor: pointer;
@@ -199,21 +206,25 @@ onMounted(load);
   font-size: 14px;
   color: var(--ink);
   cursor: pointer;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: var(--radius-sm, 8px);
+  box-shadow: none;
 }
 .nav-link.active {
-  background: var(--accent-live);
-  color: #fff;
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--accent-interactive);
+  border-radius: 0;
 }
 .nav-link:hover {
-  background: var(--surface);
+  background: transparent;
+  color: var(--accent-interactive);
 }
 .github-link {
   display: inline-flex;
   align-items: center;
   color: var(--ink);
-  padding: 6px;
+  padding: 8px;
+  border-radius: var(--radius-sm, 8px);
 }
 .github-link:hover {
   color: var(--accent-interactive);
@@ -233,6 +244,9 @@ onMounted(load);
   letter-spacing: -0.02em;
   line-height: 1.05;
   color: var(--ink);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 .lede {
   margin-top: var(--space-md, 16px);
@@ -244,14 +258,14 @@ onMounted(load);
 .create-row {
   display: flex;
   gap: var(--space-sm, 8px);
-  align-items: center;
+  align-items: stretch;
   flex-wrap: wrap;
 }
 .name-input {
   flex: 1;
   min-width: 200px;
-  padding: 10px 12px;
-  border: 1px solid var(--rule);
+  padding: 8px 12px;
+  border: 1px solid var(--field-edge);
   border-radius: var(--radius-sm, 8px);
   font-family: var(--font-body);
   font-size: 14px;
@@ -261,7 +275,7 @@ onMounted(load);
 .import-btn {
   display: inline-flex;
   align-items: center;
-  padding: 10px 16px;
+  padding: 8px 16px;
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm, 8px);
   background: var(--surface);
@@ -274,7 +288,7 @@ onMounted(load);
   background: transparent;
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm, 8px);
-  padding: 10px 16px;
+  padding: 8px 16px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -286,7 +300,19 @@ onMounted(load);
 }
 .ghost.danger:hover {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
+}
+.ghost:active,
+.import-btn:active {
+  transform: translateY(1px);
+}
+.import-btn:hover {
+  border-color: var(--accent-interactive);
+  color: var(--accent-interactive);
+}
+.import-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 .project-list {
   display: flex;
@@ -318,9 +344,8 @@ onMounted(load);
   color: var(--ink);
 }
 .project-meta {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
-  font-family: var(--font-mono);
 }
 .project-actions {
   display: flex;
@@ -348,21 +373,20 @@ onMounted(load);
 .empty-state p {
   font-size: 14px;
   line-height: 1.5;
+  max-width: 48ch;
 }
 .muted { color: var(--muted); }
 .small { font-size: 0.9em; }
+/* The body face, like every other control in the row: Cabinet's taller
+   ascent sat the label high in a 36px button. */
 button.primary {
-  background: var(--accent-live);
-  border: 1px solid var(--accent-live);
-  color: #fff;
-  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 14px;
-  padding: 10px 20px;
-  border-radius: var(--radius-sm, 8px);
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgb(232 90 79 / 0.25);
 }
-button.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgb(232 90 79 / 0.3); }
+@media (prefers-reduced-motion: reduce) {
+  .ghost:active,
+  .import-btn:active {
+    transform: none;
+  }
+}
 code { font-family: var(--font-mono); }
 </style>

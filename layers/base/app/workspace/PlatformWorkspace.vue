@@ -94,7 +94,7 @@ const taskBlocked = computed(() => {
   if (!datasets.value.length) missing.push("documents");
   if (!labelsets.value.length) missing.push("labels");
   if (!missing.length) return undefined;
-  return `A task needs documents and labels — add ${missing.join(" and ")} first.`;
+  return `A task needs documents and labels: add ${missing.join(" and ")} first.`;
 });
 
 const tasksTab = computed<WorkspaceTab>(() => ({
@@ -242,7 +242,7 @@ function created() {
           v-for="label in (item as LabelsetSummary).labels"
           :key="label.name"
           class="lw-chip"
-          :style="label.color ? { background: label.color, color: '#fff' } : undefined"
+          :style="label.color ? { background: label.color, color: 'var(--label-ink)' } : undefined"
         >
           {{ label.name }}
         </span>
@@ -314,16 +314,39 @@ h3 {
    surfaces with the theme variables. */
 html .lw .lw-primary,
 html .lw .lw-on {
-  background: var(--accent-live);
-  border-color: var(--accent-live);
-  color: #fff;
+  background: var(--accent-live-fill);
+  border-color: var(--accent-live-fill);
+  color: var(--on-accent);
 }
 
 html .lw .lw-primary:hover:not(:disabled),
 html .lw .lw-on:hover:not(:disabled) {
-  background: #d64a3f;
-  border-color: #d64a3f;
-  color: #fff;
+  background: var(--accent-live-fill-hover);
+  border-color: var(--accent-live-fill-hover);
+  color: var(--on-accent);
+}
+
+html .lw .lw-primary:disabled {
+  background: var(--disabled-fill);
+  border-color: var(--disabled-fill);
+  color: var(--disabled-ink);
+  cursor: not-allowed;
+}
+
+/* The package centres its list at --lw-max-width but leaves the tab strip
+   at the left edge, so on a wide screen the tabs and the content they
+   switch sat 250px apart. Put the tabs in the same column. */
+html .lw .lw-tabs {
+  width: 100%;
+  max-width: var(--lw-max-width, 64rem);
+  margin-inline: auto;
+}
+
+/* Table heads in the body face, sentence case, untracked (DESIGN.md). */
+html .lw-table th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.8125rem;
 }
 
 html .lw-table tbody tr.lw-click:focus-visible {
@@ -352,13 +375,14 @@ html.dark .lw button:hover:not(:disabled) {
 
 html.dark .lw .lw-primary,
 html.dark .lw .lw-on {
-  background: var(--accent-live);
-  border-color: var(--accent-live);
-  color: #fff;
+  background: var(--accent-live-fill);
+  border-color: var(--accent-live-fill);
+  color: var(--on-accent);
 }
 
 html.dark .lw h2 {
   color: var(--ink);
+  text-wrap: balance;
 }
 
 html.dark .lw-table th,
