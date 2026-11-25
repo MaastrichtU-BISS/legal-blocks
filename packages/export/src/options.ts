@@ -15,6 +15,11 @@ export interface ExportOptions {
    * file when the pipeline actually uses it.
    */
   iaaImage: string;
+  /**
+   * The ML service's image, with its tag: one image for the API and the
+   * worker. Only named when a module in the pipeline declares the ml service.
+   */
+  mlImage?: string;
   /** Port the platform is published on. 0 or absent means the default. */
   port?: number;
   /**

@@ -1,0 +1,25 @@
+{
+  "id": "vue-legal-ml-builder",
+  "name": "Train models",
+  "description": "Students upload a labelled CSV, train a model on it and try it on new text. Each person sees only their own datasets and models. Training runs in the platform's own ML service, which the export starts alongside it.",
+  "icon": "chart",
+  "version": "0.15.0",
+  "kind": "ui",
+  "runtime": "web",
+  "entry": {
+    "package": "vue-legal-ml-builder",
+    "component": "MlWorkbench",
+    "style": "vue-legal-ml-builder/style.css"
+  },
+  "host": "MLAdapter",
+  "worksIn": [
+    "workspace"
+  ],
+  "services": [
+    "ml"
+  ],
+  "inputs": [],
+  "outputs": [],
+  "config": [],
+  "storage": true
+}

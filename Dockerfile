@@ -74,7 +74,9 @@ FROM node:24-alpine AS platform
 # without the recipient chowning anything — a bind mount would be created
 # root-owned by the daemon there, and the platform could not write its
 # database into it.
-RUN adduser -D -u 10001 app && mkdir -p /app/data && chown -R app:app /app
+# /app/ml-secret the same way, for the volume an export with ML shares with
+# the ML containers.
+RUN adduser -D -u 10001 app && mkdir -p /app/data /app/ml-secret && chown -R app:app /app
 USER app
 WORKDIR /app
 

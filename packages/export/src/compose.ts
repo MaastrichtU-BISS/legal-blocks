@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { serviceIds } from "@legal-blocks/manifest";
+import { ML_VOLUMES, mlServices, platformMlSettings } from "./ml.js";
 import { DEFAULT_PORT, slug, type ExportOptions } from "./options.js";
 
 /**
@@ -50,7 +51,13 @@ function newId(): string {
 export function compose(opts: ExportOptions, hasCredentials: boolean): string {
   const id = opts.id ?? newId();
   const port = opts.port || DEFAULT_PORT;
-  const needsIaa = serviceIds(opts.pipeline, opts.registry).includes("lawnotation-iaa");
+  const services = serviceIds(opts.pipeline, opts.registry);
+  const needsIaa = services.includes("lawnotation-iaa");
+  const needsMl = services.includes("ml");
+  if (needsMl && !opts.mlImage) {
+    throw new Error("this pipeline trains models, but no ML service image was given");
+  }
+  const ml = platformMlSettings();
 
   const lines = [
     `# ${opts.pipeline.name}`,
@@ -82,13 +89,22 @@ export function compose(opts: ExportOptions, hasCredentials: boolean): string {
   // Linux, and every storage route then fails with SQLITE_CANTOPEN — which is
   // what shipped, because Docker Desktop virtualises that away on a Mac.
   lines.push("      - data:/app/data");
+  if (needsMl) lines.push(`      - ${ml.volume}`);
+
+  const environment: Record<string, string> = {};
+  if (needsIaa) environment["LEGAL_BLOCKS_IAA_URL"] = "http://agreement:8080";
+  if (needsMl) Object.assign(environment, ml.environment);
+  if (Object.keys(environment).length) {
+    lines.push("    environment:");
+    for (const [key, value] of Object.entries(environment)) lines.push(`      ${key}: ${value}`);
+  }
+
+  // Not on ml: the platform answers without it and says so when a model is
+  // asked for, and the ML containers must not wait on the platform either.
+  if (needsIaa) lines.push("    depends_on:", "      - agreement");
 
   if (needsIaa) {
     lines.push(
-      "    environment:",
-      "      LEGAL_BLOCKS_IAA_URL: http://agreement:8080",
-      "    depends_on:",
-      "      - agreement",
       "",
       "  # Computes inter-annotator agreement. Reached by the platform over the",
       "  # compose network and deliberately not published on your machine.",
@@ -97,10 +113,12 @@ export function compose(opts: ExportOptions, hasCredentials: boolean): string {
       "    restart: unless-stopped",
     );
   }
+  if (needsMl) lines.push(...mlServices(opts.mlImage!));
 
-  // Last, because both blocks above append to the same list and a top-level
+  // Last, because the blocks above append to the same list and a top-level
   // key cannot sit inside a service.
   lines.push("", "volumes:", "  data:");
+  if (needsMl) lines.push(...ML_VOLUMES.map((v) => `  ${v}:`));
 
   return lines.join("\n") + "\n";
 }

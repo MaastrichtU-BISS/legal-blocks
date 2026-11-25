@@ -1,0 +1,10 @@
+{
+  "id": "ml",
+  "image": "ghcr.io/maastrichtu-biss/legal-blocks-ml:{version}",
+  "port": 8001,
+  "healthcheck": "/health",
+  "commands": {
+    "api": "api",
+    "worker": "worker"
+  }
+}

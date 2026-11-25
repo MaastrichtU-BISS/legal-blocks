@@ -26,9 +26,11 @@ COPY alembic_env ./alembic_env
 
 # Same uid as the platform image, so this service can read the platform's
 # secret from the volume they share.
+# /run/ml-secret too: whichever container starts first initialises the shared
+# secret volume from its own directory, so both images make it uid 10001's.
 RUN adduser --system --uid 10001 --group --home /app app \
-	&& mkdir -p /app/models /app/data \
-	&& chown -R app:app /app
+	&& mkdir -p /app/models /app/data /run/ml-secret \
+	&& chown -R app:app /app /run/ml-secret
 USER app
 
 ENV HF_HOME=/app/models/.huggingface

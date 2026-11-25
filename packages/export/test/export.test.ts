@@ -8,6 +8,7 @@ import { buildExport, exportFilename } from "../src/index.js";
 const REGISTRY_DIR = fileURLToPath(new URL("../../../registry", import.meta.url));
 const PLATFORM = "ghcr.io/example/legal-blocks-platform:1.2.3";
 const IAA = "ghcr.io/example/lawnotation-iaa:1.2.3";
+const ML = "ghcr.io/example/legal-blocks-ml:1.2.3";
 
 let reg: Registry;
 beforeAll(async () => {
@@ -19,6 +20,11 @@ const workspace = `{"version":1,"name":"My workspace","kind":"workspace","nodes"
   {"id":"import1","module":"vue-legal-docs-import"},
   {"id":"annot1","module":"legal-annotation-kit"},
   {"id":"iaa1","module":"vue-iaa-metrics"}]}`;
+
+/** A workspace where students train models. */
+const training = `{"version":1,"name":"Train","kind":"workspace","login":true,"nodes":[
+  {"id":"import1","module":"vue-legal-docs-import"},
+  {"id":"ml1","module":"vue-legal-ml-builder"}]}`;
 
 /** Search and view: no storage, no agreement service, and a token. */
 const searching = `{"version":1,"name":"Find cases","kind":"pipeline","nodes":[
@@ -32,6 +38,7 @@ function build(body: string): Record<string, string> {
     registry: reg,
     platformImage: PLATFORM,
     iaaImage: IAA,
+    mlImage: ML,
   });
   const out: Record<string, string> = {};
   for (const [name, bytes] of Object.entries(unzipSync(zip))) out[name] = strFromU8(bytes);
@@ -61,6 +68,42 @@ describe("what an export contains", () => {
     expect(build(workspace)["docker-compose.yml"]).toContain("agreement:");
   });
 
+  // The ML stack is four containers and a 2 GB image. Nobody who never trains
+  // a model should pull it.
+  it("only ships the ML service when a module uses it", () => {
+    expect(build(workspace)["docker-compose.yml"]).not.toMatch(/\bml/);
+    const compose = build(training)["docker-compose.yml"]!;
+    for (const service of ["ml:", "ml-worker:", "ml-postgres:", "ml-redis:"]) {
+      expect(compose).toContain(`\n  ${service}\n`);
+    }
+    expect(compose).toContain(`image: ${ML}`);
+    expect(compose).toContain("command: worker");
+    expect(compose).toContain("LEGAL_BLOCKS_ML_URL: http://ml:8001");
+  });
+
+  // The secret the platform signs with is the one thing of the platform's the
+  // ML containers see, and they may only read it.
+  it("shares only the signing secret with the ML containers, read-only", () => {
+    const compose = build(training)["docker-compose.yml"]!;
+    expect(compose).toContain("- ml-secret:/app/ml-secret\n");
+    const mlBlock = compose.slice(compose.indexOf("\n  ml:\n"), compose.indexOf("\n  ml-worker:"));
+    expect(mlBlock).toContain("- ml-secret:/run/ml-secret:ro");
+    expect(mlBlock).not.toContain("- data:/app/data");
+    expect(mlBlock).not.toContain("pipeline.json");
+    expect(compose).toMatch(/\nvolumes:\n {2}data:\n {2}ml-secret:/);
+  });
+
+  it("refuses to name no image for a pipeline that trains models", () => {
+    expect(() =>
+      buildExport({
+        pipeline: parsePipeline(training, reg),
+        registry: reg,
+        platformImage: PLATFORM,
+        iaaImage: IAA,
+      }),
+    ).toThrow(/ML service image/);
+  });
+
   // The platform has no login, so anything that can reach the port can read
   // and write everyone's work.
   it("publishes the platform on localhost only, and the sidecar not at all", () => {
@@ -68,6 +111,7 @@ describe("what an export contains", () => {
     expect(compose).toContain('"127.0.0.1:7777:7777"');
     // One ports: block, belonging to the platform.
     expect(compose.match(/ports:/g)).toHaveLength(1);
+    expect(build(training)["docker-compose.yml"]!.match(/ports:/g)).toHaveLength(1);
   });
 
   // Two exports of a platform with the same name are two platforms. Compose

@@ -1,3 +1,5 @@
+import mlService from "../../../../registry/services/ml.service.json";
+
 /**
  * Which images an export should name.
  *
@@ -19,5 +21,7 @@ export function images() {
   return {
     platformImage: `${cfg.platformImage}:${cfg.version}`,
     iaaImage: `${cfg.iaaImage}:${cfg.iaaVersion}`,
+    // Built from services/ml by the same release, so it carries the same version.
+    mlImage: mlService.image.replace("{version}", cfg.version),
   };
 }
