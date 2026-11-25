@@ -26,5 +26,10 @@
     "@types/node": "^26.3.0",
     "typescript": "^5.9.0",
     "vitest": "^4.1.0"
+  },
+  "overrides": {
+    "vue-legal-ml-builder": {
+      "legal-annotation-kit": "^1.9.0"
+    }
   }
 }

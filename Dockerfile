@@ -15,7 +15,12 @@ WORKDIR /src
 # better-sqlite3 has prebuilt binaries for common platforms and falls back to
 # node-gyp when there is none. Having the toolchain present means the build
 # fails loudly at compile time rather than at first request on an unusual arch.
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ git
+
+# vue-legal-ml-builder is installed from GitHub until it is on npm, and npm
+# records GitHub dependencies as ssh:// in the lockfile. The build has no SSH
+# key; the repository is public, so HTTPS reaches the same commit.
+RUN git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
 # The workspace layout has to be in place before install, because npm resolves
 # workspaces from the root package.json.
