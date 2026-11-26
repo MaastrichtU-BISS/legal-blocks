@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Both images, from one file and one source tree.
 #
 #   docker build --target composer -t legal-blocks-composer .
@@ -17,16 +18,24 @@ WORKDIR /src
 # fails loudly at compile time rather than at first request on an unusual arch.
 RUN apk add --no-cache python3 make g++
 
-# The workspace layout has to be in place before install, because npm resolves
-# workspaces from the root package.json.
-COPY package.json package-lock.json ./
+# pnpm comes from corepack, at the version pinned by "packageManager" in
+# package.json. The store lives in a BuildKit cache mount, so a rebuild after a
+# lockfile change downloads only what changed.
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+
+# The workspace layout has to be in place before install, because pnpm resolves
+# workspaces from pnpm-workspace.yaml and each package.json.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/manifest/package.json ./packages/manifest/
 COPY packages/db/package.json ./packages/db/
 COPY packages/export/package.json ./packages/export/
 COPY layers/base/package.json ./layers/base/
 COPY apps/composer/package.json ./apps/composer/
 COPY apps/platform/package.json ./apps/platform/
-RUN npm ci
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir /pnpm/store
 
 COPY . .
 
@@ -40,7 +49,7 @@ RUN LEGAL_BLOCKS_VERSION="$VERSION" \
     LEGAL_BLOCKS_PLATFORM_IMAGE="$PLATFORM_IMAGE" \
     LEGAL_BLOCKS_IAA_IMAGE="$IAA_IMAGE" \
     LEGAL_BLOCKS_IAA_VERSION="$VERSION" \
-    npm run build
+    pnpm build
 
 # --- composer -----------------------------------------------------------------
 FROM node:24-alpine AS composer

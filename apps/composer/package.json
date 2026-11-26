@@ -10,9 +10,9 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
-    "@legal-blocks/base": "*",
-    "@legal-blocks/export": "*",
-    "@legal-blocks/manifest": "*",
+    "@legal-blocks/base": "workspace:*",
+    "@legal-blocks/export": "workspace:*",
+    "@legal-blocks/manifest": "workspace:*",
     "nuxt": "^4.5.0",
     "vue": "^3.5.0"
   }

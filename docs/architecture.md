@@ -106,7 +106,7 @@ the whole drift guarantee. **Never publish the images separately** — a compose
 whose platform tag does not exist produces exports that cannot start.
 
 An unreleased composer is `:dev`, deliberately, rather than `:latest`. So a zip
-exported from `npm run dev:composer` runs only on a machine that has built the
+exported from `pnpm dev:composer` runs only on a machine that has built the
 `:dev` images itself: it fails loudly on anyone else's rather than quietly
 running whatever `:latest` happened to be that week. Export from a published
 image for anything you intend to hand over.
@@ -558,7 +558,7 @@ from `process.env` at request time, and the platform's server holds no
 # 9. Working on it — the daily loop
 
 Everything from here on assumes you are changing legal-blocks. **Using** the
-composer needs none of it — no clone, no Node, no npm:
+composer needs none of it — no clone, no Node, no pnpm:
 
 ```bash
 docker run --rm -p 7788:7788 ghcr.io/maastrichtu-biss/legal-blocks-composer:0.1.0
@@ -573,13 +573,14 @@ Node 24, pinned in `.nvmrc`. `nvm use` affects only the shell you run it in.
 
 ```bash
 nvm use
-npm install
+corepack enable   # once per Node install; provides the pnpm version in package.json
+pnpm install
 
-npm run dev:platform     # http://localhost:7777
-npm run dev:composer     # http://localhost:7788
+pnpm dev:platform    # http://localhost:7777
+pnpm dev:composer    # http://localhost:7788
 
-npm test                 # vitest, every package
-npm run type-check
+pnpm test            # vitest, every package
+pnpm type-check
 ```
 
 The platform dev server runs against `apps/platform/dev/pipeline.json` — a
@@ -588,12 +589,12 @@ workspace with import, annotation and metrics. Its database is
 Edit the dev pipeline to work against a different composition; the server reads
 it once at boot, so restart after changing it.
 
-Agreement metrics need the `lawnotation-iaa` container, which `npm run dev` does
+Agreement metrics need the `lawnotation-iaa` container, which `pnpm dev` does
 not start. To work on that screen, run the published image alongside:
 
 ```bash
 docker run -d --rm -p 8080:8080 ghcr.io/maastrichtu-biss/lawnotation-iaa:0.1.0
-LEGAL_BLOCKS_IAA_URL=http://localhost:8080 npm run dev:platform
+LEGAL_BLOCKS_IAA_URL=http://localhost:8080 pnpm dev:platform
 ```
 
 ## Where things live
@@ -664,9 +665,9 @@ anything else, something is leaking.
 The common case: `vue-iaa-metrics` gets a fix and you want it in.
 
 ```bash
-npm install vue-iaa-metrics@latest --workspace @legal-blocks/base
-npm test
-npm run dev:platform          # exercise the screen it changed
+pnpm --filter @legal-blocks/base add vue-iaa-metrics@latest
+pnpm test
+pnpm dev:platform        # exercise the screen it changed
 ```
 
 Then decide whether it needs a release. **It does if anyone should get it.** The
@@ -697,7 +698,7 @@ no install needed. `node-legal-docs-import` is published, so:
 cd ~/Documents/WORK/node-legal-docs-import
 npm version patch && npm publish
 cd ~/Documents/WORK/legal-blocks
-npm install node-legal-docs-import@latest --workspace @legal-blocks/platform
+pnpm --filter @legal-blocks/platform add node-legal-docs-import@latest
 ```
 
 ## Adding a data API route

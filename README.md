@@ -56,7 +56,7 @@ and the export pulls the other two by that tag.
 
 ### Just using the composer
 
-You do not need this repository, Node, or npm. The composer writes nothing and
+You do not need this repository, Node, or pnpm. The composer writes nothing and
 reads nothing but its own bundle, so there is no volume to mount and nothing to
 configure — one command is the whole setup:
 
@@ -77,13 +77,14 @@ it is per-terminal rather than something that stays set.
 
 ```bash
 nvm use
-npm install
+corepack enable   # once per Node install; provides the pnpm version in package.json
+pnpm install
 ```
 
 ### The platform — what an exported platform is
 
 ```bash
-npm run dev:platform
+pnpm dev:platform
 ```
 
 Then open <http://localhost:7777>.
@@ -96,7 +97,7 @@ gitignored — delete that folder to start over.
 **Add documents** takes text, HTML, Word and PDF; **Labels** → **New labelset**
 defines what can be annotated; **Tasks** → **New task** over a dataset and a
 labelset opens the annotation screen. Agreement metrics need the sidecar, which
-`npm run dev` does not start — see the architecture note's daily loop for
+`pnpm dev` does not start — see the architecture note's daily loop for
 running it alongside.
 
 You can also put documents in without the UI:
@@ -112,7 +113,7 @@ curl -X POST localhost:7777/api/datasets \
 ### The composer — where platforms are designed
 
 ```bash
-npm run dev:composer
+pnpm dev:composer
 ```
 
 Then open <http://localhost:7788>.
@@ -141,8 +142,8 @@ image above instead.
 ### Tests
 
 ```bash
-npm test           # vitest across every package
-npm run type-check
+pnpm test         # vitest across every package
+pnpm type-check
 ```
 
 ## Layout
