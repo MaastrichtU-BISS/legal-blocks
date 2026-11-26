@@ -5,7 +5,7 @@
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "dependencies": {
-    "@legal-blocks/manifest": "*",
+    "@legal-blocks/manifest": "workspace:*",
     "fflate": "^0.8.2"
   }
 }

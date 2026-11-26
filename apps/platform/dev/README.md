@@ -1,6 +1,6 @@
 # dev/
 
-What `npm run dev:platform` runs against.
+What `pnpm dev:platform` runs against.
 
 A platform is normally started beside an exported `pipeline.json` and a `data`
 folder. In development there is no export, so this stands in: a workspace with

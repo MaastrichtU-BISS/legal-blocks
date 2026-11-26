@@ -10,9 +10,10 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
-    "@legal-blocks/base": "*",
-    "@legal-blocks/db": "*",
-    "@legal-blocks/manifest": "*",
+    "@legal-blocks/base": "workspace:*",
+    "@legal-blocks/db": "workspace:*",
+    "@legal-blocks/manifest": "workspace:*",
+    "h3": "^1.15.11",
     "node-legal-docs-client": "^1.0.0",
     "node-legal-docs-import": "^1.1.0",
     "nuxt": "^4.5.0",

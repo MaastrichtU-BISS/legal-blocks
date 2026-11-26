@@ -4,16 +4,12 @@
   "engines": {
     "node": "^22.19.0 || ^24.11.0 || >=26.0.0"
   },
+  "packageManager": "pnpm@10.32.1",
   "type": "module",
-  "workspaces": [
-    "packages/*",
-    "layers/*",
-    "apps/*"
-  ],
   "scripts": {
-    "dev:platform": "npm -w @legal-blocks/platform run dev",
-    "dev:composer": "npm -w @legal-blocks/composer run dev",
-    "build": "npm -w @legal-blocks/platform run build && npm -w @legal-blocks/composer run build",
+    "dev:platform": "pnpm --filter @legal-blocks/platform dev",
+    "dev:composer": "pnpm --filter @legal-blocks/composer dev",
+    "build": "pnpm --filter @legal-blocks/platform build && pnpm --filter @legal-blocks/composer build",
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "tsc --build --force"
