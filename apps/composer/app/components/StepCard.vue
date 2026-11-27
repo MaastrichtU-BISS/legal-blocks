@@ -61,7 +61,7 @@ const emit = defineEmits<{ select: []; remove: [] }>();
   font-family: var(--font-body);
   font-weight: 600;
   box-shadow: 0 1px 2px var(--shadow-soft);
-  transition: transform 120ms ease-out, border-color 120ms ease-out;
+  transition: translate 120ms ease-out, border-color 120ms ease-out;
 }
 
 /* DESIGN.md: nodes lift 1px on hover; the chosen one takes a coral border
@@ -89,8 +89,11 @@ const emit = defineEmits<{ select: []; remove: [] }>();
   color: inherit;
 }
 
+/* `translate`, not `transform`: on the workspace ring the card is centred on
+   its point with transform, and replacing that on hover moved the card out
+   from under the cursor, which ended the hover and moved it back. */
 .card:hover {
-  transform: translateY(-1px);
+  translate: 0 -1px;
   border-color: var(--accent-interactive);
 }
 
@@ -102,7 +105,7 @@ const emit = defineEmits<{ select: []; remove: [] }>();
 
 @media (prefers-reduced-motion: reduce) {
   .card:hover {
-    transform: none;
+    translate: none;
   }
 }
 
