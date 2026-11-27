@@ -199,3 +199,25 @@ describe("a Documents dataset as a training table", () => {
     );
   });
 });
+
+import { findTrainingSet, trainingSetTag } from "../server/ml/training-set";
+
+describe("sending the same documents to train on twice", () => {
+  const csv = "text,label\nThe tenant shall pay,obligation\n";
+
+  it("finds the copy the service already has, for the same task", () => {
+    const tag = trainingSetTag(3, csv);
+    const sent = [
+      { id: 1, description: "", task_type: "text_classification" },
+      { id: 2, description: tag, task_type: "text_classification" },
+    ];
+    expect(findTrainingSet(sent, tag, "text_classification")?.id).toBe(2);
+    expect(findTrainingSet(sent, tag, "topic_modeling")).toBeUndefined();
+  });
+
+  it("tells a re-import with other rows, or other documents, apart", () => {
+    const tag = trainingSetTag(3, csv);
+    expect(trainingSetTag(3, csv + "The buyer may inspect,permission\n")).not.toBe(tag);
+    expect(trainingSetTag(4, csv)).not.toBe(tag);
+  });
+});

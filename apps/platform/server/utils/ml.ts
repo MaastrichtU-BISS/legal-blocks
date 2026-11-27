@@ -41,33 +41,46 @@ export async function uploadToMl(event: H3Event, servicePath: string, form: Form
   });
 }
 
-async function callMl(
-  event: H3Event,
-  servicePath: string,
-  request: {
-    method: string;
-    query: string;
-    contentType?: string;
-    contentLength?: string;
-    body?: BodyInit | null;
-  },
-) {
+/**
+ * Reads one of the service's answers on the platform's side, as the person
+ * asking, rather than passing it on to the page.
+ */
+export async function readFromMl<T>(event: H3Event, servicePath: string): Promise<T> {
+  const answer = await reachMl(event, servicePath, { method: "GET", query: "" });
+  const body = (await new Response(answer.body).json().catch(() => ({}))) as T & { error?: string };
+  if (answer.status >= 400) throw fail(event, answer.status, body.error ?? "the ML service refused");
+  return body;
+}
+
+interface MlCall {
+  method: string;
+  query: string;
+  contentType?: string;
+  contentLength?: string;
+  body?: BodyInit | null;
+}
+
+async function callMl(event: H3Event, servicePath: string, request: MlCall) {
+  const answer = await reachMl(event, servicePath, request);
+  setResponseStatus(event, answer.status);
+  setResponseHeader(event, "content-type", answer.contentType);
+  return answer.body ?? "";
+}
+
+async function reachMl(event: H3Event, servicePath: string, request: MlCall) {
   // From the environment at request time: the compose file sets it, and a
   // runtimeConfig default would have been fixed when the image was built.
   const base = process.env["LEGAL_BLOCKS_ML_URL"];
   if (!base) throw fail(event, 503, ML_NOT_RUNNING);
 
   try {
-    const answer = await forwardToMl({
+    return await forwardToMl({
       ...request,
       base,
       path: servicePath,
       ownerId: currentUser(event).id,
       secret: mlSecret(secretPath()),
     });
-    setResponseStatus(event, answer.status);
-    setResponseHeader(event, "content-type", answer.contentType);
-    return answer.body ?? "";
   } catch (e) {
     if (e instanceof MlFailure) throw fail(event, e.status, e.message);
     throw e;
