@@ -46,6 +46,22 @@ const sources = computed(() =>
 );
 
 /**
+ * Steps that turn what a source found into documents: Get full text, after a
+ * search. They read no task and are not sources themselves, so they sit in the
+ * same window as the sources, below them.
+ */
+const preparers = computed(() =>
+  props.pipeline.nodes
+    .map((node) => ({ node, manifest: props.registry.modules[node.module] }))
+    .filter(
+      ({ manifest }) =>
+        manifest?.kind !== "source" &&
+        (manifest?.inputs ?? []).some((p) => p.required) &&
+        (manifest?.outputs ?? []).some((p) => p.type === "corpus@1"),
+    ),
+);
+
+/**
  * The modules that work on a task: annotating it, reporting agreement on it,
  * taking the results out. A module qualifies by speaking annotated-task@1,
  * which is the same declaration the composer uses to decide what may connect
@@ -259,6 +275,16 @@ function created() {
           :manifest="s.manifest as Manifest"
           :revision="uploadRevision"
           @mounted="void 0"
+        />
+      </div>
+
+      <div v-for="p in preparers" :key="p.node.id" class="pane">
+        <h3>{{ p.node.label || p.manifest?.name }}</h3>
+        <ModuleHost
+          :env="sourceEnv()"
+          :node="p.node"
+          :manifest="p.manifest as Manifest"
+          :revision="uploadRevision"
         />
       </div>
 

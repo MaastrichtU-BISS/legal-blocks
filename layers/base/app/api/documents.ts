@@ -19,6 +19,20 @@ export async function searchDocuments(
   return post("/api/services/legal-docs/search", query, "searching for documents");
 }
 
+/** One judgment's full text, or why the service has none for it. */
+export interface FullText {
+  ecli: string;
+  text: string | null;
+  message?: string;
+}
+
+/** The full text of up to 25 judgments a search found. */
+export async function fetchFullText(
+  documents: { ecli: string; dataset?: string }[],
+): Promise<FullText[]> {
+  return post("/api/services/legal-docs/text", { documents }, "fetching full text");
+}
+
 /** Searches legislation, for the query builder's law selector. */
 export async function searchLaws(query: string): Promise<unknown[]> {
   const path = `/api/services/legal-docs/laws?q=${encodeURIComponent(query)}`;

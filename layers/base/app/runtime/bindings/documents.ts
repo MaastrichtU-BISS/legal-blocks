@@ -6,6 +6,7 @@
 // the next step to read — these maps are that somewhere, and they are the only
 // state the runtime keeps.
 
+import { reactive, ref } from "vue";
 import { createDataset, importFormats, parseDocument, searchDocuments, searchLaws } from "../../api";
 import type { BindingContext, CorpusValue, KindBindings, ResultNode } from "./types";
 import { resultsOf } from "./values";
@@ -91,8 +92,20 @@ function describeFormats(extensions: string[]): string {
 
 // --- finding documents elsewhere ---------------------------------------------
 
-/** Search results held for the session, when nothing is being stored. */
-const sessionResults = new Map<string, { nodes: ResultNode[]; edges: unknown[] }>();
+/**
+ * Search results held for the session, in both kinds: a stored platform keeps
+ * results only once somebody saves them as documents.
+ *
+ * Reactive, so a step reading them (Get full text) follows each new search
+ * without being remounted.
+ */
+const sessionResults = reactive(new Map<string, { nodes: ResultNode[]; edges: unknown[] }>());
+const lastSearch = ref<string | null>(null);
+
+/** What the most recent search on this page found, for a step beside it. */
+export function latestSearchResults(): ResultNode[] {
+  return lastSearch.value ? (sessionResults.get(lastSearch.value)?.nodes ?? []) : [];
+}
 
 /**
  * vue-legal-query-builder. Search answers with a citation network and stops
@@ -105,6 +118,7 @@ export const DocumentSearch: KindBindings = {
     async props(ctx) {
       return searchProps(ctx, async (result) => {
         sessionResults.set(ctx.nodeId, result);
+        lastSearch.value = ctx.nodeId;
       });
     },
     async output(ctx): Promise<CorpusValue> {
@@ -116,6 +130,7 @@ export const DocumentSearch: KindBindings = {
     async props(ctx) {
       return searchProps(ctx, async (result) => {
         sessionResults.set(ctx.nodeId, result);
+        lastSearch.value = ctx.nodeId;
         ctx.produced();
       });
     },

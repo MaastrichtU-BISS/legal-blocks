@@ -17,7 +17,7 @@ export async function documentsOf(
     // arrives, something built this value by hand, and quietly treating a
     // case's summary as its text is the mistake worth failing over.
     throw new Error(
-      "search results are not annotatable documents — a preprocessing step has to fetch the full text first",
+      "search results are not annotatable documents — the Get full text step has to fetch their text first",
     );
   }
   return getDatasetDocuments(value.datasetId);

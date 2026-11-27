@@ -213,3 +213,36 @@ describe("what a stored platform needs", () => {
     expect(unmetInputs(parsePipeline(explorer, reg), reg)).toEqual([]);
   });
 });
+
+describe("search to annotation", () => {
+  it("goes through Get full text, never straight across", () => {
+    const chain = (modules: string[]) =>
+      JSON.stringify({
+        version: 1,
+        name: "S",
+        kind: "pipeline",
+        nodes: modules.map((module, i) => ({ id: `n${i}`, module })),
+      });
+    expect(() =>
+      parsePipeline(chain(["vue-legal-query-builder", "legal-blocks-full-text", "legal-annotation-kit"]), reg),
+    ).not.toThrow();
+    expect(() => parsePipeline(chain(["vue-legal-query-builder", "legal-annotation-kit"]), reg)).toThrow();
+  });
+
+  it("lets a stored platform annotate judgments a search found", () => {
+    const p = parsePipeline(
+      JSON.stringify({
+        version: 1,
+        name: "S",
+        kind: "workspace",
+        nodes: [
+          { id: "s", module: "vue-legal-query-builder" },
+          { id: "t", module: "legal-blocks-full-text" },
+          { id: "a", module: "legal-annotation-kit" },
+        ],
+      }),
+      reg,
+    );
+    expect(unmetInputs(p, reg)).toEqual([]);
+  });
+});

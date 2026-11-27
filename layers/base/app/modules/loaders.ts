@@ -19,6 +19,8 @@ const packages: Record<string, Loader> = {
   "vue-legal-docs-import": () => import("vue-legal-docs-import"),
   // The package's components, composed into one screen here. See ../ml.
   "vue-legal-ml-builder": () => import("../ml"),
+  // The platform's own step, not a package. See ../fulltext.
+  "legal-blocks-full-text": () => import("../fulltext"),
 };
 
 // Styles are separate entry points in these packages, and importing a

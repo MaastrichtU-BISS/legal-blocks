@@ -1,0 +1,44 @@
+{
+  "id": "legal-blocks-full-text",
+  "name": "Get full text",
+  "description": "Fetches the full text of the judgments a search found, from Rechtspraak or the ECHR, so they can be annotated. Shows which ones have no published text. With persistent data, the judgments are saved as documents.",
+  "icon": "upload",
+  "version": "1.0.0",
+  "kind": "ui",
+  "runtime": "web",
+  "entry": {
+    "package": "legal-blocks-full-text",
+    "component": "FullTextStep"
+  },
+  "host": "FullText",
+  "worksIn": [
+    "pipeline",
+    "workspace"
+  ],
+  "services": [
+    "legal-docs"
+  ],
+  "inputs": [
+    {
+      "name": "documents",
+      "type": "document-set@1",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "corpus",
+      "type": "corpus@1"
+    }
+  ],
+  "config": [
+    {
+      "key": "limit",
+      "label": "Most judgments to fetch",
+      "type": "number",
+      "default": 50,
+      "help": "Fetching text is one request per ten judgments, so a search with hundreds of results would take a while. The first ones the search returns are fetched."
+    }
+  ],
+  "storage": true
+}

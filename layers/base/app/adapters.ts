@@ -12,10 +12,11 @@
 // text. A pipeline built on it looked right and annotated the wrong thing.
 //
 // Getting from a search result to a document worth annotating means fetching
-// the judgment, and fetching is work: a second call per case, then parsing,
-// perhaps summarising. That is a step a user should see and choose, not a
-// silent conversion on an edge. It belongs to the preprocessing module, which
-// will take document-set@1 and produce corpus@1 by actually doing it.
+// the judgment, and fetching is work: a second call per case, and some cases
+// have no published text. That is a step a user should see and choose, not a
+// silent conversion on an edge. It is the Get full text step
+// (legal-blocks-full-text), which takes document-set@1 and produces corpus@1
+// by actually doing it.
 //
 // So the rule this leaves behind: an adapter may restate what a value is, and
 // may drop what the receiving side has no use for. If it has to go and get

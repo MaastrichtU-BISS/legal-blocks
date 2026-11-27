@@ -450,7 +450,7 @@ A module can declare `services`. The platform serves them at
 | id                | what it is                | where it runs                 |
 | ----------------- | ------------------------- | ----------------------------- |
 | `docs-import`     | parses PDF, Word, HTML    | a **library** in the platform |
-| `legal-docs`      | searches case law         | Nitro routes in the platform  |
+| `legal-docs`      | searches case law, fetches judgments' text | Nitro routes in the platform  |
 | `lawnotation-iaa` | inter-annotator agreement | a **container** beside it     |
 | `ml`              | datasets, training, predict | **containers**: API, worker, Postgres, Redis |
 
@@ -466,8 +466,11 @@ the library — still no image.
 
 This is the security-relevant one.
 
-`legal-docs` holds the platform's Case Law Explorer token. It exposes `search`
-and `laws` — two named operations. An earlier design forwarded
+`legal-docs` holds the platform's Case Law Explorer token. It exposes `search`,
+`laws` and `text` — three named operations. `text` serves the Get full text
+step (`legal-blocks-full-text`), the platform's own module between a search and
+annotation: it fetches each judgment's text from Rechtspraak or the ECHR, at
+most 25 per request. An earlier design forwarded
 `/api/proxy/legal-docs/<anything>` upstream, which kept the token off the page
 and still let any script on that page call any endpoint of the API as the
 platform's owner.
