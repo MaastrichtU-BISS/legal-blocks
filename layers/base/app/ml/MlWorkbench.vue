@@ -15,7 +15,11 @@ import {
 } from "vue-legal-ml-builder";
 import type { MLAdapter } from "vue-legal-ml-builder";
 
-const props = defineProps<{ adapter: MLAdapter }>();
+const props = defineProps<{
+  adapter: MLAdapter;
+  /** Opens straight at this model's page, where it can be tried. */
+  modelId?: string;
+}>();
 
 /**
  * The job each model was last started with. The wizard starts training itself
@@ -45,7 +49,9 @@ type View =
   | { name: "train"; modelId: string }
   | { name: "detail"; modelId: string };
 
-const view = ref<View>({ name: "datasets" });
+const view = ref<View>(
+  props.modelId ? { name: "detail", modelId: props.modelId } : { name: "datasets" },
+);
 
 const sections = [
   { name: "datasets", label: "Datasets" },

@@ -10,8 +10,11 @@ import type { KindBindings } from "./types";
 
 export const MLAdapter: KindBindings = {
   workspace: {
-    async props() {
-      return { adapter: createSelfHostedAdapter({ apiUrl: "/api/services/ml" }) };
+    async props(ctx) {
+      return {
+        adapter: createSelfHostedAdapter({ apiUrl: "/api/services/ml" }),
+        modelId: ctx.itemId,
+      };
     },
     async output() {
       throw new Error("the ML workbench has no output ports");

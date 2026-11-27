@@ -38,6 +38,11 @@ export interface ResolveEnv {
    * picks a document rather than carrying on from the top.
    */
   startPosition?: number;
+  /**
+   * The stored thing to open at, when the workspace opened one of a module's
+   * own rows rather than the module as a whole: a model, say.
+   */
+  itemId?: string;
   /** Called when a module reports it has nothing left to do. */
   finished?: () => void;
   refresh(): void;
@@ -107,6 +112,7 @@ export function contextFor(env: ResolveEnv, nodeId: string): BindingContext {
     taskId: env.taskId,
     datasetName: env.datasetName,
     startPosition: env.startPosition,
+    itemId: env.itemId,
     finished: env.finished,
     input: (portName) => resolveInput(env, nodeId, portName),
     refresh: env.refresh,

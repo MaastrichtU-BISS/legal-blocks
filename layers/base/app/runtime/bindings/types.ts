@@ -56,6 +56,8 @@ export interface BindingContext {
   datasetName?: string;
   /** Where in an annotator's queue to open, when not from the top. */
   startPosition?: number;
+  /** The stored thing to open at, when the workspace opened one of its rows. */
+  itemId?: string;
   /** Called when a module reports it has nothing left to do. */
   finished?: () => void;
   /** Resolves the value arriving on one of this node's input ports. */

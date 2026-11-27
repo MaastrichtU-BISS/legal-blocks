@@ -138,10 +138,17 @@ const modelsTab: WorkspaceTab = {
     { key: "accuracy", label: "Accuracy", align: "end" },
   ],
   list: getMlModels,
-  createLabel: "Train a model",
-  createTitle: "Train a model",
+  createLabel: "Upload and train",
+  createTitle: "Datasets and models",
+  openable: true,
+  openLabel: "Open",
   empty: "No models yet. Upload a labelled CSV and train one on it.",
 };
+
+/** The ML module's context, opened at one model. */
+function modelEnv(row: Row): ResolveEnv {
+  return { ...props.env, itemId: String((row as MlModelSummary).id) };
+}
 
 function accuracy(row: Row): string {
   const value = (row as MlModelSummary).metrics?.accuracy;
@@ -259,6 +266,19 @@ function created() {
     <template #create-models>
       <div v-for="m in mlModules" :key="m.node.id" class="pane">
         <ModuleHost :env="env" :node="m.node" :manifest="m.manifest as Manifest" :revision="0" />
+      </div>
+    </template>
+
+    <!-- One model, opened: its scores and a box to try it on new text. -->
+    <template #open-models="{ item }">
+      <div v-for="m in mlModules" :key="m.node.id" class="pane">
+        <ModuleHost
+          :env="modelEnv(item)"
+          :node="m.node"
+          :manifest="m.manifest as Manifest"
+          :revision="0"
+          :instance-key="(item as MlModelSummary).id"
+        />
       </div>
     </template>
 
