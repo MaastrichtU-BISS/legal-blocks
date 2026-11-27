@@ -154,11 +154,11 @@ const modelsTab: WorkspaceTab = {
     { key: "accuracy", label: "Accuracy", align: "end" },
   ],
   list: getMlModels,
-  createLabel: "Upload and train",
-  createTitle: "Datasets and models",
+  createLabel: "Train a model",
+  createTitle: "Train a model",
   openable: true,
   openLabel: "Open",
-  empty: "No models yet. Upload a labelled CSV and train one on it.",
+  empty: "No models yet. Import a labelled CSV in Documents, then train one on it.",
 };
 
 /**

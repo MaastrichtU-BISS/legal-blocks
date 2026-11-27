@@ -156,7 +156,7 @@ describe("the ML routes", () => {
       "datasets/from-documents.post.ts",
       "datasets/index.get.ts",
       "datasets/task-types.get.ts",
-      "datasets/upload.post.ts",
+      "documents.get.ts",
       "models/[id]/index.get.ts",
       "models/[id]/predict.post.ts",
       "models/available.get.ts",

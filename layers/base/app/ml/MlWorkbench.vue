@@ -7,13 +7,13 @@
 
 import { provide, ref } from "vue";
 import {
-  DatasetManager,
   ModelCreateWizard,
   ModelDetail,
   ModelList,
   TrainingMonitor,
 } from "vue-legal-ml-builder";
 import type { MLAdapter } from "vue-legal-ml-builder";
+import TrainingData from "./TrainingData.vue";
 
 const props = defineProps<{
   adapter: MLAdapter;
@@ -54,7 +54,7 @@ const view = ref<View>(
 );
 
 const sections = [
-  { name: "datasets", label: "Datasets" },
+  { name: "datasets", label: "Training data" },
   { name: "models", label: "Models" },
 ] as const;
 
@@ -77,10 +77,10 @@ function idOf(item: unknown): string {
       </button>
     </nav>
 
-    <DatasetManager
+    <TrainingData
       v-if="view.name === 'datasets'"
       :adapter="adapter"
-      @create-model="(d) => (view = { name: 'create', datasetId: idOf(d) })"
+      @create-model="(id) => (view = { name: 'create', datasetId: id })"
     />
     <ModelList
       v-else-if="view.name === 'models'"
