@@ -145,6 +145,14 @@ const modelsTab: WorkspaceTab = {
   empty: "No models yet. Upload a labelled CSV and train one on it.",
 };
 
+/**
+ * The tab a workspace opens on: its tasks when it has any, else its models,
+ * so an ML classroom does not open on an empty Documents tab.
+ */
+const firstTab = computed(() =>
+  taskModules.value.length ? "tasks" : mlModules.value.length ? "models" : "datasets",
+);
+
 /** The ML module's context, opened at one model. */
 function modelEnv(row: Row): ResolveEnv {
   return { ...props.env, itemId: String((row as MlModelSummary).id) };
@@ -234,7 +242,7 @@ function created() {
 </script>
 
 <template>
-  <LegalWorkspace :tabs="tabs" tab="tasks" @created="created">
+  <LegalWorkspace :tabs="tabs" :tab="firstTab" @created="created">
     <!-- However this platform gets documents. Usually one module; a platform
          built with both upload and search shows both. -->
     <template #create-datasets="{ done }">
