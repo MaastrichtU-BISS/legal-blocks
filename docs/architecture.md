@@ -497,6 +497,14 @@ The routes under `server/api/services/ml/` each name one service path. Anything
 below 500 from the service passes through as it is (a 400 names its `field`);
 an unreachable service is the platform's own 503, a failing one its 502.
 
+**Training data comes from Documents.** Train models reads the person's
+Documents datasets, as Annotate does, and has no upload of its own. Import
+documents reads a CSV as one document per row: its text from the `text` column,
+the other columns kept as the document's metadata. `datasets/from-documents`
+turns a dataset back into that table and uploads it to the service as the
+person asking. The manifest declares a `corpus@1` input, so the composer will
+not export Train models without something that brings documents in.
+
 **Projects.** legal-ml-core can group datasets in its own `ml_projects` table,
 but has no route that creates one. The builder does not need one to upload,
 train or predict, so the platform creates none: a student's datasets and

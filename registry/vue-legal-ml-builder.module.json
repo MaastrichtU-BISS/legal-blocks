@@ -1,7 +1,7 @@
 {
   "id": "vue-legal-ml-builder",
   "name": "Train models",
-  "description": "Students upload a labelled CSV, train a model on it and try it on new text. Each person sees only their own datasets and models. Training runs in the platform's own ML service, which the export starts alongside it.",
+  "description": "Students train a model on documents in this platform, such as a CSV imported one row per example with a text and a label column, then try it on new text. Each person sees only their own models. Training runs in the platform's own ML service, which the export starts alongside it.",
   "icon": "chart",
   "version": "0.15.0",
   "kind": "ui",
@@ -18,7 +18,13 @@
   "services": [
     "ml"
   ],
-  "inputs": [],
+  "inputs": [
+    {
+      "name": "corpus",
+      "type": "corpus@1",
+      "required": true
+    }
+  ],
   "outputs": [],
   "config": [],
   "storage": true

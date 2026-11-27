@@ -209,6 +209,12 @@ describe("what a stored platform needs", () => {
     expect(unmet.map((u) => u.module.id)).toEqual(["legal-annotation-kit"]);
   });
 
+  it("asks Train models for documents to train on, like Annotate", () => {
+    const [unmet] = unmetInputs(workspace(["vue-legal-ml-builder"]), reg);
+    expect(describeUnmet(unmet!)).toMatch(/^Train models needs documents.*Import documents/);
+    expect(unmetInputs(workspace(["vue-legal-docs-import", "vue-legal-ml-builder"]), reg)).toEqual([]);
+  });
+
   it("asks nothing of a pipeline, which cannot be built this way", () => {
     expect(unmetInputs(parsePipeline(explorer, reg), reg)).toEqual([]);
   });
