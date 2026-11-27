@@ -507,6 +507,14 @@ html.dark .lw .lw-on {
   color: var(--on-accent);
 }
 
+/* Without this the generic button hover above gives a chosen tab or the
+   primary button teal text on its coral fill. */
+html.dark .lw .lw-primary:hover:not(:disabled),
+html.dark .lw .lw-on:hover:not(:disabled) {
+  background: var(--accent-live-fill-hover);
+  border-color: var(--accent-live-fill-hover);
+  color: var(--on-accent);
+}
 
 html.dark .lw h2 {
   color: var(--ink);
@@ -522,6 +530,13 @@ html.dark .lw-table th,
 html.dark .lw-table .lw-end,
 html.dark .lw .lw-open-btn {
   color: var(--muted);
+}
+
+/* The package darkens the row's open button on hover, for a white ground. */
+html.dark .lw-table tbody tr.lw-click:hover .lw-open-btn,
+html.dark .lw-table tbody tr.lw-click:focus-within .lw-open-btn {
+  border-color: var(--field-edge);
+  color: var(--ink);
 }
 
 html.dark .lw-table tbody tr.lw-click:hover td,
