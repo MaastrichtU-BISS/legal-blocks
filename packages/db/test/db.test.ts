@@ -501,3 +501,19 @@ describe("document metadata", () => {
     db.close();
   });
 });
+
+describe("dataset names", () => {
+  it("gives a second dataset with a name already used the next free one", async () => {
+    const { open, createDataset, datasets, usersByEmail } = await import("../src/index.js");
+    const db = open(":memory:");
+    const [owner, other] = usersByEmail(db, ["owner@example.org", "other@example.org"]);
+    createDataset(db, owner!.id, "Documents 2026-11-27", "", []);
+    createDataset(db, owner!.id, "Documents 2026-11-27", "", []);
+    createDataset(db, owner!.id, "Documents 2026-11-27", "", []);
+    createDataset(db, other!.id, "Documents 2026-11-27", "", []);
+    const names = (id: number) => datasets(db).filter((d) => d.user_id === id).map((d) => d.name).sort();
+    expect(names(owner!.id)).toEqual(["Documents 2026-11-27", "Documents 2026-11-27 (2)", "Documents 2026-11-27 (3)"]);
+    expect(names(other!.id)).toEqual(["Documents 2026-11-27"]);
+    db.close();
+  });
+});

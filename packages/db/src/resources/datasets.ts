@@ -67,11 +67,26 @@ export function createDataset(
   return transaction(db, () => {
     const res = db
       .prepare(`INSERT INTO datasets (user_id, name, "desc") VALUES (?, ?, ?)`)
-      .run(ownerId, trimmed, desc);
+      .run(ownerId, freeName(db, ownerId, trimmed), desc);
     const id = Number(res.lastInsertRowid);
     insertDocuments(db, id, docs);
     return id;
   });
+}
+
+/**
+ * The name itself, or the first "name (n)" this person does not use yet.
+ *
+ * Names are unique per person, and the import's default name is the day's
+ * date, so a second import on the same day would otherwise be refused.
+ */
+function freeName(db: Handle, ownerId: number, name: string): string {
+  const taken = db.prepare(`SELECT 1 FROM datasets WHERE user_id = ? AND name = ?`);
+  if (!taken.get(ownerId, name)) return name;
+  for (let n = 2; ; n++) {
+    const candidate = `${name} (${n})`;
+    if (!taken.get(ownerId, candidate)) return candidate;
+  }
 }
 
 /**
