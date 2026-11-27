@@ -123,6 +123,7 @@ function idOf(item: unknown): string {
   --vmlb-border-strong: var(--field-edge);
   --vmlb-text: var(--ink);
   --vmlb-text-muted: var(--muted);
+  --vmlb-text-subtle: var(--muted);
   --vmlb-accent: var(--accent-interactive);
   --vmlb-accent-strong: var(--accent-interactive);
   --vmlb-accent-soft: color-mix(in srgb, var(--accent-interactive) 14%, transparent);
@@ -176,5 +177,79 @@ function idOf(item: unknown): string {
 .sections button:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+</style>
+
+<style>
+/* The workspace shell styles every button inside it (.lw button from
+   vue-legal-workspace, and the platform's dark theme on top of that) more
+   specifically than the builder's own button classes. In dark mode a hovered
+   primary button got the shell's teal text over the builder's teal fill.
+   Inside the workbench the builder's colours are restated, one level more
+   specific than the shell's. */
+.lw .ml-workbench .vmlb-btn-primary,
+.lw .ml-workbench .vmlb-btn-secondary,
+.lw .ml-workbench .vmlb-btn-tertiary {
+  padding: 0.5rem 1rem;
+  border-radius: var(--vmlb-radius-md);
+  font-size: var(--vmlb-font-size-md);
+}
+
+.lw .ml-workbench .vmlb-btn-primary {
+  background: var(--vmlb-accent);
+  border-color: transparent;
+  color: var(--vmlb-on-accent);
+}
+
+.lw .ml-workbench .vmlb-btn-primary:hover:not(:disabled) {
+  background: var(--vmlb-accent-strong);
+  border-color: transparent;
+  color: var(--vmlb-on-accent);
+}
+
+.lw .ml-workbench .vmlb-btn-secondary {
+  background: var(--vmlb-surface);
+  border-color: var(--vmlb-border-strong);
+  color: var(--vmlb-text);
+}
+
+.lw .ml-workbench .vmlb-btn-secondary:hover:not(:disabled) {
+  background: var(--vmlb-surface);
+  border-color: var(--vmlb-accent);
+  color: var(--vmlb-accent-strong);
+}
+
+.lw .ml-workbench .vmlb-btn-tertiary,
+.lw .ml-workbench .vmlb-btn-tertiary:hover:not(:disabled),
+.lw .ml-workbench .vmlb-link-btn,
+.lw .ml-workbench .vmlb-link-btn:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--vmlb-accent-strong);
+}
+
+.lw .ml-workbench .vmlb-link-btn {
+  padding: 0;
+}
+
+.lw .ml-workbench .vmlb-icon-btn {
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--vmlb-text-subtle);
+}
+
+.lw .ml-workbench .vmlb-icon-btn:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--vmlb-error-soft);
+  color: var(--vmlb-error);
+}
+
+.lw .ml-workbench .vmlb-btn-primary:disabled,
+.lw .ml-workbench .vmlb-btn-secondary:disabled,
+.lw .ml-workbench .vmlb-btn-tertiary:disabled {
+  background: var(--vmlb-border);
+  border-color: transparent;
+  color: var(--vmlb-text-subtle);
 }
 </style>
