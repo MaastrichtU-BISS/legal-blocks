@@ -8,6 +8,7 @@
 
 import { reactive, ref } from "vue";
 import { createDataset, importFormats, parseDocument, searchDocuments, searchLaws } from "../../api";
+import { csvReader, expandTables, type ImportedDocument } from "../../sources/table-import";
 import type { BindingContext, CorpusValue, KindBindings, ResultNode } from "./types";
 import { resultsOf } from "./values";
 
@@ -60,7 +61,7 @@ export const DocumentImport: KindBindings = {
  * written in one place rather than two.
  */
 async function importProps(
-  keep: (documents: { name: string; source: string; full_text: string }[]) => Promise<void>,
+  keep: (documents: ImportedDocument[]) => Promise<void>,
 ): Promise<Record<string, unknown>> {
   const extensions = await importFormats();
   return {
@@ -70,7 +71,11 @@ async function importProps(
         label: describeFormats(extensions),
         read: (file: File) => parseDocument(file),
       },
+      // A table is read in the page: it is already text, and it becomes many
+      // documents rather than one. See sources/table-import.ts.
+      csvReader,
     ],
+    onPrepare: expandTables,
     onImport: keep,
   };
 }

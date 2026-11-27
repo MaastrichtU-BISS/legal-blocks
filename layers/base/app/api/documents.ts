@@ -75,7 +75,7 @@ export async function parseDocument(
 /** Stores uploaded documents as a new dataset. */
 export async function createDataset(
   name: string,
-  documents: { name: string; source: string; full_text: string }[],
+  documents: { name: string; source: string; full_text: string; metadata?: Record<string, unknown> }[],
 ): Promise<number> {
   const body = await post<{ id: number }>(
     "/api/datasets",
