@@ -152,11 +152,13 @@ describe("the ML routes", () => {
     const all = files(routes);
     expect(all.some((f) => f.includes("[..."))).toBe(false);
     expect(all.sort()).toEqual([
+      "datasets/[id].delete.ts",
       "datasets/[id].get.ts",
       "datasets/from-documents.post.ts",
       "datasets/index.get.ts",
       "datasets/task-types.get.ts",
       "documents.get.ts",
+      "models/[id]/index.delete.ts",
       "models/[id]/index.get.ts",
       "models/[id]/predict.post.ts",
       "models/available.get.ts",

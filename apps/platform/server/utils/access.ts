@@ -3,7 +3,7 @@
 // Being the platform's admin gives no access to anybody else's work.
 
 import type { H3Event } from "h3";
-import { assignmentLocked, assignmentOwners, datasets, tasks, type Account } from "@legal-blocks/db";
+import { assignmentLocked, assignmentOwners, datasets, labelsets, tasks, type Account } from "@legal-blocks/db";
 
 export function canEdit(me: Account, ownerId: number): boolean {
   return me.id === ownerId;
@@ -47,6 +47,14 @@ export function requireAssignmentAccess(event: H3Event, assignmentId: number): v
   }
   if (canEdit(me, owners.editor)) return;
   throw fail(event, 403, "this document is somebody else's to annotate");
+}
+
+export function requireLabelsetEditor(event: H3Event, labelsetId: number): void {
+  const labelset = labelsets(requireDb(event)).find((l) => l.id === labelsetId);
+  if (!labelset) throw fail(event, 404, `no labelset ${labelsetId}`);
+  if (!canEdit(currentUser(event), labelset.user_id)) {
+    throw fail(event, 403, "only whoever made these labels can change them");
+  }
 }
 
 export function requireDatasetEditor(event: H3Event, datasetId: number): void {
