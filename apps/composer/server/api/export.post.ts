@@ -1,5 +1,5 @@
 import { buildExport, exportFilename } from "@legal-blocks/export";
-import { parsePipeline } from "@legal-blocks/manifest";
+import { describeUnmet, parsePipeline, unmetInputs } from "@legal-blocks/manifest";
 import { registry } from "../../../../layers/base/server-registry";
 
 /**
@@ -21,6 +21,13 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       statusMessage: e instanceof Error ? e.message : String(e),
     });
+  }
+
+  // The composer disables Export for this already; a hand-made request gets
+  // the same answer rather than a platform with a tab nobody can use.
+  const missing = unmetInputs(pipeline, registry);
+  if (missing.length) {
+    throw createError({ statusCode: 400, statusMessage: missing.map(describeUnmet).join(" ") });
   }
 
   const zip = buildExport({ pipeline, registry, ...images() });

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { fileURLToPath } from "node:url";
 import type { Registry } from "../src/index.js";
-import { exportKind, order, parsePipeline, requiresLogin, serviceIds } from "../src/index.js";
+import { describeUnmet, exportKind, order, parsePipeline, requiresLogin, serviceIds, unmetInputs } from "../src/index.js";
 import { loadRegistry } from "../src/registry-fs.js";
 
 const REGISTRY_DIR = fileURLToPath(new URL("../../../registry", import.meta.url));
@@ -174,5 +174,42 @@ describe("validation", () => {
         reg,
       ),
     ).toThrow(/step "metrics" needs annotated-task@1.*"docs".*corpus@1/s);
+  });
+});
+
+describe("what a stored platform needs", () => {
+  const workspace = (nodes: string[]) =>
+    parsePipeline(
+      JSON.stringify({
+        version: 1,
+        name: "W",
+        kind: "workspace",
+        nodes: nodes.map((module, i) => ({ id: `n${i}`, module })),
+      }),
+      reg,
+    );
+
+  it("is satisfied when every tool's input comes from another tool", () => {
+    expect(unmetInputs(parsePipeline(flagship, reg), reg)).toEqual([]);
+  });
+
+  it("names a tool with nothing to read and what would feed it", () => {
+    const [unmet, ...rest] = unmetInputs(workspace(["legal-annotation-kit"]), reg);
+    expect(rest).toEqual([]);
+    expect(describeUnmet(unmet!)).toMatch(/^Annotate needs documents, but nothing in this platform provides them\. Add .*Import documents/);
+  });
+
+  it("does not count a tool passing its own input on as a source of it", () => {
+    const unmet = unmetInputs(workspace(["vue-legal-docs-visualizer"]), reg);
+    expect(unmet.map((u) => u.module.id)).toEqual(["vue-legal-docs-visualizer"]);
+  });
+
+  it("follows a chain inside the workspace", () => {
+    const unmet = unmetInputs(workspace(["legal-annotation-kit", "vue-iaa-metrics"]), reg);
+    expect(unmet.map((u) => u.module.id)).toEqual(["legal-annotation-kit"]);
+  });
+
+  it("asks nothing of a pipeline, which cannot be built this way", () => {
+    expect(unmetInputs(parsePipeline(explorer, reg), reg)).toEqual([]);
   });
 });

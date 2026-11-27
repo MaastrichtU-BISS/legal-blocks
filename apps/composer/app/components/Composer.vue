@@ -29,6 +29,7 @@ const {
   kind,
   stored,
   steps,
+  missing,
   canAppend,
   whyNot,
   append,
@@ -54,7 +55,7 @@ function onKey(e: KeyboardEvent) {
     return;
   }
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
-    if (steps.value.length > 0) {
+    if (steps.value.length > 0 && !missing.value.length) {
       doExport();
       e.preventDefault();
     }
@@ -124,7 +125,12 @@ async function doExport() {
 
       <div class="row">
         <span v-if="status" class="muted">{{ status }}</span>
-        <button class="primary" :disabled="steps.length === 0" @click="doExport">
+        <button
+          class="primary"
+          :disabled="steps.length === 0 || missing.length > 0"
+          :title="missing.length ? 'Some tools have nothing to work on yet' : undefined"
+          @click="doExport"
+        >
           Export platform
         </button>
         <ThemeToggle />
@@ -132,6 +138,9 @@ async function doExport() {
     </header>
 
     <p v-if="problem" class="error pad">{{ problem }}</p>
+    <div v-if="missing.length" class="error pad missing" role="status">
+      <p v-for="m in missing" :key="m">{{ m }}</p>
+    </div>
 
     <div class="columns">
       <ModulePalette
@@ -343,5 +352,15 @@ h2 {
 
 .small {
   font-size: 0.9em;
+}
+
+.missing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.missing p {
+  margin: 0;
 }
 </style>

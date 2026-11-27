@@ -7,7 +7,7 @@
 
 import { computed, ref, type Ref } from "vue";
 import type { Kind, Manifest, Node, Pipeline, Registry } from "@legal-blocks/manifest";
-import { canConnect, exportKind, supportsKind } from "@legal-blocks/manifest";
+import { canConnect, describeUnmet, exportKind, supportsKind, unmetInputs } from "@legal-blocks/manifest";
 import { configWithDefaults } from "@base/types";
 
 const blank = (): Pipeline => ({ version: 1, name: "", kind: "pipeline", nodes: [] });
@@ -36,6 +36,15 @@ export function usePlatformDraft(registry: Ref<Registry>) {
 
   const steps = computed<Step[]>(() =>
     pipeline.value.nodes.map((node) => ({ node, manifest: registry.value.modules[node.module] })),
+  );
+
+  /**
+   * Why a stored platform cannot be used as it stands: a tool whose input no
+   * other tool provides. A pipeline never gets here, because a step can only
+   * be added after one that feeds it. Export waits until this is empty.
+   */
+  const missing = computed(() =>
+    unmetInputs(pipeline.value, registry.value).map(describeUnmet),
   );
 
   /** The type flowing out of the end of the chain, or null when it is empty. */
@@ -214,6 +223,7 @@ export function usePlatformDraft(registry: Ref<Registry>) {
     kind,
     stored,
     steps,
+    missing,
     canAppend,
     whyNot,
     append,

@@ -1,0 +1,1 @@
+{"root":["./src/index.ts","./src/kinds.ts","./src/manifest.ts","./src/pipeline.ts","./src/registry-fs.ts","./src/secrets.ts","./src/sources.ts","./test/pipeline.test.ts","./test/registry.test.ts","./test/secrets.test.ts"],"version":"5.9.3"}
