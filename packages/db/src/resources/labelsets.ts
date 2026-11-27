@@ -94,3 +94,17 @@ function parseJSON<T>(raw: string | null, fallback: T): T {
     return fallback;
   }
 }
+
+/**
+ * Deletes a labelset. Refused while a task uses it: the task would lose the
+ * labels its annotations are named after.
+ */
+export function removeLabelset(db: Handle, labelsetId: number): void {
+  const { tasks } = db.prepare(`SELECT COUNT(*) AS tasks FROM tasks WHERE labelset_id = ?`).get(labelsetId) as {
+    tasks: number;
+  };
+  if (tasks > 0) {
+    throw new Error(`${tasks === 1 ? "a task uses" : `${tasks} tasks use`} these labels; remove the task first`);
+  }
+  db.prepare(`DELETE FROM labelsets WHERE id = ?`).run(labelsetId);
+}

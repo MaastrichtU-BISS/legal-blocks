@@ -517,3 +517,43 @@ describe("dataset names", () => {
     db.close();
   });
 });
+
+describe("removing a dataset", () => {
+  it("deletes its documents, unless a task has work on them", async () => {
+    const { open, createDataset, createLabelset, createTask, datasets, removeDataset, usersByEmail } = await import(
+      "../src/index.js"
+    );
+    const db = open(":memory:");
+    const [owner] = usersByEmail(db, ["owner@example.org"]);
+    const unused = createDataset(db, owner!.id, "Unused", "", [{ name: "a", full_text: "A" }]);
+    const used = createDataset(db, owner!.id, "Used", "", [{ name: "b", full_text: "B" }]);
+    const labelset = createLabelset(db, owner!.id, "Labels", "", [{ name: "x", color: "#000000" }]);
+    createTask(db, owner!.id, { name: "T", dataset_id: used, labelset_id: labelset, annotators: ["owner@example.org"] });
+
+    removeDataset(db, unused);
+    expect(() => removeDataset(db, used)).toThrow(/a task uses these documents/);
+    expect(datasets(db).map((d) => d.name)).toEqual(["Used"]);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM documents").get()).toEqual({ n: 1 });
+    db.close();
+  });
+});
+
+describe("removing labels and tasks", () => {
+  it("refuses labels a task uses, and frees documents and labels once the task goes", async () => {
+    const { open, createDataset, createLabelset, createTask, labelsets, removeDataset, removeLabelset, removeTask, usersByEmail } =
+      await import("../src/index.js");
+    const db = open(":memory:");
+    const [owner] = usersByEmail(db, ["owner@example.org"]);
+    const dataset = createDataset(db, owner!.id, "Docs", "", [{ name: "a", full_text: "A" }]);
+    const labelset = createLabelset(db, owner!.id, "Labels", "", [{ name: "x", color: "#000000" }]);
+    const task = createTask(db, owner!.id, { name: "T", dataset_id: dataset, labelset_id: labelset, annotators: ["owner@example.org"] });
+
+    expect(() => removeLabelset(db, labelset)).toThrow(/a task uses these labels/);
+    removeTask(db, task);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM assignments").get()).toEqual({ n: 0 });
+    removeLabelset(db, labelset);
+    removeDataset(db, dataset);
+    expect(labelsets(db)).toEqual([]);
+    db.close();
+  });
+});

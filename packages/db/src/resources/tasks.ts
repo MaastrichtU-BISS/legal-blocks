@@ -226,3 +226,8 @@ function parseJSON<T>(raw: string, fallback: T): T {
     return fallback;
   }
 }
+
+/** Deletes a task with everyone's assignments and annotations in it. */
+export function removeTask(db: Handle, taskId: number): void {
+  db.prepare(`DELETE FROM tasks WHERE id = ?`).run(taskId);
+}

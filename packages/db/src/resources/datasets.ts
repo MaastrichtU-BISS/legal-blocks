@@ -90,6 +90,27 @@ function freeName(db: Handle, ownerId: number, name: string): string {
 }
 
 /**
+ * Deletes a dataset and its documents.
+ *
+ * Refused while a task has work on any of its documents: deleting them would
+ * delete that work with them, quietly, for somebody who may not be the one
+ * removing the documents.
+ */
+export function removeDataset(db: Handle, datasetId: number): void {
+  const inUse = db
+    .prepare(
+      `SELECT COUNT(DISTINCT a.task_id) AS tasks FROM assignments a
+       JOIN documents doc ON doc.id = a.document_id WHERE doc.dataset_id = ?`,
+    )
+    .get(datasetId) as { tasks: number };
+  if (inUse.tasks > 0) {
+    const tasks = inUse.tasks === 1 ? "a task uses" : `${inUse.tasks} tasks use`;
+    throw new Error(`${tasks} these documents; remove the task first`);
+  }
+  db.prepare(`DELETE FROM datasets WHERE id = ?`).run(datasetId);
+}
+
+/**
  * Appends documents to an existing dataset.
  *
  * A document already in the dataset keeps its id and its text is refreshed:
