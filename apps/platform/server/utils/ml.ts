@@ -15,26 +15,55 @@ function secretPath(): string {
 }
 
 export async function forwardMlOperation(event: H3Event, servicePath: string) {
+  const method = event.method;
+  const hasBody = method !== "GET" && method !== "HEAD";
+  const search = event.path.includes("?") ? event.path.slice(event.path.indexOf("?") + 1) : "";
+  return callMl(event, servicePath, {
+    method,
+    query: search,
+    contentType: getRequestHeader(event, "content-type"),
+    contentLength: getRequestHeader(event, "content-length"),
+    body: hasBody ? getRequestWebStream(event) : undefined,
+  });
+}
+
+/**
+ * Uploads a table the platform built itself, such as a Documents dataset, as
+ * the person asking. The service sees it exactly as it would a file upload.
+ */
+export async function uploadToMl(event: H3Event, servicePath: string, form: FormData) {
+  const encoded = new Request("http://platform.invalid", { method: "POST", body: form });
+  return callMl(event, servicePath, {
+    method: "POST",
+    query: "",
+    contentType: encoded.headers.get("content-type") ?? undefined,
+    body: encoded.body,
+  });
+}
+
+async function callMl(
+  event: H3Event,
+  servicePath: string,
+  request: {
+    method: string;
+    query: string;
+    contentType?: string;
+    contentLength?: string;
+    body?: BodyInit | null;
+  },
+) {
   // From the environment at request time: the compose file sets it, and a
   // runtimeConfig default would have been fixed when the image was built.
   const base = process.env["LEGAL_BLOCKS_ML_URL"];
   if (!base) throw fail(event, 503, ML_NOT_RUNNING);
 
-  const method = event.method;
-  const hasBody = method !== "GET" && method !== "HEAD";
-  const search = event.path.includes("?") ? event.path.slice(event.path.indexOf("?") + 1) : "";
-
   try {
     const answer = await forwardToMl({
+      ...request,
       base,
-      method,
       path: servicePath,
-      query: search,
       ownerId: currentUser(event).id,
       secret: mlSecret(secretPath()),
-      contentType: getRequestHeader(event, "content-type"),
-      contentLength: getRequestHeader(event, "content-length"),
-      body: hasBody ? getRequestWebStream(event) : undefined,
     });
     setResponseStatus(event, answer.status);
     setResponseHeader(event, "content-type", answer.contentType);

@@ -153,7 +153,9 @@ describe("the ML routes", () => {
     expect(all.some((f) => f.includes("[..."))).toBe(false);
     expect(all.sort()).toEqual([
       "datasets/[id].get.ts",
+      "datasets/from-documents.post.ts",
       "datasets/index.get.ts",
+      "datasets/task-types.get.ts",
       "datasets/upload.post.ts",
       "models/[id]/index.get.ts",
       "models/[id]/predict.post.ts",
@@ -179,5 +181,21 @@ describe("the signing secret", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+import { documentsToCsv } from "../server/ml/table";
+
+describe("a Documents dataset as a training table", () => {
+  it("has the text first, then the columns it was imported with", () => {
+    const { csv, columns } = documentsToCsv([
+      { name: "r1", full_text: 'The tenant "shall" pay, monthly', metadata: { fields: { label: "obligation" } } },
+      { name: "r2", full_text: "The buyer may inspect", metadata: { fields: { label: "permission", note: "x" } } },
+      { name: "memo", full_text: "Plain", metadata: null },
+    ]);
+    expect(columns).toEqual(["text", "label", "note"]);
+    expect(csv).toBe(
+      'text,label,note\n"The tenant ""shall"" pay, monthly",obligation,\nThe buyer may inspect,permission,x\nPlain,,\n',
+    );
   });
 });
