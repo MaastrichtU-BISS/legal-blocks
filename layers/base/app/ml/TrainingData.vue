@@ -8,6 +8,8 @@
 
 import { computed, onMounted, ref } from "vue";
 import type { MLAdapter } from "vue-legal-ml-builder";
+import { removeTrainingSet } from "../api";
+import RemoveButton from "../components/RemoveButton.vue";
 
 interface DocumentTable {
   id: number;
@@ -159,6 +161,12 @@ async function send(table: DocumentTable) {
               <button type="button" class="vmlb-btn-secondary" @click="emit('createModel', String(s.id))">
                 Create model
               </button>
+              <RemoveButton
+                :name="s.name"
+                consequence="the models trained on it"
+                :remove="() => removeTrainingSet(String(s.id))"
+                @removed="load"
+              />
             </div>
           </li>
         </ul>

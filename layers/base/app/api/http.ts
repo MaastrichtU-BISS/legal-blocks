@@ -26,3 +26,7 @@ export async function post<T>(path: string, body: unknown, what: string): Promis
   });
   return json<T>(res, what);
 }
+
+export async function remove(path: string, what: string): Promise<void> {
+  await json(await fetch(path, { method: "DELETE" }), what);
+}

@@ -23,3 +23,12 @@ export interface User {
 export async function getUsers(): Promise<User[]> {
   return json(await fetch("/api/users"), "loading users");
 }
+
+/** Who is signed in, or undefined when this platform has no sign-in. */
+export async function signedInId(): Promise<number | undefined> {
+  const state = await json<{ user?: { id: number } | null }>(
+    await fetch("/api/auth/state"),
+    "checking who is signed in",
+  );
+  return state.user?.id;
+}

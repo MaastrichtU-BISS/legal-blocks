@@ -1,7 +1,7 @@
 // The three things a running platform lets people make.
 
 import type { CorpusDocument } from "../types";
-import { json, post } from "./http";
+import { json, post, remove } from "./http";
 
 export interface Label {
   name: string;
@@ -77,6 +77,10 @@ export async function getDatasets(): Promise<DatasetSummary[]> {
   return json(await fetch("/api/datasets"), "loading datasets");
 }
 
+export async function removeDataset(id: number): Promise<void> {
+  return remove(`/api/datasets/${id}`, "removing these documents");
+}
+
 export async function getTasks(): Promise<TaskSummary[]> {
   return json(await fetch("/api/tasks"), "loading tasks");
 }
@@ -84,4 +88,12 @@ export async function getTasks(): Promise<TaskSummary[]> {
 export async function createTask(spec: TaskSpec): Promise<number> {
   const out = await post<{ id: number }>("/api/tasks", spec, "creating the task");
   return out.id;
+}
+
+export async function removeLabelset(id: number): Promise<void> {
+  return remove(`/api/labelsets/${id}`, "removing these labels");
+}
+
+export async function removeTask(id: number): Promise<void> {
+  return remove(`/api/tasks/${id}`, "removing the task");
 }

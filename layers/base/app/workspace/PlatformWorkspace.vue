@@ -17,15 +17,18 @@
 
 import { computed, ref } from "vue";
 import { LegalWorkspace } from "vue-legal-workspace";
-import type { Row, WorkspaceTab } from "vue-legal-workspace";
+import type { Row } from "vue-legal-workspace";
 import "vue-legal-workspace/style.css";
 
 import ModuleHost from "../runtime/ModuleHost.vue";
 import type { ResolveEnv } from "../runtime/resolve";
 import type { Manifest, Pipeline, Registry } from "@legal-blocks/manifest";
 import type { DatasetSummary, LabelsetSummary, MlModelSummary, TaskSummary } from "../api";
-import { getDatasets, getLabelsets, getMlModels, getTasks } from "../api";
+import { getDatasets, getLabelsets, getMlModels, getTasks, signedInId } from "../api";
+import RemoveButton from "../components/RemoveButton.vue";
 import NewLabelsetForm from "./NewLabelsetForm.vue";
+import { REMOVE_COLUMN, withRemoval, type RemovableTab } from "./removal";
+import { datasetRemoval, labelsetRemoval, modelRemoval, taskRemoval } from "./removals";
 import OpenTask from "./OpenTask.vue";
 import NewTaskForm from "./NewTaskForm.vue";
 
@@ -123,7 +126,10 @@ const taskBlocked = computed(() => {
   return `A task needs documents and labels: add ${missing.join(" and ")} first.`;
 });
 
-const tasksTab = computed<WorkspaceTab>(() => ({
+const me = ref<number | undefined>();
+void signedInId().then((id) => (me.value = id));
+
+const tasksTab = computed<RemovableTab>(() => withRemoval({
   id: "tasks",
   label: "Tasks",
   columns: [
@@ -141,10 +147,10 @@ const tasksTab = computed<WorkspaceTab>(() => ({
   openable: true,
   openLabel: "See",
   empty: "No tasks yet. Make one and give it to somebody, or wait to be given one.",
-}));
+}, taskRemoval(() => me.value)));
 
 /** Only the signed-in person's: the platform signs each request for them. */
-const modelsTab: WorkspaceTab = {
+const modelsTab = withRemoval({
   id: "models",
   label: "Models",
   columns: [
@@ -159,7 +165,7 @@ const modelsTab: WorkspaceTab = {
   openable: true,
   openLabel: "Open",
   empty: "No models yet. Import a labelled CSV in Documents, then train one on it.",
-};
+}, modelRemoval);
 
 /**
  * The tab a workspace opens on: its tasks when it has any, else its models,
@@ -179,9 +185,9 @@ function accuracy(row: Row): string {
   return typeof value === "number" ? `${Math.round(value * 100)}%` : "–";
 }
 
-const tabs = computed<WorkspaceTab[]>(() => {
-  const out: WorkspaceTab[] = [
-    {
+const tabs = computed<RemovableTab[]>(() => {
+  const out: RemovableTab[] = [
+    withRemoval({
       id: "datasets",
       label: "Documents",
       columns: [
@@ -194,7 +200,7 @@ const tabs = computed<WorkspaceTab[]>(() => {
       createLabel: sources.value.length ? "Add documents" : undefined,
       createTitle: "Add documents",
       empty: "No documents yet. Everything else here is made from these.",
-    },
+    }, datasetRemoval),
   ];
 
   if (mlModules.value.length) out.push(modelsTab);
@@ -202,7 +208,7 @@ const tabs = computed<WorkspaceTab[]>(() => {
   if (!taskModules.value.length) return out;
 
   out.push(
-    {
+    withRemoval({
       id: "labelsets",
       label: "Labels",
       columns: [
@@ -214,7 +220,7 @@ const tabs = computed<WorkspaceTab[]>(() => {
       createLabel: "New labelset",
       createTitle: "New labelset",
       empty: "No labelsets yet. A labelset is what annotators can apply.",
-    },
+    }, labelsetRemoval),
     tasksTab.value,
   );
 
@@ -248,6 +254,16 @@ function progress(row: Row): string {
   return `${t.done} of ${t.total}`;
 }
 
+const workspace = ref<{ reload(): void } | null>(null);
+const removable = computed(() => tabs.value.filter((t) => t.removal));
+
+function removed() {
+  workspace.value?.reload();
+  void listDatasets();
+  void listLabelsets();
+  emit("changed");
+}
+
 function created() {
   datasetName.value = "";
   uploadRevision.value++;
@@ -258,7 +274,19 @@ function created() {
 </script>
 
 <template>
-  <LegalWorkspace :tabs="tabs" :tab="firstTab" @created="created">
+  <LegalWorkspace ref="workspace" :tabs="tabs" :tab="firstTab" @created="created">
+    <!-- Every tab that allows removing gets the same button in its last column. -->
+    <template v-for="t in removable" :key="t.id" #[`cell-${t.id}-${REMOVE_COLUMN}`]="{ item }">
+      <RemoveButton
+        v-if="t.removal!.allowed?.(item) ?? true"
+        :name="t.removal!.name(item)"
+        :consequence="t.removal!.consequence?.(item)"
+        :blocked="t.removal!.blocked?.(item)"
+        :remove="() => t.removal!.remove(item)"
+        @removed="removed"
+      />
+    </template>
+
     <!-- However this platform gets documents. Usually one module; a platform
          built with both upload and search shows both. -->
     <template #create-datasets="{ done }">
@@ -478,6 +506,7 @@ html.dark .lw .lw-on {
   border-color: var(--accent-live-fill);
   color: var(--on-accent);
 }
+
 
 html.dark .lw h2 {
   color: var(--ink);
