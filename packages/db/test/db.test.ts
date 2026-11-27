@@ -484,3 +484,20 @@ describe("assignment ownership", () => {
     expect(assignmentOwners(db, 9999)).toBeUndefined();
   });
 });
+
+describe("document metadata", () => {
+  it("keeps what the producing step attached, such as a CSV row's other columns", async () => {
+    const { open, createDataset, datasetRows, usersByEmail } = await import("../src/index.js");
+    const db = open(":memory:");
+    const [owner] = usersByEmail(db, ["owner@example.org"]);
+    const id = createDataset(db, owner!.id, "Clauses", "", [
+      { name: "row 1", full_text: "The tenant shall pay", metadata: { fields: { label: "obligation" } } },
+      { name: "row 2", full_text: "The buyer may inspect" },
+    ]);
+    expect(datasetRows(db, id)).toEqual([
+      { name: "row 1", full_text: "The tenant shall pay", metadata: { fields: { label: "obligation" } } },
+      { name: "row 2", full_text: "The buyer may inspect", metadata: null },
+    ]);
+    db.close();
+  });
+});
